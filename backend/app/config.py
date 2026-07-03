@@ -1,0 +1,57 @@
+"""
+Application configuration — loaded from environment variables or .env file.
+All settings have sensible defaults for local development.
+"""
+import os
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    # ── Application ───────────────────────────────────────────────────────────
+    APP_NAME: str = "RoomCanvas AI"
+    APP_VERSION: str = "1.0.0"
+    DEBUG: bool = False
+
+    # ── Database ──────────────────────────────────────────────────────────────
+    DATABASE_URL: str = "sqlite:///./storage/interior_ai.db"
+
+    # ── Storage Directories ───────────────────────────────────────────────────
+    UPLOAD_DIR: str = "./storage/uploads"
+    CONTROL_IMAGE_DIR: str = "./storage/control_images"
+    GENERATED_DIR: str = "./storage/generated"
+
+    # ── API / Security ────────────────────────────────────────────────────────
+    # Comma-separated list of allowed CORS origins, e.g. "http://localhost:3000,https://myapp.com"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    MAX_UPLOAD_SIZE_MB: int = 10
+
+    # ── AI Pipeline ───────────────────────────────────────────────────────────
+    # Set to "real" once the Colab inference notebook is connected.
+    AI_MODE: str = "mock"
+    # Number of design variations to generate per request
+    NUM_VARIATIONS: int = 3
+
+    @field_validator("MAX_UPLOAD_SIZE_MB")
+    @classmethod
+    def must_be_positive(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("MAX_UPLOAD_SIZE_MB must be a positive integer")
+        return v
+
+    @field_validator("NUM_VARIATIONS")
+    @classmethod
+    def must_be_reasonable(cls, v: int) -> int:
+        if not 1 <= v <= 10:
+            raise ValueError("NUM_VARIATIONS must be between 1 and 10")
+        return v
+
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+
+settings = Settings()

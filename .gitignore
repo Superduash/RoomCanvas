@@ -1,0 +1,80 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# RoomCanvas AI — .gitignore
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+develop-eggs/
+lib/
+lib64/
+wheels/
+sdist/
+var/
+parts/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+backend/venv/
+venv/
+.venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+coverage.xml
+nosetests.xml
+*.cover
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# ── Environment files ─────────────────────────────────────────────────────────
+backend/.env
+.env
+.env.local
+
+# ── SQLite ────────────────────────────────────────────────────────────────────
+*.db
+*.sqlite3
+*.db-journal
+*.sqlite3-journal
+
+# ── Storage (generated images & uploads) — keep folder structure ──────────────
+backend/storage/uploads/*
+backend/storage/control_images/*
+backend/storage/generated/*
+!backend/storage/uploads/.gitkeep
+!backend/storage/control_images/.gitkeep
+!backend/storage/generated/.gitkeep
+
+# ── VS Code ───────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.vscode/*.log
+
+# ── OS generated ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+code_export.txt
+*.log
