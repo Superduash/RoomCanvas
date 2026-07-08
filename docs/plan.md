@@ -126,13 +126,22 @@ interior-ai/
 │           ├── DesignExplanation.jsx # NEW: furniture/palette/budget panel
 │           └── BeforeAfterSlider.jsx
 ├── backend/
-│   ├── app.py
-│   ├── database.py                  # + seed, prompt, room_type_detected, confidence columns
-│   ├── style_templates.py           # NEW: static STYLE_TEMPLATES dict
-│   ├── colab_client.py
+│   ├── app/
+│   │   ├── main.py                  # FastAPI server
+│   │   └── database/                # SQLite + SQLAlchemy models
 │   └── requirements.txt
-└── colab_inference/
-    └── inference_server.ipynb       # MLSD + CLIP + batched diffusion, one notebook
+├── ai/
+│   ├── config.py                    # Replicate config + model choice
+│   ├── service.py                   # Connects FastAPI to AI Orchestrator
+│   ├── providers/
+│   │   ├── base_provider.py         # Abstract provider interface
+│   │   └── replicate_provider.py    # Replicate API implementation
+│   ├── prompts/
+│   │   └── builder.py               # Dynamic templated prompts
+│   └── services/
+│       └── orchestrator.py          # Coordinates DB saves + generation
+└── scripts/
+    └── export.py                    # Export tool for LLM analysis
 ```
 
 ---
@@ -144,16 +153,16 @@ interior-ai/
 | **1** | 3h | Benchmark SD1.5 vs SDXL + ControlNet-MLSD on 5 identical room photos, same prompt/seed. Score against the Part 1 rubric. Lock the winner. | Scored comparison table, model decision locked | You can state in one sentence why you chose your model — not "it seemed fine" |
 | **2** | 3h | Single generation working end-to-end with the locked model. Tune `strength`/`guidance_scale`. Wire up CLIP zero-shot classifier, test on 5 photos, verify confidence scores make sense. | One good generation + working room classifier | Classifier gets 4/5 test rooms right |
 | **3** | 3h | Build prompt template system (style → prompt string). Build `STYLE_TEMPLATES` dict for all 5 styles (furniture/palette/budget_tag/reason). Test 9 room×style combos with single-image generation first (cheaper to iterate). | Finalized prompt templates + explanation templates | 6+/9 combos demo-worthy |
-| **4** | 3h | Convert to batched `num_images_per_prompt=3` generation. **Measure and record actual batch timing** — this number goes directly in your demo script. Wrap MLSD + CLIP + batched-diffusion as one Colab FastAPI+tunnel endpoint. | Working `/infer` endpoint returning 3 images + detected room type + confidence | `curl` request returns 3 distinct images in under ~50-60s |
-| **5** | 3h | FastAPI backend: `/api/generate` proxy, SQLite schema with seed/prompt/room_type/confidence columns, `/api/history`, `/api/health`. | Full round trip: backend → Colab → 3 images + metadata back | Round trip works twice in a row |
+| **4** | 3h | Integrate Replicate API. Refactor `ai/providers/replicate_provider.py` to handle generation logic using the chosen model. | Working Replicate Provider implementation returning 3 images | Test script returns 3 distinct images in under ~50-60s |
+| **5** | 3h | FastAPI backend: `/api/generate` endpoint using the `AIService` orchestrator, SQLite schema with seed/prompt/room_type columns, `/api/history`, `/api/health`. | Full round trip: backend → Replicate API → 3 images + metadata back | Round trip works twice in a row |
 | **6** | 3h | `UploadPage.jsx`: upload, style dropdown (no room-type dropdown needed now), `ProgressSteps.jsx` showing real stage names ("Detecting structure...", "Classifying room...", "Generating designs..."). | Upload → real progress → variation results | Progress steps match actual backend timing, not fake delays |
 | **7** | 3h | `VariationPicker.jsx` (3-thumbnail grid) → `ResultPage.jsx` with before/after slider + `DesignExplanation.jsx` panel populated from the selected variation's style template. | Full pick-a-variation → see explanation flow | Explanation panel content matches the picked style correctly |
-| **8** | 3h | `HistoryPage.jsx` with all past generations + "Regenerate with same seed" (re-calls `/infer` passing the stored seed). Full UI polish pass. | Cohesive 4-page app | Full flow: upload → auto-detect → 3 variations → pick → explanation → history → regenerate, zero console errors |
-| **9** | 3h | **Reliability day, unchanged from v1.** Retry wrapper for Colab tunnel drops. Pre-generate and save 6-8 great before/after/explanation sets as fallback. Document Colab/ngrok restart steps. | Tested fallback path | You can simulate "Colab is down" and the app still shows something coherent |
+| **8** | 3h | `HistoryPage.jsx` with all past generations + "Regenerate with same seed" (re-calls API passing the stored seed). Full UI polish pass. | Cohesive 4-page app | Full flow: upload → auto-detect → 3 variations → pick → explanation → history → regenerate, zero console errors |
+| **9** | 3h | **Reliability day, unchanged from v1.** Retry wrapper for API drops or rate limits. Pre-generate and save 6-8 great before/after/explanation sets as fallback. Document fallback steps. | Tested fallback path | You can simulate "API is down" and the app still shows something coherent |
 | **10** | 3h | Deploy backend (Render/Railway free) + frontend (Vercel free). | Live public URL | Fresh generation works from a phone on mobile data |
-| **11** | 3h | Full rehearsal run. Fix rough edges. Re-verify classifier + batch timing haven't drifted after a fresh Colab restart. | Rehearsed, zero manual intervention | Full demo completes start to finish unaided |
+| **11** | 3h | Full rehearsal run. Fix rough edges. Re-verify timing haven't drifted. | Rehearsed, zero manual intervention | Full demo completes start to finish unaided |
 | **12** | 3h | README, demo script, rehearsed answers to reviewer questions (updated set below), backup video of a full successful run. | Submission-ready docs + video | Backup video plays and looks good |
-| **13** | 3h | Buffer. Restart Colab 20 min before your actual slot (cold model load ~2-3 min + first classifier call). Final UI copy polish. | Everything works twice in a row with no changes between runs | — |
+| **13** | 3h | Buffer. Final UI copy polish. | Everything works twice in a row with no changes between runs | — |
 
 ---
 

@@ -9,17 +9,14 @@
 ```
 Room Photo
    ↓
-MLSD Structure Detection
-(extracts wall / window / door lines → ControlNet edge-map)
-   ↓
-CLIP Zero-Shot Room Classification
-(detects: bedroom / living room / kitchen / office / dining room)
-   ↓
 Prompt Builder
-(room type + user-selected style → templated Stable Diffusion prompt)
+(auto-formats room type + user-selected style → templated prompt)
    ↓
-Batched Diffusion Inference
-(1 call · 3 seeds · 3 design variations)
+AI Service
+(orchestrates the generation workflow via unified provider interface)
+   ↓
+Replicate Provider (or any future provider)
+(Batched Inference: 1 call · 3 seeds · 3 design variations)
    ↓
 User selects a variation → Design Explanation Panel + Generation Summary
 ```
@@ -32,7 +29,7 @@ User selects a variation → Design Explanation Panel + Generation Summary
 |-----------|-----------------------------------------------|
 | Frontend  | React 18 + Vite + Vanilla CSS                 |
 | Backend   | Python 3.12 · FastAPI · SQLAlchemy 2 · SQLite |
-| AI (Day 4)| ControlNet (MLSD) · CLIP · Stable Diffusion   |
+| AI        | Replicate API (Model: adirik/interior-design) |
 
 ---
 
@@ -56,25 +53,29 @@ Full interactive docs: **http://localhost:8000/docs**
 
 - Python 3.12+
 - Node.js 18+
+- Replicate API Token (`REPLICATE_API_TOKEN`)
 
-### Backend
+### Backend & AI
 
 ```bash
-cd backend
-
-# Create + activate virtual environment
+# Create + activate virtual environment (at project root)
 python -m venv venv
 venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS / Linux
 
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
+pip install replicate
 
 # Copy environment config
-copy .env.example .env         # Windows
-# cp .env.example .env         # macOS / Linux
+copy backend\.env.example backend\.env         # Windows
+# cp backend/.env.example backend/.env         # macOS / Linux
+
+# Make sure to add your REPLICATE_API_TOKEN to backend/.env!
 
 # Start the API server (port 8000)
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# Ensure the root folder is in the Python path so the ai module is found
+set PYTHONPATH=.
+uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### Frontend
@@ -104,18 +105,9 @@ Open **http://localhost:3000** in your browser.
 
 ---
 
-## Connecting Real AI (Day 4)
+## Provider Architecture
 
-Open [`backend/app/routers/generate.py`](backend/app/routers/generate.py) and replace the three mock service lines:
-
-```python
-# Replace these with real PyTorch implementations:
-_mlsd_service: MlsdService = MockMlsdService()
-_clip_service: ClipService = MockClipService()
-_inference_service: InferenceService = MockInferenceService()
-```
-
-The orchestrator, routers, repositories, and all frontend code require **zero changes**.
+We use a modular `Provider` pattern for all AI models. Changing models or providers (e.g., to OpenAI or local Stable Diffusion) is as easy as modifying the `ACTIVE_PROVIDER` in `ai/config.py` and implementing `BaseAIProvider`.
 
 ---
 
@@ -123,47 +115,44 @@ The orchestrator, routers, repositories, and all frontend code require **zero ch
 
 ```
 RoomCanvas AI/
+├── ai/
+│   ├── config.py                  # AI parameters and model selection
+│   ├── service.py                 # Main entry point for the backend
+│   ├── storage.py                 # File download and saving handlers
+│   ├── formatter.py
+│   ├── providers/
+│   │   ├── base_provider.py       # Abstract Base Provider
+│   │   ├── registry.py            # Provider factory
+│   │   └── replicate_provider.py  # Replicate implementation
+│   ├── prompts/
+│   │   ├── builder.py
+│   │   ├── negative.py
+│   │   └── system.py
+│   ├── services/
+│   │   └── orchestrator.py        # Pipeline workflow coordinator
+│   ├── styles/
+│   │   └── templates.py
+│   └── image/
+│       ├── preprocess.py
+│       └── postprocess.py
 ├── backend/
 │   ├── app/
-│   │   ├── config.py                  # Pydantic settings
-│   │   ├── main.py                    # FastAPI app + lifespan
-│   │   ├── logging_config.py
+│   │   ├── config.py              # App settings
+│   │   ├── main.py                # FastAPI app
 │   │   ├── database/
-│   │   │   ├── models.py              # SQLAlchemy ORM models
-│   │   │   └── session.py
 │   │   ├── repositories/
-│   │   │   └── generation_repository.py
 │   │   ├── routers/
-│   │   │   ├── health.py
-│   │   │   ├── generate.py
-│   │   │   └── history.py
 │   │   ├── schemas/
-│   │   │   ├── common.py
-│   │   │   └── generation.py
-│   │   ├── services/
-│   │   │   ├── clip_service.py        # ABC + MockClipService
-│   │   │   ├── inference_service.py   # ABC + MockInferenceService
-│   │   │   ├── mlsd_service.py        # ABC + MockMlsdService
-│   │   │   ├── generation_orchestrator.py
-│   │   │   ├── prompt_builder.py
-│   │   │   └── style_templates.py
 │   │   └── utils/
-│   │       ├── exceptions.py
-│   │       └── image_utils.py
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/
-│   ├── index.html
-│   ├── package.json
-│   └── src/
-│       ├── api/
-│       ├── components/
-│       ├── constants/
-│       ├── context/
-│       ├── hooks/
-│       ├── layouts/
-│       └── pages/
-├── AI_Interior_Design_13Day_Plan_v2.md
+│   ├── src/
+│   └── package.json
+├── docs/
+│   └── plan.md
+├── scripts/
+│   └── export.py
 └── README.md
 ```
 
