@@ -76,7 +76,16 @@ Thumbs.db
 desktop.ini
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
-code_export.txt
 *.log
-*.md
+
+# Architecture review & planning docs (not project source)
+roomcanvas_architecture_review.md
+AI_Interior_Design_13Day_Plan_v2.md
+
+# Temp build/audit scripts that may appear at project root
+/*.py
+code_export.txt
+full_audit_out.txt
+
+# Keep README
 !README.md
