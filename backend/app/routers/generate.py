@@ -15,33 +15,17 @@ from app.schemas.generation import GenerateResponse
 from app.utils.image_utils import validate_image_file, save_upload
 from app.utils.exceptions import InvalidImageError, InferenceServiceError
 
-# Service interfaces & mock implementations
-from app.services.mlsd_service import MlsdService, MockMlsdService
-from app.services.clip_service import ClipService, MockClipService
-from app.services.inference_service import InferenceService, MockInferenceService
-from app.services.generation_orchestrator import GenerationOrchestrator
+from ai.service import AIService
+from ai.services.orchestrator import GenerationOrchestrator
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# ── Service singletons ────────────────────────────────────────────────────────
-# Day 1: mock services.  Day 4: swap these three for real implementations.
-_mlsd_service: MlsdService = MockMlsdService()
-_clip_service: ClipService = MockClipService()
-_inference_service: InferenceService = MockInferenceService()
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def get_orchestrator(db: Session = Depends(get_db)) -> GenerationOrchestrator:
-    """Dependency that wires services + DB session into the orchestrator."""
+def get_ai_service(db: Session = Depends(get_db)) -> AIService:
+    """Dependency that wires DB session into the AI Service."""
     repo = GenerationRepository(db)
-    return GenerationOrchestrator(
-        mlsd_service=_mlsd_service,
-        clip_service=_clip_service,
-        inference_service=_inference_service,
-        repository=repo,
-    )
-
+    orchestrator = GenerationOrchestrator(repository=repo)
+    return AIService(orchestrator=orchestrator)
 
 @router.post(
     "/generate",
@@ -50,14 +34,13 @@ def get_orchestrator(db: Session = Depends(get_db)) -> GenerationOrchestrator:
     summary="Generate interior design variations",
     description=(
         "Accepts a room photo and a design style, runs the full AI pipeline "
-        "(structure extraction → room classification → diffusion inference), "
         "and returns 3 distinct design variations."
     ),
 )
 async def generate_design(
     image: UploadFile = File(..., description="Room photo (PNG / JPG / WEBP, max 10 MB)"),
     style: str = Form(..., description="Design style key, e.g. 'modern_minimalist'"),
-    orchestrator: GenerationOrchestrator = Depends(get_orchestrator),
+    ai_service: AIService = Depends(get_ai_service),
 ) -> GenerateResponse:
     logger.info("POST /api/generate — style=%r  filename=%r", style, image.filename)
 
@@ -84,7 +67,7 @@ async def generate_design(
 
     # 3. Run the full generation pipeline
     try:
-        result = orchestrator.run(
+        result = ai_service.generate_design(
             image_path=saved_path,
             style=style,
             n=settings.NUM_VARIATIONS,

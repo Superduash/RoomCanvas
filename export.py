@@ -37,7 +37,7 @@ def export_code():
                     continue
                 
                 # Only include text/code files
-                if file.endswith(('.py', '.jsx', '.js', '.css', '.html', '.md', '.json', '.txt')):
+                if file.endswith(('.py', '.jsx', '.js', '.css', '.html', '.md', '.json', '.txt', '.env.example')) or file == '.gitignore':
                     outfile.write(f"\n\n{'='*80}\n")
                     outfile.write(f"FILE: {file_path}\n")
                     outfile.write(f"{'='*80}\n\n")
