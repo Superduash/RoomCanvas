@@ -1,4 +1,7 @@
-from app.database.models import Generation
+try:
+    from app.database.models import Generation
+except ImportError:
+    from backend.app.database.models import Generation
 from ai.services.orchestrator import GenerationOrchestrator
 
 class AIService:

@@ -10,7 +10,10 @@ import uuid
 
 from ai.providers.base_provider import BaseAIProvider
 from ai.config import ai_settings
-from app.utils.exceptions import InferenceServiceError
+try:
+    from app.utils.exceptions import InferenceServiceError
+except ImportError:
+    from backend.app.utils.exceptions import InferenceServiceError
 from ai.storage import download_and_save
 
 logger = logging.getLogger(__name__)

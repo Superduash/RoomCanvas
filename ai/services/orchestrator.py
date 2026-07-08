@@ -1,11 +1,18 @@
 import logging
 from PIL import Image
 
-from app.config import settings
-from app.database.models import Generation
-from app.repositories.generation_repository import GenerationRepository
-from app.utils.image_utils import load_image
-from app.utils.exceptions import InferenceServiceError
+try:
+    from app.config import settings
+    from app.database.models import Generation
+    from app.repositories.generation_repository import GenerationRepository
+    from app.utils.image_utils import load_image
+    from app.utils.exceptions import InferenceServiceError
+except ImportError:
+    from backend.app.config import settings
+    from backend.app.database.models import Generation
+    from backend.app.repositories.generation_repository import GenerationRepository
+    from backend.app.utils.image_utils import load_image
+    from backend.app.utils.exceptions import InferenceServiceError
 
 from ai.providers.registry import get_provider
 from ai.prompts.builder import build_prompt
