@@ -17,7 +17,7 @@ import { useUIStore } from '../store/uiStore';
 import { resolveImageUrl } from '../api/client';
 import { titleCase } from '../lib/utils';
 import type { AnalyzeResponse } from '../api/types';
-import toast from 'react-hot-toast';
+import { toast } from '../lib/toast';
 
 type ViewMode = 'compare' | 'side-by-side' | 'generated';
 

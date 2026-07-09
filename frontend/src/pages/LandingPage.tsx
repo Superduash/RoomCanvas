@@ -376,7 +376,7 @@ function HeroVisual() {
   return (
     <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
       <CompareSlider
-        beforeSrc="/originalroom.jpg"
+        beforeSrc="/original.png"
         afterSrc="/redesignedroom.png"
         beforeLabel="Original"
         afterLabel="Redesigned"

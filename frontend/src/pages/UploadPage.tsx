@@ -10,7 +10,7 @@ import { Skeleton } from '../components/primitives/Skeleton';
 import { useConfig, useStyles, useAnalyzeRoom } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
-import toast from 'react-hot-toast';
+import { toast } from '../lib/toast';
 
 export function UploadPage() {
   const navigate = useNavigate();

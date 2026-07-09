@@ -11,7 +11,7 @@ import { Button } from '../primitives/Button';
 import { Dialog } from '../primitives/Dialog';
 import { Skeleton } from '../primitives/Skeleton';
 import { formatRelativeTime, titleCase } from '../../lib/utils';
-import toast from 'react-hot-toast';
+import { toast } from '../../lib/toast';
 
 interface HistoryCardProps {
   generation: GenerationOut;

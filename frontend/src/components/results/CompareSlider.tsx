@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Skeleton } from '../primitives/Skeleton';
 import { ChevronsLeftRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -18,26 +18,53 @@ export function CompareSlider({
   afterLabel = 'Redesigned',
   className,
 }: CompareSliderProps) {
-  const [position, setPosition] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const beforeWrapperRef = useRef<HTMLDivElement>(null);
+  const sliderLineRef = useRef<HTMLDivElement>(null);
+  const beforeLabelRef = useRef<HTMLSpanElement>(null);
+  const afterLabelRef = useRef<HTMLSpanElement>(null);
+  
+  const isDragging = useRef(false);
+
+  const updateDOM = (percent: number) => {
+    if (beforeWrapperRef.current) {
+      beforeWrapperRef.current.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+    }
+    if (sliderLineRef.current) {
+      sliderLineRef.current.style.left = `${percent}%`;
+    }
+    if (beforeLabelRef.current) {
+      beforeLabelRef.current.style.opacity = percent > 15 ? '1' : '0';
+    }
+    if (afterLabelRef.current) {
+      afterLabelRef.current.style.opacity = percent < 85 ? '1' : '0';
+    }
+  };
 
   const handleMove = (clientX: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const percent = (x / rect.width) * 100;
-    setPosition(percent);
+    
+    // Direct DOM manipulation for buttery smooth 60fps+ rendering
+    requestAnimationFrame(() => updateDOM(percent));
   };
 
   useEffect(() => {
-    if (!isDragging) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      handleMove(e.clientX);
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      handleMove(e.touches[0].clientX);
+    };
+    const handleUp = () => {
+      isDragging.current = false;
+    };
 
-    const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX);
-    const handleTouchMove = (e: TouchEvent) => handleMove(e.touches[0].clientX);
-    const handleUp = () => setIsDragging(false);
-
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
     window.addEventListener('mouseup', handleUp);
     window.addEventListener('touchend', handleUp);
@@ -48,7 +75,7 @@ export function CompareSlider({
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('touchend', handleUp);
     };
-  }, [isDragging]);
+  }, []);
 
   return (
     <div
@@ -58,11 +85,11 @@ export function CompareSlider({
         className
       )}
       onMouseDown={(e) => {
-        setIsDragging(true);
+        isDragging.current = true;
         handleMove(e.clientX);
       }}
       onTouchStart={(e) => {
-        setIsDragging(true);
+        isDragging.current = true;
         handleMove(e.touches[0].clientX);
       }}
     >
@@ -78,8 +105,9 @@ export function CompareSlider({
 
       {/* Before (original) — clipped to left side */}
       <div
+        ref={beforeWrapperRef}
         className="absolute inset-0 overflow-hidden"
-        style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
+        style={{ clipPath: 'inset(0 50% 0 0)' }}
       >
         <img
           src={beforeSrc}
@@ -93,8 +121,9 @@ export function CompareSlider({
 
       {/* Visual slider line */}
       <div
+        ref={sliderLineRef}
         className="absolute top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_rgba(0,0,0,0.3)] pointer-events-none z-10"
-        style={{ left: `${position}%`, transform: 'translateX(-50%)' }}
+        style={{ left: '50%', transform: 'translateX(-50%)' }}
       >
         {/* Elegant handle */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center border border-border transition-transform duration-fast hover:scale-110 active:scale-95">
@@ -105,16 +134,16 @@ export function CompareSlider({
       {/* Labels */}
       <div className="absolute top-4 left-4 pointer-events-none z-20">
         <span
+          ref={beforeLabelRef}
           className="rounded-full bg-surface/90 backdrop-blur-md border border-border/50 px-3 py-1.5 text-xs font-semibold tracking-wide uppercase text-text-primary shadow-sm transition-opacity duration-base"
-          style={{ opacity: position > 15 ? 1 : 0 }}
         >
           {beforeLabel}
         </span>
       </div>
       <div className="absolute top-4 right-4 pointer-events-none z-20">
         <span
+          ref={afterLabelRef}
           className="rounded-full bg-surface/90 backdrop-blur-md border border-border/50 px-3 py-1.5 text-xs font-semibold tracking-wide uppercase text-text-primary shadow-sm transition-opacity duration-base"
-          style={{ opacity: position < 85 ? 1 : 0 }}
         >
           {afterLabel}
         </span>

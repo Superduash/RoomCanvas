@@ -5,7 +5,7 @@ import { Button } from '../primitives/Button';
 import { Textarea } from '../primitives/Input';
 import { useRefineDesign } from '../../api/queries';
 import { useUIStore } from '../../store/uiStore';
-import toast from 'react-hot-toast';
+import { toast } from '../../lib/toast';
 
 const SUGGESTION_CHIPS = [
   'Change the wall color to sage green',

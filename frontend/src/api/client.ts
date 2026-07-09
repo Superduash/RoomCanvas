@@ -24,39 +24,46 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
     } catch {
       /* body wasn't JSON — keep default message */
     }
-    logger.error(`API Error on ${method} ${path}: ${detail}`);
+    // Only warn here; let the caller decide if it should be an Error toast.
+    logger.warn(`API Error on ${method} ${path}: ${detail}`);
     throw new ApiError(detail, res.status);
   }
   return res.json() as Promise<T>;
 }
 
-export const api = {
-  get: <T>(path: string): Promise<T> => {
-    const start = performance.now();
-    return fetch(`${API_PREFIX}${path}`, { method: 'GET' })
-      .then((r) => handleResponse<T>(r, 'GET', path, start));
-  },
+async function safeFetch<T>(method: string, path: string, options: RequestInit): Promise<T> {
+  const start = performance.now();
+  try {
+    const r = await fetch(`${API_PREFIX}${path}`, { ...options, method });
+    return await handleResponse<T>(r, method, path, start);
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    
+    // Network failure, DNS error, or CORS error
+    const elapsed = performance.now() - start;
+    logger.error(`Network Error on ${method} ${path} after ${Math.round(elapsed)}ms:`, err);
+    
+    // Check if offline
+    if (!navigator.onLine) {
+      throw new ApiError('You appear to be offline. Please check your internet connection.', 0);
+    }
+    throw new ApiError('Network error. The server might be unreachable or down.', 0);
+  }
+}
 
-  post: <T>(path: string, body: unknown): Promise<T> => {
-    const start = performance.now();
-    return fetch(`${API_PREFIX}${path}`, {
-      method: 'POST',
+export const api = {
+  get: <T>(path: string): Promise<T> => safeFetch<T>('GET', path, {}),
+  
+  post: <T>(path: string, body: unknown): Promise<T> =>
+    safeFetch<T>('POST', path, {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).then((r) => handleResponse<T>(r, 'POST', path, start));
-  },
+    }),
 
-  postForm: <T>(path: string, formData: FormData): Promise<T> => {
-    const start = performance.now();
-    return fetch(`${API_PREFIX}${path}`, { method: 'POST', body: formData })
-      .then((r) => handleResponse<T>(r, 'POST', path, start));
-  },
+  postForm: <T>(path: string, formData: FormData): Promise<T> =>
+    safeFetch<T>('POST', path, { body: formData }),
 
-  del: <T>(path: string): Promise<T> => {
-    const start = performance.now();
-    return fetch(`${API_PREFIX}${path}`, { method: 'DELETE' })
-      .then((r) => handleResponse<T>(r, 'DELETE', path, start));
-  },
+  del: <T>(path: string): Promise<T> => safeFetch<T>('DELETE', path, {}),
 };
 
 // Image paths are relative POSIX paths from repo root
