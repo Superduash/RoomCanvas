@@ -99,7 +99,7 @@ export function PaletteSwatches({ swatches }: PaletteSwatchesProps) {
               aria-label={`${s.name} — ${s.hex}`}
             />
             <div className="text-center">
-              <p className="text-[11px] font-semibold text-text-primary truncate w-full px-1">{s.name}</p>
+              <p className="text-[11px] font-semibold text-text-primary line-clamp-2 leading-tight w-full px-1">{s.name}</p>
               <p className="text-[10px] text-text-tertiary font-mono tracking-wider">{s.hex}</p>
             </div>
           </div>

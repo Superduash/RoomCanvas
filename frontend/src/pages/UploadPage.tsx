@@ -58,8 +58,9 @@ export function UploadPage() {
   };
 
   const budgetVariant = (tag: string) => {
-    if (tag === 'Budget') return 'success';
-    if (tag === 'Premium') return 'accent';
+    const t = tag.toLowerCase();
+    if (t.includes('budget')) return 'success';
+    if (t.includes('premium')) return 'accent';
     return 'info';
   };
 
@@ -116,8 +117,8 @@ export function UploadPage() {
                   className="p-5 flex flex-col justify-between h-full"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-3 mb-3 w-full">
-                      <h3 className="text-base font-semibold text-text-primary truncate flex-1">{titleCase(style.id)}</h3>
+                    <div className="flex items-start justify-between gap-3 mb-3 w-full min-h-[3rem]">
+                      <h3 className="text-base font-semibold text-text-primary line-clamp-2 flex-1 pt-0.5">{titleCase(style.id)}</h3>
                       <Badge variant={budgetVariant(style.budget_tag) as any} dot className="flex-shrink-0">
                         {style.budget_tag}
                       </Badge>

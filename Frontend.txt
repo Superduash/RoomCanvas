@@ -1,0 +1,803 @@
+
+
+================================================================================
+FILE: .\frontend\.env.example
+================================================================================
+
+# Copy to .env.local for local development — Vite auto-loads .env.local (gitignored by default).
+VITE_API_BASE_URL=http://localhost:8000
+
+
+================================================================================
+FILE: .\frontend\generate-icons.js
+================================================================================
+
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const inputPath = path.resolve(__dirname, '../Logo Reference.png');
+const outputDir = path.resolve(__dirname, 'public/icons');
+
+// Create output directory if it doesn't exist
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
+
+const sizes = [16, 32, 48, 64, 72, 96, 128, 144, 152, 180, 192, 256, 384, 512];
+
+async function generate() {
+  console.log('Generating icons from Logo Reference.png...');
+  
+  // Standard sizes
+  for (const size of sizes) {
+    await sharp(inputPath)
+      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .toFile(path.join(outputDir, `icon-${size}x${size}.png`));
+    console.log(`Generated icon-${size}x${size}.png`);
+  }
+
+  // Maskable icon (usually needs some padding)
+  await sharp(inputPath)
+    .resize(512, 512, { fit: 'contain', background: '#B76E4D' }) // using the brand accent color as background for maskable
+    .toFile(path.join(outputDir, `icon-maskable-512x512.png`));
+  console.log('Generated maskable icon');
+
+  // Monochrome (just a simple threshold trace or greyscale)
+  await sharp(inputPath)
+    .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .threshold(128) // Make it monochrome solid
+    .toFile(path.join(outputDir, `icon-monochrome-512x512.png`));
+  console.log('Generated monochrome icon');
+
+  // Apple Touch Icon
+  await sharp(inputPath)
+    .resize(180, 180, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    .toFile(path.join(outputDir, `apple-touch-icon.png`));
+  console.log('Generated apple touch icon');
+
+  // Favicon ICO (just using 32x32 png renamed to ico for modern simplicity, or combine them if needed, but sharp can't output .ico directly)
+  // Actually, standard practice now is to use PNG favicons, but we can copy the 32x32 one to favicon.ico
+  fs.copyFileSync(
+    path.join(outputDir, `icon-32x32.png`),
+    path.resolve(__dirname, 'public/favicon.ico')
+  );
+  
+  // Create a manifest.json
+  const manifest = {
+    name: "RoomCanvas",
+    short_name: "RoomCanvas",
+    description: "AI-powered interior design assistant.",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#FAF7F2",
+    theme_color: "#FAF8F5",
+    icons: sizes.map(s => ({
+      src: `/icons/icon-${s}x${s}.png`,
+      sizes: `${s}x${s}`,
+      type: "image/png"
+    })).concat([
+      {
+        src: "/icons/icon-maskable-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable"
+      },
+      {
+        src: "/icons/icon-monochrome-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "monochrome"
+      }
+    ])
+  };
+
+  fs.writeFileSync(
+    path.resolve(__dirname, 'public/manifest.json'),
+    JSON.stringify(manifest, null, 2)
+  );
+  console.log('Generated manifest.json');
+}
+
+generate().catch(console.error);
+
+
+================================================================================
+FILE: .\frontend\index.html
+================================================================================
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoomCanvas — AI Interior Design Assistant</title>
+    <meta name="description" content="Upload a photo of your room and get an AI-generated redesign with real furniture, dimension, and budget recommendations." />
+    <meta property="og:title" content="RoomCanvas" />
+    <meta property="og:description" content="See your room, redesigned." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#FAF8F5" />
+    <link rel="icon" type="image/svg+xml" href="/branding/logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/branding/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/branding/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/branding/apple-touch-icon.png" />
+    <link rel="manifest" href="/branding/site.webmanifest" />
+    
+    <meta property="og:image" content="/branding/logo.png" />
+    <meta name="msapplication-TileImage" content="/branding/android-chrome-192x192.png" />
+    <meta name="msapplication-TileColor" content="#FAF8F5" />
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+
+================================================================================
+FILE: .\frontend\package.json
+================================================================================
+
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/tailwindcss": "^3.0.11",
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.16",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vite-tsconfig-paths": "^5.1.4"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-query-devtools": "^5.101.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "framer-motion": "^12.42.2",
+    "lucide-react": "^1.23.0",
+    "potrace": "^2.1.8",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-dropzone": "^15.0.0",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.18.1",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  }
+}
+
+
+================================================================================
+FILE: .\frontend\postcss.config.js
+================================================================================
+
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+
+
+================================================================================
+FILE: .\frontend\src\style.css
+================================================================================
+
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --code-bg: #1f2028;
+    --accent: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+    --social-bg: rgba(47, 48, 58, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  }
+
+  #social .button-icon {
+    filter: invert(1) brightness(2);
+  }
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
+
+.counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.hero {
+  position: relative;
+
+  .base,
+  .framework,
+  .vite {
+    inset-inline: 0;
+    margin: 0 auto;
+  }
+
+  .base {
+    width: 170px;
+    position: relative;
+    z-index: 0;
+  }
+
+  .framework,
+  .vite {
+    position: absolute;
+  }
+
+  .framework {
+    z-index: 1;
+    top: 34px;
+    height: 28px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
+      scale(1.4);
+  }
+
+  .vite {
+    z-index: 0;
+    top: 107px;
+    height: 26px;
+    width: auto;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
+      scale(0.8);
+  }
+}
+
+#app {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+  flex-grow: 1;
+
+  @media (max-width: 1024px) {
+    padding: 32px 20px 24px;
+    gap: 18px;
+  }
+}
+
+#next-steps {
+  display: flex;
+  border-top: 1px solid var(--border);
+  text-align: left;
+
+  & > div {
+    flex: 1 1 0;
+    padding: 32px;
+    @media (max-width: 1024px) {
+      padding: 24px 20px;
+    }
+  }
+
+  .icon {
+    margin-bottom: 16px;
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+#docs {
+  border-right: 1px solid var(--border);
+
+  @media (max-width: 1024px) {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+#next-steps ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  margin: 32px 0 0;
+
+  .logo {
+    height: 18px;
+  }
+
+  a {
+    color: var(--text-h);
+    font-size: 16px;
+    border-radius: 6px;
+    background: var(--social-bg);
+    display: flex;
+    padding: 6px 12px;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: box-shadow 0.3s;
+
+    &:hover {
+      box-shadow: var(--shadow);
+    }
+    .button-icon {
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    li {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    a {
+      width: 100%;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+  }
+}
+
+#spacer {
+  height: 88px;
+  border-top: 1px solid var(--border);
+  @media (max-width: 1024px) {
+    height: 48px;
+  }
+}
+
+.ticks {
+  position: relative;
+  width: 100%;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -4.5px;
+    border: 5px solid transparent;
+  }
+
+  &::before {
+    left: 0;
+    border-left-color: var(--border);
+  }
+  &::after {
+    right: 0;
+    border-right-color: var(--border);
+  }
+}
+
+
+================================================================================
+FILE: .\frontend\src\components\command\CommandPalette.css
+================================================================================
+
+/* cmdk token-driven overrides */
+[cmdk-group-heading] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  padding: 8px 8px 4px;
+}
+
+.cmd-group {
+  margin-bottom: 4px;
+}
+
+.cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.cmd-item[aria-selected='true'],
+.cmd-item:hover {
+  background-color: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+
+================================================================================
+FILE: .\frontend\src\styles\globals.css
+================================================================================
+
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+    line-height: var(--leading-normal);
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-subtle);
+    color: var(--color-accent);
+  }
+
+  img, video {
+    max-width: 100%;
+    display: block;
+  }
+
+  input, textarea, select, button {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: var(--radius-full);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
+}
+
+/* ── Skeleton pulse ─────────────────────────────────────── */
+@layer utilities {
+  .skeleton-pulse {
+    background: linear-gradient(
+      90deg,
+      var(--color-border) 25%,
+      var(--color-surface-alt) 50%,
+      var(--color-border) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* Typography utilities */
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  /* Skip-link */
+  .sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Page transition ─────────────────────────────────────── */
+@keyframes page-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-fade-up var(--duration-slow) var(--ease-out) both;
+}
+
+/* ── Select dropdown cross-browser fix ────────────────────── */
+/* Chrome/Windows doesn't inherit background for <option> in custom-styled selects */
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+/* ── Stacking context ─────────────────────────────────────── */
+/* Ensure card dropdowns stay above sibling cards but below dialogs/toasts */
+@layer utilities {
+  .z-card { z-index: 10; }
+  .z-dropdown { z-index: 50; }
+  .z-modal { z-index: 100; }
+  .z-toast { z-index: 9999; }
+}
+
+/* ── Focus visible ring ───────────────────────────────────── */
+/* Consistent focus ring across interactive elements */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+/* Suppress outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Input / select base reset ────────────────────────────── */
+/* Remove Firefox default styling for invalid states */
+input:invalid, textarea:invalid, select:invalid {
+  box-shadow: none;
+}
+
+
+================================================================================
+FILE: .\frontend\src\styles\tokens.css
+================================================================================
+
+:root {
+  /* ── Color: warm architectural neutrals ── */
+  --color-bg:              #FAF7F2;
+  --color-surface:         #FFFFFF;
+  --color-surface-alt:     #F4EFE8;
+  --color-surface-raised:  #FFFFFF;
+  --color-border:          #E6DED4;
+  --color-border-strong:   #CEC5B8;
+  --color-text-primary:    #1F1F1F;
+  --color-text-secondary:  #524E48;
+  --color-text-tertiary:   #757069;
+  --color-text-inverse:    #FAF7F2;
+
+  /* ── Color: terracotta accent — the brand color ── */
+  --color-accent:          #B76E4D;
+  --color-accent-hover:    #A35F42;
+  --color-accent-subtle:   #F5EAE2;
+  --color-accent-text-on:  #FFFFFF;
+
+  /* ── Color: semantic ── */
+  --color-success:         #3C7A52;
+  --color-success-subtle:  #E3F0E9;
+  --color-warning:         #D89B34;
+  --color-warning-subtle:  #FDF4E1;
+  --color-danger:          #C44B4B;
+  --color-danger-subtle:   #FAEBEB;
+  --color-info:            #3B6EA5;
+  --color-info-subtle:     #E2ECF5;
+
+  /* ── Spacing — 8px base grid ── */
+  --space-0:   2px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+  --space-10: 128px;
+
+  /* ── Radius ── */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* ── Typography ── */
+  --font-sans:   'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --text-xs:    11px;
+  --text-sm:    13px;
+  --text-base:  15px;
+  --text-md:    16px;
+  --text-lg:    18px;
+  --text-xl:    22px;
+  --text-2xl:   28px;
+  --text-3xl:   36px;
+  --text-4xl:   48px;
+  --text-5xl:   64px;
+  --text-hero:  72px;
+
+  --leading-none:    1;
+  --leading-tight:   1.2;
+  --leading-snug:    1.35;
+  --leading-normal:  1.55;
+  --leading-relaxed: 1.75;
+
+  --tracking-tighter: -0.04em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:   0;
+  --tracking-wide:     0.05em;
+  --tracking-widest:   0.12em;
+
+  /* ── Shadows — soft layered, warm-tinted ── */
+  --shadow-xs:    0 1px 2px rgba(31,24,18,0.04);
+  --shadow-sm:    0 1px 3px rgba(31,24,18,0.06), 0 1px 2px rgba(31,24,18,0.04);
+  --shadow-md:    0 4px 12px rgba(31,24,18,0.08), 0 2px 4px rgba(31,24,18,0.04);
+  --shadow-lg:    0 12px 32px rgba(31,24,18,0.10), 0 4px 8px rgba(31,24,18,0.04);
+  --shadow-xl:    0 24px 64px rgba(31,24,18,0.12), 0 8px 16px rgba(31,24,18,0.06);
+  --shadow-focus: 0 0 0 3px rgba(183,110,77,0.28);
+  --shadow-focus-danger: 0 0 0 3px rgba(196,75,75,0.24);
+
+  /* ── Motion ── */
+  --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:    cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard:  cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  --duration-instant: 80ms;
+  --duration-fast:   150ms;
+  --duration-base:   220ms;
+  --duration-slow:   350ms;
+  --duration-slower: 500ms;
+
+  /* ── Layout ── */
+  --content-max-width: 1280px;
+  --nav-height: 72px;
+  --page-gutter: clamp(16px, 5vw, 48px);
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

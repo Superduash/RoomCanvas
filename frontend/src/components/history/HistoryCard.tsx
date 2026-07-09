@@ -132,7 +132,7 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
 
         {/* Card Body */}
         <div className="flex flex-col flex-1 p-5">
-          <h3 className="text-base font-semibold text-text-primary truncate mb-1.5">
+          <h3 className="text-base font-semibold text-text-primary mb-1.5 leading-snug">
             {g.room_type_detected ?? 'Untitled Space'}
           </h3>
           
@@ -265,7 +265,7 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
                           </Button>
                        </div>
                     </div>
-                    <p className="text-xs font-medium text-text-primary line-clamp-2 italic">
+                    <p className="text-xs font-medium text-text-primary italic leading-relaxed break-words">
                       &ldquo;{r.redesign_prompt}&rdquo;
                     </p>
                   </div>

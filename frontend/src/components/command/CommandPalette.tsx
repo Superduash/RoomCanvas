@@ -77,7 +77,7 @@ export function CommandPalette() {
                     alt=""
                     className="h-8 w-8 rounded object-cover flex-shrink-0"
                   />
-                  <span className="truncate">
+                  <span className="line-clamp-2">
                     {g.room_type_detected ?? 'Untitled room'} — {g.style}
                   </span>
                 </Command.Item>
