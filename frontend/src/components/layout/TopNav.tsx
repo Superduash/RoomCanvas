@@ -45,73 +45,78 @@ export function TopNav() {
 
       {/* Main nav */}
       <header
-        className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border h-[60px] md:h-[var(--nav-height)]"
+        className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border h-[64px] md:h-[var(--nav-height)]"
       >
         <div className="mx-auto max-w-content h-full flex items-center justify-between px-6">
+          
+          {/* Left: Logo & Nav */}
+          <div className="flex items-center gap-8 xl:gap-10 shrink-0">
+            {/* Logo */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 group focus-visible:outline-none focus-visible:shadow-focus rounded-md"
+              aria-label="RoomCanvas home"
+            >
+              <div className="-translate-y-[1px]">
+                <RoomCanvasLogoMark size={32} />
+              </div>
+              <span className="text-[15px] font-semibold text-text-primary tracking-tight group-hover:text-accent transition-colors duration-fast">
+                RoomCanvas
+              </span>
+            </Link>
 
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 group focus-visible:outline-none focus-visible:shadow-focus rounded-md"
-            aria-label="RoomCanvas home"
-          >
-            <div className="-translate-y-[1px]">
-              <RoomCanvasLogoMark size={32} />
-            </div>
-            <span className="text-[15px] font-semibold text-text-primary tracking-tight group-hover:text-accent transition-colors duration-fast">
-              RoomCanvas
-            </span>
-          </Link>
-
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1 ml-6 mr-auto" aria-label="Main navigation">
-            <NavLink to="/" className={navLinkClass} end={true}>
-              <span className="px-3 py-1.5 block">Home</span>
-            </NavLink>
-            <NavLink to="/upload" className={navLinkClass} end={false}>
-              <span className="px-3 py-1.5 block">New Design</span>
-            </NavLink>
-            <NavLink to="/history" className={navLinkClass}>
-              <span className="px-3 py-1.5 block">Library</span>
-            </NavLink>
-          </nav>
+            {/* Desktop nav */}
+            <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
+              <NavLink to="/" className={navLinkClass} end={true}>
+                <span className="py-1.5 block">Home</span>
+              </NavLink>
+              <NavLink to="/upload" className={navLinkClass} end={false}>
+                <span className="py-1.5 block">New Design</span>
+              </NavLink>
+              <NavLink to="/history" className={navLinkClass}>
+                <span className="py-1.5 block">Library</span>
+              </NavLink>
+            </nav>
+          </div>
 
           {/* Center Search */}
-          <form 
-            onSubmit={handleSearch}
-            className="hidden lg:flex items-center relative mr-6 flex-1 max-w-sm"
-          >
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary pointer-events-none" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search designs..."
-              className="w-full h-9 rounded-lg border border-border bg-surface-alt pl-9 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:bg-surface transition-all duration-fast shadow-sm"
-              aria-label="Search library"
-            />
-          </form>
+          <div className="hidden lg:flex flex-1 justify-center px-8 min-w-[280px]">
+            <form 
+              onSubmit={handleSearch}
+              className="relative w-full max-w-[400px]"
+            >
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary pointer-events-none" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search designs..."
+                className="w-full h-11 rounded-xl border border-border bg-surface-alt pl-11 pr-5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:bg-surface transition-all duration-fast shadow-sm"
+                aria-label="Search library"
+              />
+            </form>
+          </div>
 
-          {/* Desktop actions */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* Right: Desktop actions */}
+          <div className="hidden md:flex items-center justify-end gap-3 shrink-0">
             <Link to="/upload">
-              <Button size="sm" variant="primary" icon={<Plus className="h-3.5 w-3.5" />}>
+              <Button size="lg" variant="primary" icon={<Plus className="h-4 w-4" />}>
                 New Design
               </Button>
             </Link>
-            <Button size="icon" variant="ghost" className="text-text-secondary" title="Settings (Coming soon)">
-              <Settings className="h-4 w-4" />
+            <Button size="icon-lg" variant="ghost" className="text-text-secondary" title="Settings (Coming soon)">
+              <Settings className="h-5 w-5" />
             </Button>
           </div>
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden h-9 w-9 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-fast focus-visible:outline-none focus-visible:shadow-focus"
+            className="md:hidden h-10 w-10 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-fast focus-visible:outline-none focus-visible:shadow-focus ml-auto"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
           </button>
         </div>
       </header>
