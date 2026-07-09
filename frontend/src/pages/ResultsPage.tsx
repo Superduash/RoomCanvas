@@ -136,7 +136,7 @@ export function ResultsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1400px] px-6 py-10 page-enter">
+    <div className="mx-auto max-w-[1600px] px-6 py-10 page-enter">
       {/* Breadcrumb & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
@@ -221,7 +221,7 @@ export function ResultsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-10 lg:gap-12 items-start">
         
         {/* Left: Image workspace */}
         <div className="space-y-6">

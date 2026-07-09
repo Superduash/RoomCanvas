@@ -80,7 +80,14 @@ class ReplicateProvider(GenerationProvider):
             
             logger.info(f"Calling Replicate model {self.model} for refinement...")
             
-            output = await self.client.async_run(
+            from replicate.client import Client
+            import httpx
+            client = Client(
+                api_token=settings.REPLICATE_API_TOKEN,
+                timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
+            )
+            
+            output = await client.async_run(
                 self.model,
                 input={
                     "input_image": file_obj,

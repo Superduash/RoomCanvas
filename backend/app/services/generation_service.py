@@ -98,7 +98,13 @@ class GenerationService:
             image_bytes = resize_for_upload(image)
 
             # 2. Build prompt
-            final_prompt = build_generation_prompt(generation.redesign_prompt)
+            analysis_data = {}
+            if generation.analysis_json:
+                try:
+                    analysis_data = json.loads(generation.analysis_json)
+                except Exception:
+                    pass
+            final_prompt = build_generation_prompt(generation.redesign_prompt, analysis_data)
 
             # 3. Call Replicate
             logger.info(

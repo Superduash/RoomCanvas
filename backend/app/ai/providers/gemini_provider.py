@@ -27,6 +27,9 @@ class GeminiProvider(AnalysisProvider):
     def _is_transient(exc: Exception) -> bool:
         if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError)):
             return True
+        exc_str = str(exc).lower()
+        if "timed out" in exc_str or "timeout" in exc_str or "503" in exc_str or "unavailable" in exc_str:
+            return True
         if isinstance(exc, genai_errors.APIError): # using APIError as genai_errors base
             if hasattr(exc, 'code') and exc.code >= 500:
                 return True

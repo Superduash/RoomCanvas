@@ -4,11 +4,23 @@ JSON Schema definitions for Gemini structured outputs.
 
 ANALYSIS_RESPONSE_SCHEMA = {
     "type": "object",
-    "required": ["room_type", "furniture", "estimated_dimensions", "layout_notes",
+    "required": ["room_type", "architecture", "furniture_placement", "furniture", "estimated_dimensions", "layout_notes",
                  "color_palette", "lighting_suggestions", "estimated_budget_range",
                  "style_explanation", "redesign_prompt"],
     "properties": {
         "room_type": {"type": "string"},
+        "architecture": {
+            "type": "object",
+            "required": ["walls", "windows", "doors", "ceiling_height", "lighting_direction"],
+            "properties": {
+                "walls": {"type": "string"},
+                "windows": {"type": "string"},
+                "doors": {"type": "string"},
+                "ceiling_height": {"type": "string"},
+                "lighting_direction": {"type": "string"}
+            }
+        },
+        "furniture_placement": {"type": "string"},
         "furniture": {
             "type": "array",
             "items": {
