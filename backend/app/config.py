@@ -18,7 +18,6 @@ class Settings(BaseSettings):
 
     # ── Storage Directories ───────────────────────────────────────────────────
     UPLOAD_DIR: str = "./storage/uploads"
-    CONTROL_IMAGE_DIR: str = "./storage/control_images"
     GENERATED_DIR: str = "./storage/generated"
 
     # ── API / Security ────────────────────────────────────────────────────────
@@ -27,10 +26,16 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 10
 
     # ── AI Pipeline ───────────────────────────────────────────────────────────
-    # Set to "real" once the Colab inference notebook is connected.
-    AI_MODE: str = "mock"
-    # Number of design variations to generate per request
-    NUM_VARIATIONS: int = 3
+    ACTIVE_ANALYSIS_PROVIDER: str = "gemini"
+    ACTIVE_GENERATION_PROVIDER: str = "replicate"
+
+    # API Keys
+    GEMINI_API_KEY: str = ""
+    REPLICATE_API_TOKEN: str = ""
+
+    # Timeouts
+    GEMINI_TIMEOUT_SECONDS: int = 20
+    REPLICATE_TIMEOUT_SECONDS: int = 45
 
     @field_validator("MAX_UPLOAD_SIZE_MB")
     @classmethod
@@ -39,12 +44,7 @@ class Settings(BaseSettings):
             raise ValueError("MAX_UPLOAD_SIZE_MB must be a positive integer")
         return v
 
-    @field_validator("NUM_VARIATIONS")
-    @classmethod
-    def must_be_reasonable(cls, v: int) -> int:
-        if not 1 <= v <= 10:
-            raise ValueError("NUM_VARIATIONS must be between 1 and 10")
-        return v
+
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),

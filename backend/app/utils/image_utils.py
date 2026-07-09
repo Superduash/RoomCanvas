@@ -1,5 +1,4 @@
-import os
-import uuid
+import io
 import logging
 from pathlib import Path
 from PIL import Image
@@ -33,43 +32,18 @@ def validate_image_file(upload_file: UploadFile) -> None:
         raise InvalidImageError(
             f"Image size exceeds the limit of {settings.MAX_UPLOAD_SIZE_MB}MB."
         )
-
-def save_upload(upload_file: UploadFile, directory: str) -> str:
-    # Resolve directory relative to the workspace root or as provided
-    base_dir = Path(directory)
-    base_dir.mkdir(parents=True, exist_ok=True)
-
-    # Extract extension or fallback
-    ext = Path(upload_file.filename or "").suffix.lower()
-    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
-        content_type_map = {
-            "image/jpeg": ".jpg",
-            "image/png": ".png",
-            "image/webp": ".webp"
-        }
-        ext = content_type_map.get(upload_file.content_type, ".jpg")
-
-    new_filename = f"{uuid.uuid4()}{ext}"
-    dest_path = base_dir / new_filename
-
-    # Save to disk
+        
+    # Content-based image validation (Pillow verify)
+    # NOTE: Image.verify() closes the internal file handle, so we read into a buffer first.
     try:
         upload_file.file.seek(0)
-        with open(dest_path, "wb") as buffer:
-            while chunk := upload_file.file.read(8192):
-                buffer.write(chunk)
-        logger.info(f"Saved upload file to {dest_path}")
+        img_bytes = upload_file.file.read()
+        img = Image.open(io.BytesIO(img_bytes))
+        img.verify()  # Verifies it is an actual image
+        upload_file.file.seek(0)  # Reset for subsequent reads
     except Exception as e:
-        logger.error(f"Error saving upload file: {e}")
-        raise RuntimeError(f"Could not save upload file: {e}")
-
-    # Return relative path from backend folder or workspace root
-    # Since storage/ is usually located at the workspace root (or inside backend), let's keep it uniform.
-    # The config has UPLOAD_DIR: "./storage/uploads"
-    # Returning "storage/uploads/<uuid>.<ext>" fits FastAPI static mount.
-    # Let's normalize it to use forward slashes
-    relative_path = Path(directory) / new_filename
-    return relative_path.as_posix()
+        logger.error(f"Image content verification failed: {e}")
+        raise InvalidImageError("The uploaded file is not a valid image.")
 
 def load_image(path: str) -> Image.Image:
     # Resolve path
@@ -82,3 +56,18 @@ def load_image(path: str) -> Image.Image:
     except Exception as e:
         logger.error(f"Failed to load image from {path}: {e}")
         raise InvalidImageError(f"Could not load image: {e}")
+
+def resize_for_upload(image: Image.Image, max_dimension: int = 2048) -> bytes:
+    w, h = image.size
+    if max(w, h) > max_dimension:
+        scale = max_dimension / max(w, h)
+        new_w, new_h = int(w * scale), int(h * scale)
+        image = image.resize((new_w, new_h), Image.LANCZOS)
+    
+    # Convert to RGB if necessary before saving to JPEG
+    if image.mode in ('RGBA', 'LA') or (image.mode == 'P' and 'transparency' in image.info):
+        image = image.convert('RGB')
+        
+    out = io.BytesIO()
+    image.save(out, format="JPEG", quality=90)
+    return out.getvalue()

@@ -9,13 +9,20 @@ class Generation(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     original_image_path: Mapped[str] = mapped_column(String, nullable=False)
-    control_image_path: Mapped[str | None] = mapped_column(String, nullable=True)
     room_type_detected: Mapped[str | None] = mapped_column(String, nullable=True)
     room_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     style: Mapped[str] = mapped_column(String, nullable=False)
-    prompt_used: Mapped[str] = mapped_column(String, nullable=False)
+    redesign_prompt: Mapped[str] = mapped_column(String, nullable=False)
+    prompt_version: Mapped[str | None] = mapped_column(String, nullable=True)
+    analysis_json: Mapped[str | None] = mapped_column(String, nullable=True)
+    parent_generation_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("generations.id"), nullable=True)
+    provider: Mapped[str | None] = mapped_column(String, nullable=True)
+    provider_version: Mapped[str | None] = mapped_column(String, nullable=True)
     model_used: Mapped[str] = mapped_column(String, nullable=False)
-    generation_time_sec: Mapped[float] = mapped_column(Float, nullable=False)
+    model_version: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="completed", nullable=False)
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
+    processing_time_sec: Mapped[float] = mapped_column(Float, nullable=False)
     selected_variation_id: Mapped[int | None] = mapped_column(
         Integer, 
         ForeignKey("variations.id", use_alter=True, name="fk_generation_selected_variation_id"), 

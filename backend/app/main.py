@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -11,7 +12,8 @@ import uvicorn
 import app.logging_config as logging_config
 from app.config import settings
 from app.database.session import engine, Base
-from app.routers import health, generate, history
+from app.ai.providers.provider_registry import init_providers
+from app.routers import health, analyze, generate, refine, history, styles, providers, config
 from app.utils.exceptions import InteriorAIError
 
 logger = logging_config.logger
@@ -24,6 +26,20 @@ async def lifespan(app: FastAPI):
     All initialisation logic runs before the first `yield`; cleanup runs after.
     """
     # ── Startup ──────────────────────────────────────────────────────────────
+    if not settings.GEMINI_API_KEY:
+        logger.critical("GEMINI_API_KEY is not set — set it in .env and restart.")
+        sys.exit(1)
+    if not settings.REPLICATE_API_TOKEN:
+        logger.critical("REPLICATE_API_TOKEN is not set — set it in .env and restart.")
+        sys.exit(1)
+
+    # Initialise provider singletons (once per process, not once per request)
+    try:
+        init_providers()
+    except Exception as exc:
+        logger.critical(f"Failed to initialise AI providers: {exc}")
+        sys.exit(1)
+
     logger.info("Initializing database schema…")
     try:
         Base.metadata.create_all(bind=engine)
@@ -33,15 +49,21 @@ async def lifespan(app: FastAPI):
         sys.exit(1)
 
     # Ensure required storage subdirectories exist
-    for directory in [settings.UPLOAD_DIR, settings.CONTROL_IMAGE_DIR, settings.GENERATED_DIR]:
+    for directory in [settings.UPLOAD_DIR, settings.GENERATED_DIR]:
         Path(directory).mkdir(parents=True, exist_ok=True)
 
-    logger.info("=" * 60)
-    logger.info(f"   {settings.APP_NAME} API — Ready")
-    logger.info(f"   AI Mode:    {health.AI_MODE}")
-    logger.info(f"   Debug:      {settings.DEBUG}")
-    logger.info(f"   Database:   {settings.DATABASE_URL}")
-    logger.info("=" * 60)
+    # Warm static caches so first requests are instant
+    from app.cache import get_cached_styles, get_cached_config
+    get_cached_styles()
+    get_cached_config(settings.MAX_UPLOAD_SIZE_MB)
+    logger.info("Static caches warmed.")
+
+    logger.info(
+        f"{settings.APP_NAME} ready — "
+        f"analysis={settings.ACTIVE_ANALYSIS_PROVIDER} "
+        f"generation={settings.ACTIVE_GENERATION_PROVIDER} "
+        f"debug={settings.DEBUG}"
+    )
 
     yield  # ── Application runs here ─────────────────────────────────────────
 
@@ -53,8 +75,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     description=(
-        "RoomCanvas AI — Intelligent interior space redesign powered by ControlNet + Stable Diffusion. "
-        "Upload a room photo, choose a style, and receive 3 AI-generated variations."
+        "RoomCanvas AI — Intelligent interior space redesign powered by Gemini and Replicate."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -62,14 +83,35 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+@app.middleware("http")
+async def access_log_middleware(request: Request, call_next):
+    """Clean per-request access log with X-Request-ID generation and tracking."""
+    from app.utils.request_id import set_request_id
+    req_id = request.headers.get("X-Request-ID")
+    req_id = set_request_id(req_id)
+    
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    
+    response.headers["X-Process-Time"] = f"{elapsed_ms:.1f}ms"
+    response.headers["X-Request-ID"] = req_id
+    
+    if request.url.path.startswith("/api"):
+        logger.info(
+            f"{request.method} {request.url.path} → {response.status_code} "
+            f"({elapsed_ms:.1f}ms)"
+        )
+    return response
+
 # ── CORS ──────────────────────────────────────────────────────────────────────
 _origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # ── Static file serving ───────────────────────────────────────────────────────
@@ -79,9 +121,14 @@ _storage_root.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(_storage_root)), name="static")
 
 # ── Routers ───────────────────────────────────────────────────────────────────
-app.include_router(health.router,   prefix="/api", tags=["Health"])
-app.include_router(generate.router, prefix="/api", tags=["Generate"])
-app.include_router(history.router,  prefix="/api", tags=["History"])
+app.include_router(health.router,   prefix="/api")
+app.include_router(config.router,   prefix="/api")
+app.include_router(providers.router,prefix="/api")
+app.include_router(styles.router,   prefix="/api")
+app.include_router(analyze.router,  prefix="/api")
+app.include_router(generate.router, prefix="/api")
+app.include_router(refine.router,   prefix="/api")
+app.include_router(history.router,  prefix="/api")
 
 
 # ── Global Exception Handlers ─────────────────────────────────────────────────
