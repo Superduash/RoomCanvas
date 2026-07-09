@@ -41,9 +41,10 @@ class StorageService:
 
     @staticmethod
     def download_and_save(image_url: str, save_dir: str = settings.GENERATED_DIR) -> str:
-        os.makedirs(save_dir, exist_ok=True)
+        base_dir = Path(save_dir)
+        base_dir.mkdir(parents=True, exist_ok=True)
         filename = f"{uuid.uuid4().hex}_gen.png"
-        filepath = os.path.join(save_dir, filename)
+        filepath = base_dir / filename
 
         try:
             resp = requests.get(str(image_url), timeout=30)
@@ -51,7 +52,7 @@ class StorageService:
             with open(filepath, "wb") as f:
                 f.write(resp.content)
             logger.info(f"Downloaded generated image to {filepath}")
-            return filepath
+            return filepath.as_posix()
         except Exception as e:
             logger.error(f"Failed to download image from {image_url}: {e}")
             raise RuntimeError(f"Could not save generated image: {e}")
