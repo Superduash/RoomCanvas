@@ -18,6 +18,7 @@ class ReplicateProvider(GenerationProvider):
         self.model = "black-forest-labs/flux-kontext-pro"
         pass
         
+    @staticmethod
     def _is_transient(exc: Exception) -> bool:
         if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError, httpx.TimeoutException, httpx.NetworkError)):
             return True
