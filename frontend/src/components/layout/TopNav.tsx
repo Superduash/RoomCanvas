@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { Menu, Plus, History, X } from 'lucide-react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Menu, Plus, History, X, Search, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
@@ -8,6 +8,8 @@ import { useHealth } from '../../api/queries';
 
 export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
   const { data: health } = useHealth();
 
   const hasProviderDown = health && (!health.providers.gemini || !health.providers.replicate);
@@ -19,6 +21,14 @@ export function TopNav() {
         ? 'text-text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:rounded-full after:bg-accent'
         : 'text-text-secondary hover:text-text-primary'
     );
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/history?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
 
   return (
     <>
@@ -53,25 +63,44 @@ export function TopNav() {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
+          <nav className="hidden md:flex items-center gap-1 ml-6 mr-auto" aria-label="Main navigation">
+            <NavLink to="/" className={navLinkClass} end={true}>
+              <span className="px-3 py-1.5 block">Home</span>
+            </NavLink>
             <NavLink to="/upload" className={navLinkClass} end={false}>
               <span className="px-3 py-1.5 block">New Design</span>
             </NavLink>
             <NavLink to="/history" className={navLinkClass}>
-              <span className="px-3 py-1.5 block">History</span>
+              <span className="px-3 py-1.5 block">Library</span>
             </NavLink>
           </nav>
 
+          {/* Center Search */}
+          <form 
+            onSubmit={handleSearch}
+            className="hidden lg:flex items-center relative mr-6 flex-1 max-w-sm"
+          >
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary pointer-events-none" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search designs..."
+              className="w-full h-9 rounded-lg border border-border bg-surface-alt pl-9 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent focus:bg-surface transition-all duration-fast shadow-sm"
+              aria-label="Search library"
+            />
+          </form>
+
           {/* Desktop actions */}
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-xs text-text-tertiary border border-border rounded-md px-2 py-1 font-mono hidden lg:block select-none">
-              ⌘K
-            </span>
+          <div className="hidden md:flex items-center gap-3">
             <Link to="/upload">
               <Button size="sm" variant="primary" icon={<Plus className="h-3.5 w-3.5" />}>
                 New Design
               </Button>
             </Link>
+            <Button size="icon" variant="ghost" className="text-text-secondary" title="Settings (Coming soon)">
+              <Settings className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Mobile menu button */}
@@ -131,7 +160,19 @@ export function TopNav() {
               <nav className="flex flex-col gap-1 p-4 flex-1" aria-label="Mobile navigation">
                 <MobileNavLink to="/" label="Home" onClick={() => setMobileOpen(false)} />
                 <MobileNavLink to="/upload" label="New Design" icon={<Plus className="h-4 w-4" />} onClick={() => setMobileOpen(false)} />
-                <MobileNavLink to="/history" label="History" icon={<History className="h-4 w-4" />} onClick={() => setMobileOpen(false)} />
+                <MobileNavLink to="/history" label="Library" icon={<History className="h-4 w-4" />} onClick={() => setMobileOpen(false)} />
+                <div className="mt-4 px-3">
+                  <form onSubmit={(e) => { handleSearch(e); setMobileOpen(false); }} className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary pointer-events-none" />
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search designs..."
+                      className="w-full h-10 rounded-lg border border-border bg-surface-alt pl-9 pr-4 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  </form>
+                </div>
               </nav>
 
               {/* CTA */}
@@ -175,8 +216,7 @@ function MobileNavLink({ to, label, icon, onClick }: { to: string; label: string
 export function RoomCanvasLogoMark({ size = 28 }: { size?: number }) {
   return (
     <img
-      src="/logo-ui-1x.png"
-      srcSet="/logo-ui-1x.png 1x, /logo-ui-2x.png 2x, /logo-ui-3x.png 3x"
+      src="/branding/logo.svg"
       alt="RoomCanvas Logo"
       width={size}
       height={size}

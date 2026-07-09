@@ -1,16 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Search, LayoutGrid } from 'lucide-react';
 import { useHistory } from '../api/queries';
 import { type GenerationOut } from '../api/types';
 import { HistoryCard, HistoryCardSkeleton, EmptyHistory } from '../components/history/HistoryCard';
 import { Button } from '../components/primitives/Button';
+import { Dialog } from '../components/primitives/Dialog';
+import { useDeleteAllRefinements } from '../api/queries';
+import { toast } from '../lib/toast';
 
 type SortOrder = 'newest' | 'oldest';
 
 export function HistoryPage() {
   const { data, isLoading, isError, refetch } = useHistory(50);
-  const [search, setSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('search') || '';
   const [sort, setSort] = useState<SortOrder>('newest');
+  const [clearOpen, setClearOpen] = useState(false);
+  const deleteAll = useDeleteAllRefinements();
 
   // Build tree: group refinements under their root parent
   const { roots, refinementMap } = useMemo(() => {
@@ -78,7 +85,7 @@ export function HistoryPage() {
                 type="search"
                 placeholder="Search projects..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => setSearchParams(e.target.value ? { search: e.target.value } : {})}
                 className="h-10 rounded-lg border border-border bg-surface pl-9 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-fast w-64 shadow-sm"
                 aria-label="Search designs"
               />
@@ -93,6 +100,16 @@ export function HistoryPage() {
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
             </select>
+            <Button
+              variant="secondary"
+              size="md"
+              icon={<Trash2 className="h-4 w-4 text-text-tertiary group-hover:text-danger transition-colors" />}
+              onClick={() => setClearOpen(true)}
+              className="group border-border"
+              title="Clear all history"
+            >
+              Clear All
+            </Button>
           </div>
         )}
       </div>
@@ -134,7 +151,7 @@ export function HistoryPage() {
       {!isLoading && !isError && roots.length > 0 && filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center bg-surface-alt rounded-2xl border border-border border-dashed">
           <p className="text-base text-text-secondary mb-4">No designs match &ldquo;{search}&rdquo;</p>
-          <Button variant="outline" size="md" onClick={() => setSearch('')}>
+          <Button variant="outline" size="md" onClick={() => setSearchParams({})}>
             Clear Search Filters
           </Button>
         </div>
@@ -157,6 +174,36 @@ export function HistoryPage() {
           ))}
         </div>
       )}
+
+      {/* Clear All Confirm Dialog */}
+      <Dialog
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        title="Clear entire library?"
+        description="This will permanently delete all your projects, refinements, and images. This action cannot be undone."
+      >
+        <div className="flex gap-3 justify-end mt-4">
+          <Button variant="secondary" onClick={() => setClearOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            loading={deleteAll.isPending}
+            onClick={async () => {
+              try {
+                await deleteAll.mutateAsync();
+                setClearOpen(false);
+                toast.success('Library cleared');
+              } catch {
+                toast.error('Failed to clear library');
+              }
+            }}
+            icon={<Trash2 className="h-4 w-4" />}
+          >
+            Clear Library
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

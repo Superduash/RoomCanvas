@@ -247,3 +247,84 @@ def delete_generation(
     background_tasks.add_task(_delete_files)
 
     return {"deleted": True}
+
+
+# ── DELETE /api/history/all ───────────────────────────────────────────────────
+@router.delete(
+    "/history/all",
+    tags=["History"],
+    responses={
+        200: {
+            "description": "All history deleted."
+        }
+    }
+)
+def delete_all_history(
+    background_tasks: BackgroundTasks,
+    repo: GenerationRepository = Depends(get_repo),
+):
+    """
+    Truncate all history and clear files.
+    """
+    generations = repo.list_all(limit=1000)
+    files = []
+    for g in generations:
+        if g.original_image_path:
+            files.append(g.original_image_path)
+        for v in g.variations:
+            if v.image_path:
+                files.append(v.image_path)
+        repo.delete(g.id)
+    
+    import os
+    def _delete_files():
+        for f in files:
+            try:
+                if os.path.exists(f):
+                    os.remove(f)
+            except Exception as ex:
+                pass
+    background_tasks.add_task(_delete_files)
+    
+    return {"deleted": True}
+
+
+# ── DELETE /api/history/refinement/{id} ───────────────────────────────────────
+@router.delete(
+    "/history/refinement/{generation_id}",
+    tags=["History"],
+)
+def delete_refinement(
+    generation_id: int,
+    background_tasks: BackgroundTasks,
+    repo: GenerationRepository = Depends(get_repo),
+):
+    """
+    Delete a specific refinement generation.
+    """
+    generation = repo.get_by_id(generation_id)
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found.")
+        
+    if generation.parent_generation_id is None:
+        raise HTTPException(status_code=400, detail="Cannot delete a root generation via this endpoint. Use DELETE /api/history/{id}")
+        
+    files = []
+    for v in generation.variations:
+        if v.image_path:
+            files.append(v.image_path)
+            
+    repo.delete(generation_id)
+    invalidate_generation_cache(generation.parent_generation_id)
+    
+    import os
+    def _delete_files():
+        for f in files:
+            try:
+                if os.path.exists(f):
+                    os.remove(f)
+            except Exception:
+                pass
+    background_tasks.add_task(_delete_files)
+    
+    return {"deleted": True}

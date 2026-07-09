@@ -101,3 +101,19 @@ export function useDeleteGeneration() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
   });
 }
+
+export function useDeleteAllRefinements() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.del<{ deleted: boolean }>('/history/all'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+  });
+}
+
+export function useDeleteRefinement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.del<{ deleted: boolean }>(`/history/refinement/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+  });
+}

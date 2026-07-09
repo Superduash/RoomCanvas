@@ -12,6 +12,7 @@ import { Dialog } from '../primitives/Dialog';
 import { Skeleton } from '../primitives/Skeleton';
 import { formatRelativeTime, titleCase } from '../../lib/utils';
 import { toast } from '../../lib/toast';
+import { useDeleteRefinement } from '../../api/queries';
 
 interface HistoryCardProps {
   generation: GenerationOut;
@@ -20,8 +21,10 @@ interface HistoryCardProps {
 
 export const HistoryCard = memo(function HistoryCard({ generation: g, refinements = [] }: HistoryCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [refinementToDelete, setRefinementToDelete] = useState<number | null>(null);
   const [refinementsOpen, setRefinementsOpen] = useState(false);
   const deleteGen = useDeleteGeneration();
+  const deleteRefinement = useDeleteRefinement();
   const setRefinementDraft = useUIStore((s) => s.setRefinementDraft);
 
   const thumbnail = g.variations[0]?.image_path
@@ -81,8 +84,8 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
         </Link>
 
         {/* Card Body */}
-        <div className="flex flex-col flex-1 p-4">
-          <h3 className="text-base font-semibold text-text-primary truncate mb-1">
+        <div className="flex flex-col flex-1 p-5">
+          <h3 className="text-base font-semibold text-text-primary truncate mb-1.5">
             {g.room_type_detected ?? 'Untitled Space'}
           </h3>
           
@@ -152,6 +155,15 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
                           >
                             Reuse Prompt
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="h-6 px-1.5 text-text-tertiary hover:text-danger hover:bg-danger-subtle"
+                            title="Delete this refinement"
+                            onClick={() => setRefinementToDelete(r.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                        </div>
                     </div>
                     <p className="text-xs font-medium text-text-primary line-clamp-2 italic">
@@ -186,6 +198,37 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
           </Button>
         </div>
       </Dialog>
+
+      {/* Delete refinement confirm dialog */}
+      <Dialog
+        open={refinementToDelete !== null}
+        onClose={() => setRefinementToDelete(null)}
+        title="Delete this refinement?"
+        description="This will permanently delete this specific iterative generation. Your original project and other refinements will remain intact."
+      >
+        <div className="flex gap-3 justify-end mt-4">
+          <Button variant="secondary" onClick={() => setRefinementToDelete(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            loading={deleteRefinement.isPending}
+            onClick={async () => {
+              if (refinementToDelete === null) return;
+              try {
+                await deleteRefinement.mutateAsync(refinementToDelete);
+                setRefinementToDelete(null);
+                toast.success('Refinement deleted');
+              } catch {
+                toast.error('Failed to delete refinement');
+              }
+            }}
+            icon={<Trash2 className="h-4 w-4" />}
+          >
+            Delete Refinement
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 });
@@ -194,7 +237,7 @@ export function HistoryCardSkeleton() {
   return (
     <div className="flex flex-col h-full rounded-2xl border border-border bg-surface p-0 overflow-hidden">
       <Skeleton className="w-full aspect-[4/3] rounded-none" />
-      <div className="p-4 space-y-3">
+      <div className="p-5 space-y-3">
         <Skeleton className="h-5 w-2/3" />
         <Skeleton className="h-3 w-full" />
         <Skeleton className="h-3 w-4/5" />
