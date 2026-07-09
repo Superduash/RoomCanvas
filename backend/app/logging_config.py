@@ -87,7 +87,7 @@ def setup_logging() -> None:
         l = logging.getLogger(name)
         l.handlers = [InterceptHandler()]
         l.propagate = False
-        # Suppress noise unless explicitly asked
-        l.setLevel(logging.WARNING if not settings.DEBUG else logging.INFO)
+        # Suppress noise unconditionally
+        l.setLevel(logging.WARNING)
 
 setup_logging()

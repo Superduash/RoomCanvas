@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { logger } from '../lib/logger';
 import { Button } from './primitives/Button';
 

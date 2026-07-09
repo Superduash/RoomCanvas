@@ -10,7 +10,7 @@ import { Badge } from '../primitives/Badge';
 import { Button } from '../primitives/Button';
 import { Dialog } from '../primitives/Dialog';
 import { Skeleton } from '../primitives/Skeleton';
-import { formatRelativeTime, titleCase } from '../../lib/utils';
+import { formatRelativeTime, titleCase, cn } from '../../lib/utils';
 import { toast } from '../../lib/toast';
 
 interface HistoryCardProps {
@@ -39,8 +39,9 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
       await deleteGen.mutateAsync(g.id);
       setDeleteOpen(false);
       toast.success('Project deleted');
-    } catch {
-      toast.error('Failed to delete project');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Delete failed: ${msg}`);
     }
   };
 
@@ -50,20 +51,37 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
     try {
       await renameGen.mutateAsync({ id: g.id, title: renameTitle.trim() });
       setRenameOpen(false);
-      toast.success('Project renamed');
-    } catch {
-      toast.error('Failed to rename project');
+      toast.success('Project renamed successfully');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Rename failed: ${msg}`);
     }
   };
 
-  const handleDownload = () => {
-    if (!g.variations[0]?.image_path) return;
-    const link = document.createElement('a');
-    link.href = resolveImageUrl(g.variations[0].image_path);
-    link.download = `roomcanvas-${g.id}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async () => {
+    const path = g.variations[0]?.image_path;
+    if (!path) {
+      toast.error('No generated image available to download.');
+      return;
+    }
+    const url = resolveImageUrl(path);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `roomcanvas-${g.id}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      toast.success('Download started');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Download failed: ${msg}. Try right-clicking the image and saving.`);
+    }
     setMenuOpen(false);
   };
 
@@ -82,7 +100,10 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
 
   return (
     <>
-      <div className="flex flex-col h-full rounded-2xl border border-border bg-surface shadow-sm group hover:border-accent/40 transition-all duration-base relative">
+      <div className={cn(
+        "flex flex-col h-full rounded-2xl border border-border bg-surface shadow-sm group hover:border-accent/40 transition-all duration-base relative",
+        menuOpen || refinementsOpen ? "z-50" : "z-10"
+      )}>
         {/* Thumbnail Hero */}
         <Link to={`/results/${g.id}`} className="block relative aspect-[4/3] w-full overflow-hidden bg-surface-alt rounded-t-2xl">
           <img
@@ -259,7 +280,8 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
       <Dialog
         open={deleteOpen}
         onClose={() => !deleteGen.isPending && setDeleteOpen(false)}
-        title="Delete Project"
+        title="Delete Project?"
+        description="This will permanently delete this project and all of its refinements. This action cannot be undone."
       >
         <p className="text-text-secondary text-sm mb-6">
           Are you sure you want to delete this project? This will permanently remove the original photo, all generated variations, and refinements.
@@ -310,12 +332,12 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
       {/* Delete refinement confirm dialog */}
       <Dialog
         open={refinementToDelete !== null}
-        onClose={() => setRefinementToDelete(null)}
+        onClose={() => !deleteRefinement.isPending && setRefinementToDelete(null)}
         title="Delete this refinement?"
         description="This will permanently delete this specific iterative generation. Your original project and other refinements will remain intact."
       >
         <div className="flex gap-3 justify-end mt-4">
-          <Button variant="secondary" onClick={() => setRefinementToDelete(null)}>
+          <Button variant="secondary" onClick={() => setRefinementToDelete(null)} disabled={deleteRefinement.isPending}>
             Cancel
           </Button>
           <Button
@@ -327,8 +349,9 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
                 await deleteRefinement.mutateAsync(refinementToDelete);
                 setRefinementToDelete(null);
                 toast.success('Refinement deleted');
-              } catch {
-                toast.error('Failed to delete refinement');
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Unknown error';
+                toast.error(`Failed to delete refinement: ${msg}`);
               }
             }}
             icon={<Trash2 className="h-4 w-4" />}

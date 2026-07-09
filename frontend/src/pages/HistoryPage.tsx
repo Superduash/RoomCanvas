@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Search, LayoutGrid, Trash2 } from 'lucide-react';
 import { useHistory } from '../api/queries';
@@ -6,7 +6,7 @@ import { type GenerationOut } from '../api/types';
 import { HistoryCard, HistoryCardSkeleton, EmptyHistory } from '../components/history/HistoryCard';
 import { Button } from '../components/primitives/Button';
 import { Dialog } from '../components/primitives/Dialog';
-import { useDeleteAllRefinements } from '../api/queries';
+import { useDeleteAllHistory } from '../api/queries';
 import { toast } from '../lib/toast';
 
 type SortOrder = 'newest' | 'oldest';
@@ -17,7 +17,7 @@ export function HistoryPage() {
   const search = searchParams.get('search') || '';
   const [sort, setSort] = useState<SortOrder>('newest');
   const [clearOpen, setClearOpen] = useState(false);
-  const deleteAll = useDeleteAllRefinements();
+  const deleteAll = useDeleteAllHistory();
 
   // Build tree: group refinements under their root parent
   const { roots, refinementMap } = useMemo(() => {
@@ -94,7 +94,7 @@ export function HistoryPage() {
               value={sort}
               onChange={(e) => setSort(e.target.value as SortOrder)}
               className="h-10 rounded-lg border border-border bg-surface px-4 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-fast shadow-sm appearance-none pr-8 cursor-pointer"
-              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundPosition: 'right 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23757069' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundPosition: 'right 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
               aria-label="Sort order"
             >
               <option value="newest">Newest first</option>
@@ -193,9 +193,10 @@ export function HistoryPage() {
               try {
                 await deleteAll.mutateAsync();
                 setClearOpen(false);
-                toast.success('Library cleared');
-              } catch {
-                toast.error('Failed to clear library');
+                toast.success('Library cleared successfully');
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Unknown error';
+                toast.error(`Failed to clear library: ${msg}`);
               }
             }}
             icon={<Trash2 className="h-4 w-4" />}

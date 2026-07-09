@@ -143,8 +143,9 @@ export function ResultsPage() {
     try {
       await selectVariation.mutateAsync({ generationId: generation.id, variationId: variation.id });
       toast.success('Design saved!');
-    } catch {
-      toast.error('Failed to save design');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to save design: ${msg}`);
     }
   };
 

@@ -89,6 +89,65 @@ def list_history(
     return response
 
 
+# ── DELETE /api/history/all ───────────────────────────────────────────────────
+@router.delete(
+    "/history/all",
+    tags=["History"],
+    responses={
+        200: {
+            "description": "All history deleted."
+        }
+    }
+)
+def delete_all_history(
+    background_tasks: BackgroundTasks,
+    repo: GenerationRepository = Depends(get_repo),
+):
+    """
+    Truncate all history and clear files.
+    """
+    generations = repo.list_all(limit=1000)
+    files = []
+    for g in generations:
+        if g.original_image_path:
+            files.append(g.original_image_path)
+        for v in g.variations:
+            if v.image_path:
+                files.append(v.image_path)
+    
+    # In SQLite, refinements reference parent generations via parent_generation_id.
+    # To delete all successfully, we must delete refinements (children) first.
+    from app.database.models import Generation
+    try:
+        # 1. Delete all generations that have a parent (refinements)
+        repo.db.query(Generation).filter(Generation.parent_generation_id.isnot(None)).delete(synchronize_session=False)
+        # 2. Delete all root generations
+        repo.db.query(Generation).filter(Generation.parent_generation_id.is_(None)).delete(synchronize_session=False)
+        repo.db.commit()
+    except Exception as ex:
+        repo.db.rollback()
+        logger.error(f"Error truncating generations: {ex}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error clearing history: {ex}"
+        )
+    
+    # Clear all cache keys
+    invalidate_history_cache()
+    
+    import os
+    def _delete_files():
+        for f in files:
+            try:
+                if os.path.exists(f):
+                    os.remove(f)
+            except Exception as ex:
+                pass
+    background_tasks.add_task(_delete_files)
+    
+    return {"deleted": True}
+
+
 # ── GET /api/history/{id} ──────────────────────────────────────────────────────
 @router.get(
     "/history/{generation_id}",
@@ -267,11 +326,16 @@ def delete_generation(
 class RenameRequest(BaseModel):
     room_type_detected: str
 
-# ── PATCH /api/history/{id} ───────────────────────────────────────────────────
+# ── PATCH /api/history/{id} ───────────────────────────────────────────
 @router.patch(
     "/history/{generation_id}",
     response_model=GenerationOut,
     tags=["History"],
+    responses={
+        200: {"description": "Generation renamed."},
+        404: {"description": "Generation not found."},
+        422: {"description": "Validation error."},
+    }
 )
 def rename_generation(
     generation_id: int,
@@ -279,79 +343,33 @@ def rename_generation(
     repo: GenerationRepository = Depends(get_repo),
 ):
     """
-    Rename a generation (updates room_type_detected).
+    Rename a generation by updating room_type_detected.
+    Also invalidates both the individual and history list caches.
     """
+    if not req.room_type_detected or not req.room_type_detected.strip():
+        raise HTTPException(status_code=422, detail="Name cannot be empty.")
+    
     generation = repo.get_by_id(generation_id)
     if not generation:
-        raise HTTPException(status_code=404, detail="Generation not found.")
+        raise HTTPException(status_code=404, detail=f"Generation {generation_id} not found.")
 
-    generation.room_type_detected = req.room_type_detected
-    repo.db.commit()
-    repo.db.refresh(generation)
+    try:
+        generation.room_type_detected = req.room_type_detected.strip()
+        repo.db.commit()
+        repo.db.refresh(generation)
+    except Exception as ex:
+        repo.db.rollback()
+        logger.error(f"Failed to rename generation {generation_id}: {ex}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error renaming generation: {ex}"
+        )
 
     invalidate_generation_cache(generation_id)
     invalidate_history_cache()
+    logger.info(f"Renamed Generation id={generation_id} to '{generation.room_type_detected}'")
 
     return generation
-
-
-# ── DELETE /api/history/all ───────────────────────────────────────────────────
-@router.delete(
-    "/history/all",
-    tags=["History"],
-    responses={
-        200: {
-            "description": "All history deleted."
-        }
-    }
-)
-def delete_all_history(
-    background_tasks: BackgroundTasks,
-    repo: GenerationRepository = Depends(get_repo),
-):
-    """
-    Truncate all history and clear files.
-    """
-    generations = repo.list_all(limit=1000)
-    files = []
-    for g in generations:
-        if g.original_image_path:
-            files.append(g.original_image_path)
-        for v in g.variations:
-            if v.image_path:
-                files.append(v.image_path)
-    
-    # In SQLite, refinements reference parent generations via parent_generation_id.
-    # To delete all successfully, we must delete refinements (children) first.
-    from app.database.models import Generation
-    try:
-        # 1. Delete all generations that have a parent (refinements)
-        repo.db.query(Generation).filter(Generation.parent_generation_id.isnot(None)).delete(synchronize_session=False)
-        # 2. Delete all root generations
-        repo.db.query(Generation).filter(Generation.parent_generation_id.is_(None)).delete(synchronize_session=False)
-        repo.db.commit()
-    except Exception as ex:
-        repo.db.rollback()
-        logger.error(f"Error truncating generations: {ex}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error clearing history: {ex}"
-        )
-    
-    # Clear all cache keys
-    invalidate_history_cache()
-    
-    import os
-    def _delete_files():
-        for f in files:
-            try:
-                if os.path.exists(f):
-                    os.remove(f)
-            except Exception as ex:
-                pass
-    background_tasks.add_task(_delete_files)
-    
-    return {"deleted": True}
 
 
 # ── DELETE /api/history/refinement/{id} ───────────────────────────────────────
@@ -366,21 +384,37 @@ def delete_refinement(
 ):
     """
     Delete a specific refinement generation.
+    Cascades: removes variation images from filesystem, invalidates both
+    the parent generation cache and the history list cache.
     """
     generation = repo.get_by_id(generation_id)
     if not generation:
-        raise HTTPException(status_code=404, detail="Generation not found.")
+        raise HTTPException(status_code=404, detail=f"Refinement {generation_id} not found.")
         
     if generation.parent_generation_id is None:
-        raise HTTPException(status_code=400, detail="Cannot delete a root generation via this endpoint. Use DELETE /api/history/{id}")
-        
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a root generation via this endpoint. Use DELETE /api/history/{id}"
+        )
+    
+    parent_id = generation.parent_generation_id
     files = []
     for v in generation.variations:
         if v.image_path:
             files.append(v.image_path)
-            
-    repo.delete(generation_id)
-    invalidate_generation_cache(generation.parent_generation_id)
+    
+    try:
+        repo.delete(generation_id)
+    except Exception as ex:
+        logger.error(f"Failed to delete refinement {generation_id}: {ex}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error deleting refinement: {ex}"
+        )
+    
+    # Invalidate both the parent generation and the full history list
+    invalidate_generation_cache(parent_id)
+    invalidate_history_cache()
     
     import os
     def _delete_files():
@@ -388,8 +422,8 @@ def delete_refinement(
             try:
                 if os.path.exists(f):
                     os.remove(f)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Could not delete file {f}: {e}")
     background_tasks.add_task(_delete_files)
     
     return {"deleted": True}

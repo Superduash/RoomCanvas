@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { api } from './client';
+import { api, ApiError } from './client';
 import type { AnalyzeResponse, AppConfig, GenerationOut, HealthStatus, StyleOption } from './types';
+import { logger } from '../lib/logger';
 
 // ── Boot-time static data ──────────────────────────────────────────────
 export function useConfig() {
@@ -45,7 +46,7 @@ export function useGenerateDesign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (analysis_id: number) => api.post<GenerationOut>('/generate', { analysis_id }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
   });
 }
 
@@ -55,7 +56,7 @@ export function useRefineDesign() {
   return useMutation({
     mutationFn: ({ generation_id, instruction }: { generation_id: number; instruction: string }) =>
       api.post<GenerationOut>('/refine', { generation_id, instruction }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
   });
 }
 
@@ -89,7 +90,7 @@ export function useSelectVariation() {
       api.post<GenerationOut>(`/history/${generationId}/select/${variationId}`, {}),
     onSuccess: (data) => {
       qc.setQueryData(['generation', data.id], data);
-      qc.invalidateQueries({ queryKey: ['history'] });
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
     },
   });
 }
@@ -98,15 +99,34 @@ export function useDeleteGeneration() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.del<{ deleted: boolean }>(`/history/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+    onSuccess: (_data, id) => {
+      // Remove from individual cache instantly
+      qc.removeQueries({ queryKey: ['generation', id] });
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+    },
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.message : 'Unknown error';
+      logger.error(`[useDeleteGeneration] Failed: ${detail}`, err);
+    },
   });
 }
 
-export function useDeleteAllRefinements() {
+/**
+ * Delete ALL history entries (library clear).
+ * Previously named useDeleteAllRefinements — now correctly named.
+ */
+export function useDeleteAllHistory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.del<{ deleted: boolean }>('/history/all'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+    onSuccess: () => {
+      qc.setQueryData(['history', 50], []);
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+    },
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.message : 'Unknown error';
+      logger.error(`[useDeleteAllHistory] Failed: ${detail}`, err);
+    },
   });
 }
 
@@ -114,15 +134,30 @@ export function useDeleteRefinement() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.del<{ deleted: boolean }>(`/history/refinement/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+    onSuccess: (_data, id) => {
+      qc.removeQueries({ queryKey: ['generation', id] });
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+    },
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.message : 'Unknown error';
+      logger.error(`[useDeleteRefinement] Failed: ${detail}`, err);
+    },
   });
 }
 
 export function useRenameGeneration() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, title }: { id: number; title: string }) => 
+    mutationFn: ({ id, title }: { id: number; title: string }) =>
       api.patch<GenerationOut>(`/history/${id}`, { room_type_detected: title }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+    onSuccess: (data) => {
+      // Optimistically update the individual generation cache
+      qc.setQueryData(['generation', data.id], data);
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+    },
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.message : 'Unknown error';
+      logger.error(`[useRenameGeneration] Failed: ${detail}`, err);
+    },
   });
 }
