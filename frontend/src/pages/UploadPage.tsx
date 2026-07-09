@@ -26,6 +26,7 @@ export function UploadPage() {
 
   const analyze = useAnalyzeRoom();
   const canSubmit = !!pendingFile && !!selectedStyleId;
+  const selectedStyle = styles?.find((s) => s.id === selectedStyleId);
 
   // Revoke object URL on unmount
   useEffect(() => {
@@ -65,7 +66,7 @@ export function UploadPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12 md:py-20 page-enter">
+    <div className="mx-auto w-full max-w-6xl px-6 py-12 md:py-20 page-enter">
       <div className="text-center max-w-2xl mx-auto mb-16">
         <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Start a new project</p>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-text-primary mb-4" style={{ lineHeight: 1.1 }}>
@@ -114,33 +115,26 @@ export function UploadPage() {
                       setSelectedStyle(style.id);
                     }
                   }}
-                  className="p-5 flex flex-col justify-between h-full"
+                  className="p-6 flex flex-col gap-4 h-full group"
                 >
-                  <div>
-                    <div className="flex items-start justify-between gap-3 mb-3 w-full min-h-[3rem]">
-                      <h3 className="text-base font-semibold text-text-primary line-clamp-2 flex-1 pt-0.5">{titleCase(style.id)}</h3>
-                      <Badge variant={budgetVariant(style.budget_tag) as any} dot className="flex-shrink-0">
-                        {style.budget_tag}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-text-secondary leading-relaxed mb-4 line-clamp-2">
-                      {style.furniture.join(', ')}
+                  <div className="flex items-start justify-between gap-4 w-full">
+                    <h3 className="text-lg font-semibold text-text-primary leading-snug break-words">
+                      {titleCase(style.id)}
+                    </h3>
+                    <Badge variant={budgetVariant(style.budget_tag) as any} dot className="flex-shrink-0 mt-0.5">
+                      {style.budget_tag}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm text-text-secondary leading-relaxed">
+                      {style.furniture.slice(0, 2).join(', ')}.
                     </p>
                   </div>
-                  {/* Palette swatches */}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-border border-opacity-50">
-                    <span className="text-xs text-text-tertiary mr-1 font-medium">Palette:</span>
-                    {style.palette.slice(0, 3).map((color, i) => (
-                      <span
-                        key={i}
-                        className="text-[11px] px-2 py-0.5 rounded bg-surface border border-border text-text-secondary"
-                      >
-                        {color}
-                      </span>
-                    ))}
-                    {style.palette.length > 3 && (
-                      <span className="text-[11px] text-text-tertiary">+{style.palette.length - 3}</span>
-                    )}
+
+                  <div className="flex items-center text-sm font-medium text-text-tertiary group-hover:text-accent transition-colors pt-2 mt-auto border-t border-border border-opacity-50">
+                    <span className="mr-1">Select style</span>
+                    <ArrowRight className="h-4 w-4" />
                   </div>
                 </Card>
               ))}
@@ -156,6 +150,36 @@ export function UploadPage() {
               Upload photo
             </h2>
           </div>
+
+          <AnimatePresence mode="popLayout">
+            {selectedStyle && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-surface rounded-2xl border border-accent/20 ring-1 ring-accent/10 p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-text-primary">
+                      {titleCase(selectedStyle.id)}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-wider py-0.5">Palette</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedStyle.palette.map((color, i) => (
+                      <span
+                        key={i}
+                        className="text-xs px-2.5 py-1 rounded bg-surface-alt border border-border text-text-secondary font-medium"
+                      >
+                        {color}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm mb-6">
             <Dropzone
