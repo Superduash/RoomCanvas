@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useDeferredValue } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Search, LayoutGrid, Trash2 } from 'lucide-react';
 import { useHistory } from '../api/queries';
@@ -15,6 +15,7 @@ export function HistoryPage() {
   const { data, isLoading, isError, refetch } = useHistory(50);
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search') || '';
+  const deferredSearch = useDeferredValue(search); // smooths filtering on large libraries without adding input lag
   const [sort, setSort] = useState<SortOrder>('newest');
   const [clearOpen, setClearOpen] = useState(false);
   const deleteAll = useDeleteAllHistory();
@@ -39,25 +40,30 @@ export function HistoryPage() {
     return { roots: rootList, refinementMap: map };
   }, [data]);
 
-  // Client-side filter and sort
+  // Search now matches a root's own fields OR any of its refinements' instructions —
+  // a match on a child surfaces the parent card, since that's the unit the UI navigates to.
   const filtered = useMemo(() => {
     let list = roots;
+    const q = deferredSearch.trim().toLowerCase();
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (g) =>
+    if (q) {
+      list = list.filter((g) => {
+        const ownMatch =
           g.room_type_detected?.toLowerCase().includes(q) ||
           g.redesign_prompt?.toLowerCase().includes(q) ||
-          g.style?.toLowerCase().includes(q)
-      );
+          g.style?.toLowerCase().includes(q);
+        if (ownMatch) return true;
+
+        const children = refinementMap.get(g.id) ?? [];
+        return children.some((c) => c.redesign_prompt?.toLowerCase().includes(q));
+      });
     }
 
     return [...list].sort((a, b) => {
       const diff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       return sort === 'newest' ? diff : -diff;
     });
-  }, [roots, search, sort]);
+  }, [roots, refinementMap, deferredSearch, sort]);
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-6 py-12 page-enter">
@@ -85,7 +91,9 @@ export function HistoryPage() {
                 type="search"
                 placeholder="Search projects..."
                 value={search}
-                onChange={(e) => setSearchParams(e.target.value ? { search: e.target.value } : {})}
+                onChange={(e) =>
+                  setSearchParams(e.target.value ? { search: e.target.value } : {}, { replace: true })
+                }
                 className="h-10 rounded-lg border border-border bg-surface pl-9 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-fast w-64 shadow-sm"
                 aria-label="Search designs"
               />

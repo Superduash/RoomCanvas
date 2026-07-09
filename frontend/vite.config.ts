@@ -1,6 +1,7 @@
 import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import { VitePWA } from 'vite-plugin-pwa';
 
 function roomCanvasBannerPlugin(): Plugin {
   return {
@@ -43,7 +44,33 @@ export default defineConfig({
     hasErrorLogged: () => false,
     hasWarned: false,
   },
-  plugins: [react(), tsconfigPaths(), roomCanvasBannerPlugin()],
+  plugins: [
+    react(),
+    tsconfigPaths(),
+    roomCanvasBannerPlugin(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['branding/favicon-32x32.png', 'branding/favicon-16x16.png', 'branding/apple-touch-icon.png'],
+      manifest: {
+        name: 'RoomCanvas — AI Interior Design Assistant',
+        short_name: 'RoomCanvas',
+        description: 'Upload a photo of your room and get an AI-generated redesign.',
+        theme_color: '#FAF8F5',
+        background_color: '#FAF8F5',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/branding/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/branding/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+      workbox: {
+        // Cache the app shell; never cache API responses — generation status must always be fresh, not served stale from a cache
+        navigateFallbackDenylist: [/^\/api/, /^\/static/],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+      },
+    })
+  ],
   build: {
     target: 'es2020',
     sourcemap: false,
