@@ -142,13 +142,13 @@ app.include_router(history.router,  prefix="/api")
 # ── Global Exception Handlers ─────────────────────────────────────────────────
 @app.exception_handler(InteriorAIError)
 def app_exception_handler(request: Request, exc: InteriorAIError) -> JSONResponse:
-    logger.warning("Application error [HTTP %s]: %s", exc.status_code, exc.message)
+    logger.warning(f"Application error [HTTP {exc.status_code}]: {exc.message}")
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 @app.exception_handler(Exception)
 def uncaught_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.error("Uncaught exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    logger.exception(f"Uncaught exception on {request.method} {request.url.path}: {exc}")
     return JSONResponse(
         status_code=500,
         content={"detail": "An unexpected server error occurred. Please try again."},

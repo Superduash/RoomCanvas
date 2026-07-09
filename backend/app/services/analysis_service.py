@@ -26,35 +26,20 @@ class AnalysisService:
         original_image_path: str,
     ) -> AnalyzeResponse:
         t0 = time.perf_counter()
+        analysis_dict = None
+        error_msg = None
+        status = "analyzed"
+
+        # 1. Try to get analysis from AI Provider
         try:
             analysis_dict = await self.provider.analyze_room(image_bytes, mime_type, style_id)
-            try:
-                _ = AnalyzeResponse(analysis_id=0, **analysis_dict)
-            except (ValidationError, TypeError) as e:
-                raise AnalysisServiceError(f"Gemini returned an unexpected response shape: {e}", 500)
-            generation_data = {
-                "original_image_path": original_image_path,
-                "style": style_id,
-                "redesign_prompt": analysis_dict.get("redesign_prompt", ""),
-                "prompt_version": "v1",
-                "analysis_json": json.dumps(analysis_dict),
-                "provider": "gemini",
-                "provider_version": "google-genai 0.1.0",
-                "model_used": "gemini-2.5-flash",
-                "model_version": "2024-12-01",
-                "status": "analyzed",
-                "processing_time_sec": round(time.perf_counter() - t0, 2),
-            }
-            generation = self.repository.create_generation(generation_data)
-
-            elapsed = round(time.perf_counter() - t0, 2)
-            logger.info(f"Analysis complete — id={generation.id} style={style_id} ({elapsed}s)")
-
-            return AnalyzeResponse(analysis_id=generation.id, **analysis_dict)
-
+            # Validate response shape
+            _ = AnalyzeResponse(analysis_id=0, **analysis_dict)
         except Exception as e:
             logger.error(f"Analysis provider failed: {e}. Falling back to default skeleton.")
-            fallback_dict = {
+            error_msg = f"Provider failed: {str(e)}"
+            status = "failed_analysis"
+            analysis_dict = {
                 "room_type": "Unknown",
                 "furniture": [],
                 "estimated_dimensions": {"width_ft": 0.0, "length_ft": 0.0, "confidence": "low"},
@@ -65,23 +50,34 @@ class AnalysisService:
                 "style_explanation": "Unable to analyze style dynamically.",
                 "redesign_prompt": f"Redesign this room in {style_id.replace('_', ' ')} style."
             }
-            generation_data = {
-                "original_image_path": original_image_path,
-                "style": style_id,
-                "redesign_prompt": fallback_dict["redesign_prompt"],
-                "prompt_version": "v1",
-                "analysis_json": json.dumps(fallback_dict),
-                "provider": "gemini",
-                "provider_version": "google-genai 0.1.0",
-                "model_used": "gemini-2.5-flash",
-                "model_version": "2024-12-01",
-                "status": "failed_analysis",
-                "processing_time_sec": round(time.perf_counter() - t0, 2),
-                "error": f"Gemini failed: {str(e)}"
-            }
-            try:
-                generation = self.repository.create_generation(generation_data)
-                return AnalyzeResponse(analysis_id=generation.id, **fallback_dict)
-            except Exception as db_err:
-                logger.error(f"Database save also failed during fallback: {db_err}")
-                raise AnalysisServiceError(f"Unable to analyze room: {e}", 500)
+
+        # 2. Save generation to DB
+        generation_data = {
+            "original_image_path": original_image_path,
+            "style": style_id,
+            "redesign_prompt": analysis_dict.get("redesign_prompt", ""),
+            "prompt_version": "v1",
+            "analysis_json": json.dumps(analysis_dict),
+            "provider": self.provider.__class__.__name__.replace('Provider', '').lower(),
+            "provider_version": "v1",
+            "model_used": getattr(self.provider, 'model_name', "unknown"),
+            "model_version": getattr(self.provider, 'model_version', "latest"),
+            "status": status,
+            "processing_time_sec": round(time.perf_counter() - t0, 2),
+        }
+        if error_msg:
+            generation_data["error"] = error_msg
+
+        analysis_id = 0
+        try:
+            generation = self.repository.create_generation(generation_data)
+            analysis_id = generation.id
+            elapsed = round(time.perf_counter() - t0, 2)
+            logger.info(f"Analysis complete — id={analysis_id} style={style_id} ({elapsed}s) status={status}")
+        except Exception as db_err:
+            logger.error(f"Database save failed: {db_err}")
+            # Do NOT crash. Return the analysis anyway, so the user can see it.
+            # But the user won't be able to generate from it. Still better than 500.
+        
+        return AnalyzeResponse(analysis_id=analysis_id, **analysis_dict)
+

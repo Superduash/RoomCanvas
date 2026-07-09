@@ -26,10 +26,14 @@ class GenerationRepository:
     def create_generation(self, data: dict) -> Generation:
         generation = Generation(**data)
         self.db.add(generation)
-        self.db.commit()
-        self.db.refresh(generation)
-        logger.info(f"Created Generation id={generation.id} status={generation.status}")
-        return generation
+        try:
+            self.db.commit()
+            self.db.refresh(generation)
+            logger.info(f"Created Generation id={generation.id} status={generation.status}")
+            return generation
+        except Exception as e:
+            self.db.rollback()
+            raise e
 
     def add_variations(self, generation_id: int, variations: list[dict]) -> list[Variation]:
         variation_objs = []
