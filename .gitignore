@@ -85,7 +85,9 @@ roomcanvas_architecture_review.md
 AI_Interior_Design_13Day_Plan_v2.md
 
 # Temp build/audit scripts that may appear at project root
-/*.py
+export.py
+Frontend.txt
+Backend.txt
 code_export.txt
 full_audit_out.txt
 
