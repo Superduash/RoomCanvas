@@ -99,7 +99,7 @@ async def access_log_middleware(request: Request, call_next):
     
     if request.url.path.startswith("/api"):
         logger.info(
-            f"{request.method} {request.url.path} → {response.status_code} "
+            f"{request.method} {request.url.path} -> {response.status_code} "
             f"({elapsed_ms:.1f}ms)"
         )
     return response

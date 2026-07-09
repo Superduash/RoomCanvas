@@ -1,13 +1,26 @@
 """
 generation_service.py — Orchestrates Replicate generation from an analysis.
+
+Key design decisions:
+- `prepare_generation()` — synchronous; called from the FastAPI request handler.
+  Creates the DB row in 'pending' state and returns immediately.
+- `run_generation_task()` — synchronous def (NOT async); FastAPI BackgroundTasks
+  calls it in a thread pool. We use asyncio.run() inside to drive the async
+  provider. Using async def here would require FastAPI to schedule it on the
+  event loop via run_coroutine_threadsafe, which is fragile; sync def + asyncio.run
+  is the reliable pattern for background tasks that call async code.
+- Uses BackgroundSessionLocal (NullPool) to avoid sharing the StaticPool
+  connection that the request session holds, which would deadlock.
 """
 import time
+import json
 import logging
+import asyncio
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_generation_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
-from app.utils.exceptions import InferenceServiceError, InteriorAIError
+from app.utils.exceptions import InferenceServiceError
 from app.utils.image_utils import load_image, resize_for_upload
 
 logger = logging.getLogger(__name__)
@@ -30,12 +43,21 @@ class GenerationService:
         self.repository.update_status(generation.id, "pending")
         return generation
 
-    async def run_generation_task(self, analysis_id: int):
+    # ── SYNC background task — called by FastAPI BackgroundTasks in a thread ──
+    def run_generation_task(self, analysis_id: int):
+        """
+        Synchronous wrapper so FastAPI BackgroundTasks can call us directly.
+        asyncio.run() starts a fresh event loop in this background thread to
+        drive the async provider without fighting the main event loop.
+        """
+        asyncio.run(self._generate_async(analysis_id))
+
+    async def _generate_async(self, analysis_id: int):
+        """Actual async work — image load, Replicate call, DB write."""
         t0 = time.perf_counter()
-        from app.database.session import SessionLocal
-        
-        # Open a new session specifically for the background thread to avoid session closed errors
-        db = SessionLocal()
+        from app.database.session import BackgroundSessionLocal
+
+        db = BackgroundSessionLocal()
         repo = GenerationRepository(db)
         generation = repo.get_by_id(analysis_id)
         if not generation:
@@ -64,7 +86,15 @@ class GenerationService:
             # 5. Persist variation
             repo.add_variations(generation.id, [{"image_path": generated_filepath, "seed": 0}])
 
-            # 6. Commit processing time + mark complete
+            # 6. Back-fill room_type_detected from analysis_json if not already set
+            if not generation.room_type_detected and generation.analysis_json:
+                try:
+                    analysis_data = json.loads(generation.analysis_json)
+                    generation.room_type_detected = analysis_data.get("room_type") or "Room"
+                except Exception:
+                    generation.room_type_detected = "Room"
+
+            # 7. Commit processing time + mark complete
             elapsed = round(time.perf_counter() - t0, 2)
             generation.processing_time_sec = elapsed
             generation.provider = "replicate"
@@ -78,7 +108,9 @@ class GenerationService:
             logger.info(f"Background task: Generation id={generation.id} done ({elapsed}s)")
 
         except Exception as e:
-            logger.error(f"Background task: Generation id={generation.id} failed: {e}")
+            logger.error(f"Background task: Generation id={generation.id} failed: {e}", exc_info=True)
             repo.set_error(generation.id, str(e))
         finally:
             db.close()
+
+

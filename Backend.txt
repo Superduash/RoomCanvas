@@ -892,12 +892,16 @@ def setup_logging() -> None:
 
     log_level = logging.DEBUG if settings.DEBUG else logging.INFO
 
-    handler = logging.StreamHandler(sys.stdout)
+    # Force UTF-8 so Unicode log characters don't crash on Windows cp1252 consoles
+    import io
+    utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+    handler = logging.StreamHandler(utf8_stdout)
     handler.setLevel(log_level)
     handler.addFilter(RequestIDFilter())
     handler.setFormatter(
         logging.Formatter(
-            fmt="%(asctime)s [%(levelname)s]%(request_id)s %(name)s — %(message)s",
+            fmt="%(asctime)s [%(levelname)s]%(request_id)s %(name)s - %(message)s",
             datefmt="%H:%M:%S",
         )
     )
@@ -1042,7 +1046,7 @@ async def access_log_middleware(request: Request, call_next):
     
     if request.url.path.startswith("/api"):
         logger.info(
-            f"{request.method} {request.url.path} → {response.status_code} "
+            f"{request.method} {request.url.path} -> {response.status_code} "
             f"({elapsed_ms:.1f}ms)"
         )
     return response
@@ -1626,27 +1630,42 @@ FILE: .\backend\app\database\session.py
 """
 session.py — SQLAlchemy engine and session configuration.
 Tuned for SQLite with WAL mode and connection pooling.
+
+Two engines are exposed:
+- `engine` / `SessionLocal`           — request-scoped (StaticPool for SQLite)
+- `bg_engine` / `BackgroundSessionLocal` — background-task-scoped (NullPool)
+
+Background tasks MUST use BackgroundSessionLocal so they open a fresh
+connection rather than sharing the StaticPool connection that the active
+request session holds, which would otherwise deadlock.
 """
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
 
 connect_args = {}
 engine_kwargs: dict = {}
+bg_engine_kwargs: dict = {}
 
 if settings.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
-    # Use StaticPool for SQLite to reuse one connection (avoids WAL file lock issues)
-    # and dramatically speeds up repeated reads in a single-user demo context.
-    from sqlalchemy.pool import StaticPool
+    # Use StaticPool for SQLite to reuse one connection for request sessions
+    from sqlalchemy.pool import StaticPool, NullPool
     engine_kwargs["poolclass"] = StaticPool
     engine_kwargs["connect_args"] = connect_args
+    # Background tasks use NullPool — new connection per session, no sharing
+    bg_engine_kwargs["poolclass"] = NullPool
+    bg_engine_kwargs["connect_args"] = connect_args
 else:
     # For production Postgres: pool tuning
     engine_kwargs["pool_size"] = 5
     engine_kwargs["max_overflow"] = 10
     engine_kwargs["pool_pre_ping"] = True
     engine_kwargs["connect_args"] = connect_args
+    bg_engine_kwargs["pool_size"] = 2
+    bg_engine_kwargs["max_overflow"] = 5
+    bg_engine_kwargs["pool_pre_ping"] = True
+    bg_engine_kwargs["connect_args"] = connect_args
 
 engine = create_engine(
     settings.DATABASE_URL,
@@ -1654,25 +1673,38 @@ engine = create_engine(
     **engine_kwargs,
 )
 
-# ── SQLite performance tuning ──────────────────────────────────────────────────
-if settings.DATABASE_URL.startswith("sqlite"):
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragmas(dbapi_conn, connection_record):
+bg_engine = create_engine(
+    settings.DATABASE_URL,
+    echo=False,
+    **bg_engine_kwargs,
+)
+
+# ── SQLite performance tuning (apply to both engines) ─────────────────────────
+def _apply_sqlite_pragmas(eng):
+    @event.listens_for(eng, "connect")
+    def _set_pragmas(dbapi_conn, connection_record):
         cursor = dbapi_conn.cursor()
-        # WAL mode allows concurrent reads while a write is in progress.
         cursor.execute("PRAGMA journal_mode=WAL")
-        # Relaxed durability — acceptable for a demo; removes fsync calls.
         cursor.execute("PRAGMA synchronous=NORMAL")
-        # 32MB page cache in memory for fast repeated reads.
         cursor.execute("PRAGMA cache_size=-32000")
-        # Keep temporary tables in memory.
         cursor.execute("PRAGMA temp_store=MEMORY")
         cursor.close()
+
+if settings.DATABASE_URL.startswith("sqlite"):
+    _apply_sqlite_pragmas(engine)
+    _apply_sqlite_pragmas(bg_engine)
 
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine,
+)
+
+# Session factory for background tasks — NullPool, no connection sharing
+BackgroundSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=bg_engine,
 )
 
 Base = declarative_base()
@@ -2122,12 +2154,13 @@ def list_history(
     """
     cached = get_cached_history(limit)
     if cached is not None:
-        return cached
+        return JSONResponse(content=cached)
 
     results = repo.list_all(limit=limit)
-    set_cached_history(limit, results)
+    serialized = [GenerationOut.model_validate(r).model_dump(mode="json") for r in results]
+    set_cached_history(limit, serialized)
 
-    response = JSONResponse(content=[GenerationOut.model_validate(r).model_dump(mode="json") for r in results])
+    response = JSONResponse(content=serialized)
     response.headers["Cache-Control"] = "no-store"  # Mutates frequently
     return response
 
@@ -2162,9 +2195,10 @@ def get_generation(
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Generation {generation_id} not found.")
+    serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
     if generation.status == "completed":
-        set_cached_generation(generation_id, generation)
-    return generation
+        set_cached_generation(generation_id, serialized)
+    return serialized
 
 
 # ── GET /api/generation/{id} ──────────────────────────────────────────────────
@@ -2197,9 +2231,10 @@ def get_generation_by_id(
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Generation {generation_id} not found.")
+    serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
     if generation.status == "completed":
-        set_cached_generation(generation_id, generation)
-    return generation
+        set_cached_generation(generation_id, serialized)
+    return serialized
 
 
 # ── POST /api/history/{id}/select/{variation_id} ──────────────────────────────
@@ -2631,14 +2666,27 @@ FILE: .\backend\app\services\generation_service.py
 
 """
 generation_service.py — Orchestrates Replicate generation from an analysis.
+
+Key design decisions:
+- `prepare_generation()` — synchronous; called from the FastAPI request handler.
+  Creates the DB row in 'pending' state and returns immediately.
+- `run_generation_task()` — synchronous def (NOT async); FastAPI BackgroundTasks
+  calls it in a thread pool. We use asyncio.run() inside to drive the async
+  provider. Using async def here would require FastAPI to schedule it on the
+  event loop via run_coroutine_threadsafe, which is fragile; sync def + asyncio.run
+  is the reliable pattern for background tasks that call async code.
+- Uses BackgroundSessionLocal (NullPool) to avoid sharing the StaticPool
+  connection that the request session holds, which would deadlock.
 """
 import time
+import json
 import logging
+import asyncio
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_generation_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
-from app.utils.exceptions import InferenceServiceError, InteriorAIError
+from app.utils.exceptions import InferenceServiceError
 from app.utils.image_utils import load_image, resize_for_upload
 
 logger = logging.getLogger(__name__)
@@ -2661,12 +2709,21 @@ class GenerationService:
         self.repository.update_status(generation.id, "pending")
         return generation
 
-    async def run_generation_task(self, analysis_id: int):
+    # ── SYNC background task — called by FastAPI BackgroundTasks in a thread ──
+    def run_generation_task(self, analysis_id: int):
+        """
+        Synchronous wrapper so FastAPI BackgroundTasks can call us directly.
+        asyncio.run() starts a fresh event loop in this background thread to
+        drive the async provider without fighting the main event loop.
+        """
+        asyncio.run(self._generate_async(analysis_id))
+
+    async def _generate_async(self, analysis_id: int):
+        """Actual async work — image load, Replicate call, DB write."""
         t0 = time.perf_counter()
-        from app.database.session import SessionLocal
-        
-        # Open a new session specifically for the background thread to avoid session closed errors
-        db = SessionLocal()
+        from app.database.session import BackgroundSessionLocal
+
+        db = BackgroundSessionLocal()
         repo = GenerationRepository(db)
         generation = repo.get_by_id(analysis_id)
         if not generation:
@@ -2695,7 +2752,15 @@ class GenerationService:
             # 5. Persist variation
             repo.add_variations(generation.id, [{"image_path": generated_filepath, "seed": 0}])
 
-            # 6. Commit processing time + mark complete
+            # 6. Back-fill room_type_detected from analysis_json if not already set
+            if not generation.room_type_detected and generation.analysis_json:
+                try:
+                    analysis_data = json.loads(generation.analysis_json)
+                    generation.room_type_detected = analysis_data.get("room_type") or "Room"
+                except Exception:
+                    generation.room_type_detected = "Room"
+
+            # 7. Commit processing time + mark complete
             elapsed = round(time.perf_counter() - t0, 2)
             generation.processing_time_sec = elapsed
             generation.provider = "replicate"
@@ -2709,10 +2774,12 @@ class GenerationService:
             logger.info(f"Background task: Generation id={generation.id} done ({elapsed}s)")
 
         except Exception as e:
-            logger.error(f"Background task: Generation id={generation.id} failed: {e}")
+            logger.error(f"Background task: Generation id={generation.id} failed: {e}", exc_info=True)
             repo.set_error(generation.id, str(e))
         finally:
             db.close()
+
+
 
 
 ================================================================================
@@ -2721,14 +2788,19 @@ FILE: .\backend\app\services\refinement_service.py
 
 """
 refinement_service.py — Orchestrates Replicate refinement on an existing image.
+
+Same design as generation_service:
+- `run_refinement_task()` is a sync def that calls asyncio.run() internally.
+- Uses BackgroundSessionLocal (NullPool) to avoid StaticPool deadlocks.
 """
 import time
 import logging
+import asyncio
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_refinement_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
-from app.utils.exceptions import InferenceServiceError, InteriorAIError
+from app.utils.exceptions import InferenceServiceError
 from app.utils.image_utils import load_image, resize_for_upload
 
 logger = logging.getLogger(__name__)
@@ -2772,18 +2844,30 @@ class RefinementService:
             "model_version": "latest",
             "status": "pending",
             "processing_time_sec": 0.0,
+            # Forward room_type_detected from parent so history shows it correctly
+            "room_type_detected": parent_gen.room_type_detected,
+            "room_confidence": parent_gen.room_confidence,
         })
         return new_gen
 
-    async def run_refinement_task(self, new_gen_id: int, parent_id: int, instruction: str):
+    # ── SYNC background task — called by FastAPI BackgroundTasks in a thread ──
+    def run_refinement_task(self, new_gen_id: int, parent_id: int, instruction: str):
+        """
+        Synchronous wrapper — asyncio.run() starts a fresh event loop in this
+        background thread to drive the async provider.
+        """
+        asyncio.run(self._refine_async(new_gen_id, parent_id, instruction))
+
+    async def _refine_async(self, new_gen_id: int, parent_id: int, instruction: str):
+        """Actual async work — image load, Replicate refine call, DB write."""
         t0 = time.perf_counter()
-        from app.database.session import SessionLocal
-        
-        db = SessionLocal()
+        from app.database.session import BackgroundSessionLocal
+
+        db = BackgroundSessionLocal()
         repo = GenerationRepository(db)
         new_gen = repo.get_by_id(new_gen_id)
         parent_gen = repo.get_by_id(parent_id)
-        
+
         if not new_gen or not parent_gen:
             db.close()
             return
@@ -2793,7 +2877,7 @@ class RefinementService:
             if parent_gen.selected_variation_id
             else (parent_gen.variations[0] if parent_gen.variations else None)
         )
-        
+
         try:
             # 1. Prepare source image (resize in memory)
             image = load_image(variation.image_path)
@@ -2830,10 +2914,12 @@ class RefinementService:
             logger.info(f"Background task: Refinement id={new_gen.id} done ({elapsed}s)")
 
         except Exception as e:
-            logger.error(f"Background task: Refinement id={new_gen.id} failed: {e}")
+            logger.error(f"Background task: Refinement id={new_gen.id} failed: {e}", exc_info=True)
             repo.set_error(new_gen.id, str(e))
         finally:
             db.close()
+
+
 
 
 ================================================================================

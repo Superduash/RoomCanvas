@@ -1,13 +1,18 @@
 """
 refinement_service.py — Orchestrates Replicate refinement on an existing image.
+
+Same design as generation_service:
+- `run_refinement_task()` is a sync def that calls asyncio.run() internally.
+- Uses BackgroundSessionLocal (NullPool) to avoid StaticPool deadlocks.
 """
 import time
 import logging
+import asyncio
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_refinement_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
-from app.utils.exceptions import InferenceServiceError, InteriorAIError
+from app.utils.exceptions import InferenceServiceError
 from app.utils.image_utils import load_image, resize_for_upload
 
 logger = logging.getLogger(__name__)
@@ -51,18 +56,30 @@ class RefinementService:
             "model_version": "latest",
             "status": "pending",
             "processing_time_sec": 0.0,
+            # Forward room_type_detected from parent so history shows it correctly
+            "room_type_detected": parent_gen.room_type_detected,
+            "room_confidence": parent_gen.room_confidence,
         })
         return new_gen
 
-    async def run_refinement_task(self, new_gen_id: int, parent_id: int, instruction: str):
+    # ── SYNC background task — called by FastAPI BackgroundTasks in a thread ──
+    def run_refinement_task(self, new_gen_id: int, parent_id: int, instruction: str):
+        """
+        Synchronous wrapper — asyncio.run() starts a fresh event loop in this
+        background thread to drive the async provider.
+        """
+        asyncio.run(self._refine_async(new_gen_id, parent_id, instruction))
+
+    async def _refine_async(self, new_gen_id: int, parent_id: int, instruction: str):
+        """Actual async work — image load, Replicate refine call, DB write."""
         t0 = time.perf_counter()
-        from app.database.session import SessionLocal
-        
-        db = SessionLocal()
+        from app.database.session import BackgroundSessionLocal
+
+        db = BackgroundSessionLocal()
         repo = GenerationRepository(db)
         new_gen = repo.get_by_id(new_gen_id)
         parent_gen = repo.get_by_id(parent_id)
-        
+
         if not new_gen or not parent_gen:
             db.close()
             return
@@ -72,7 +89,7 @@ class RefinementService:
             if parent_gen.selected_variation_id
             else (parent_gen.variations[0] if parent_gen.variations else None)
         )
-        
+
         try:
             # 1. Prepare source image (resize in memory)
             image = load_image(variation.image_path)
@@ -109,7 +126,9 @@ class RefinementService:
             logger.info(f"Background task: Refinement id={new_gen.id} done ({elapsed}s)")
 
         except Exception as e:
-            logger.error(f"Background task: Refinement id={new_gen.id} failed: {e}")
+            logger.error(f"Background task: Refinement id={new_gen.id} failed: {e}", exc_info=True)
             repo.set_error(new_gen.id, str(e))
         finally:
             db.close()
+
+

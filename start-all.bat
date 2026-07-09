@@ -1,47 +1,104 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal EnableDelayedExpansion
 
 title RoomCanvas AI Launcher
+color 0A
 
-echo ===================================================
-echo       RoomCanvas AI - Startup Script
-echo ===================================================
+echo ============================================================
+echo                RoomCanvas AI Launcher
+echo ============================================================
 echo.
 
-echo [1/3] Checking and freeing ports 3000 and 8000...
-for %%p in (3000 8000) do (
-    for /f "tokens=5" %%a in ('netstat -aon ^| findstr :%%p ^| findstr LISTENING') do (
-        taskkill /F /PID %%a >nul 2>&1
+:: -------------------------------
+:: Kill existing processes
+:: -------------------------------
+echo [1/5] Clearing ports...
+
+for %%P in (3000 8000) do (
+    for /f "tokens=5" %%A in ('netstat -aon ^| findstr :%%P ^| findstr LISTENING') do (
+        echo     Killing PID %%A on port %%P...
+        taskkill /F /PID %%A >nul 2>&1
     )
 )
-echo       Ports are clear.
+
+echo     Ports cleared.
 echo.
 
-echo [2/3] Starting Backend Server...
-cd backend
-:: Uses cmd /k so if there's an error, the window stays open for you to read it.
-start "RoomCanvas AI - Backend" cmd /k ".\venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8000 --log-level warning"
-cd ..
+:: -------------------------------
+:: Backend
+:: -------------------------------
+echo [2/5] Starting Backend...
 
-:: Wait 4 seconds to ensure backend is fully up before frontend hits it
-timeout /t 4 /nobreak >nul
-echo       Backend launched in a new window.
+pushd backend
+
+start "RoomCanvas Backend" cmd /k ^
+".\venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+
+popd
+
+echo     Waiting for backend...
+
+:WAIT_BACKEND
+
+timeout /t 1 /nobreak >nul
+
+netstat -ano | findstr ":8000" | findstr LISTENING >nul
+
+if errorlevel 1 (
+    goto WAIT_BACKEND
+)
+
+echo     Backend ready.
 echo.
 
-echo [3/3] Starting Frontend Server...
-cd frontend
-start "RoomCanvas AI - Frontend" cmd /k "npm run dev -- --clearScreen false"
-cd ..
-echo       Frontend launched in a new window.
+:: -------------------------------
+:: Frontend
+:: -------------------------------
+echo [3/5] Starting Frontend...
+
+pushd frontend
+
+start "RoomCanvas Frontend" cmd /k ^
+"npm run dev"
+
+popd
+
+echo     Waiting for frontend...
+
+:WAIT_FRONTEND
+
+timeout /t 1 /nobreak >nul
+
+netstat -ano | findstr ":3000" | findstr LISTENING >nul
+
+if errorlevel 1 (
+    goto WAIT_FRONTEND
+)
+
+echo     Frontend ready.
 echo.
 
-echo ===================================================
-echo   All systems go!
-echo   Opening http://localhost:3000 in your browser...
-echo ===================================================
-timeout /t 2 /nobreak >nul
+:: -------------------------------
+:: Browser
+:: -------------------------------
+echo [4/5] Opening browser...
+
 start http://localhost:3000
 
 echo.
-echo Press any key to exit this launcher window...
-pause >nul
+
+:: -------------------------------
+:: Done
+:: -------------------------------
+echo ============================================================
+echo                RoomCanvas Started Successfully
+echo ============================================================
+echo.
+echo Backend : http://127.0.0.1:8000
+echo API Docs: http://127.0.0.1:8000/docs
+echo Frontend: http://localhost:3000
+echo.
+echo Close the Backend and Frontend windows to stop the servers.
+echo.
+
+pause

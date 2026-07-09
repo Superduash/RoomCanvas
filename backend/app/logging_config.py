@@ -20,12 +20,16 @@ def setup_logging() -> None:
 
     log_level = logging.DEBUG if settings.DEBUG else logging.INFO
 
-    handler = logging.StreamHandler(sys.stdout)
+    # Force UTF-8 so Unicode log characters don't crash on Windows cp1252 consoles
+    import io
+    utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+    handler = logging.StreamHandler(utf8_stdout)
     handler.setLevel(log_level)
     handler.addFilter(RequestIDFilter())
     handler.setFormatter(
         logging.Formatter(
-            fmt="%(asctime)s [%(levelname)s]%(request_id)s %(name)s — %(message)s",
+            fmt="%(asctime)s [%(levelname)s]%(request_id)s %(name)s - %(message)s",
             datefmt="%H:%M:%S",
         )
     )

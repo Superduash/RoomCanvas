@@ -77,12 +77,13 @@ def list_history(
     """
     cached = get_cached_history(limit)
     if cached is not None:
-        return cached
+        return JSONResponse(content=cached)
 
     results = repo.list_all(limit=limit)
-    set_cached_history(limit, results)
+    serialized = [GenerationOut.model_validate(r).model_dump(mode="json") for r in results]
+    set_cached_history(limit, serialized)
 
-    response = JSONResponse(content=[GenerationOut.model_validate(r).model_dump(mode="json") for r in results])
+    response = JSONResponse(content=serialized)
     response.headers["Cache-Control"] = "no-store"  # Mutates frequently
     return response
 
@@ -117,9 +118,10 @@ def get_generation(
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Generation {generation_id} not found.")
+    serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
     if generation.status == "completed":
-        set_cached_generation(generation_id, generation)
-    return generation
+        set_cached_generation(generation_id, serialized)
+    return serialized
 
 
 # ── GET /api/generation/{id} ──────────────────────────────────────────────────
@@ -152,9 +154,10 @@ def get_generation_by_id(
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Generation {generation_id} not found.")
+    serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
     if generation.status == "completed":
-        set_cached_generation(generation_id, generation)
-    return generation
+        set_cached_generation(generation_id, serialized)
+    return serialized
 
 
 # ── POST /api/history/{id}/select/{variation_id} ──────────────────────────────
