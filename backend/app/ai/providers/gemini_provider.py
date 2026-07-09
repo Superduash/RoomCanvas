@@ -23,6 +23,7 @@ class GeminiProvider(AnalysisProvider):
         )
         self.model_name = "gemini-2.5-flash"
 
+    @staticmethod
     def _is_transient(exc: Exception) -> bool:
         if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError)):
             return True
@@ -63,7 +64,7 @@ class GeminiProvider(AnalysisProvider):
                     return json.loads(response.text)
                 except Exception as e:
                     last_exc = e
-                    if self._is_transient(e):
+                    if GeminiProvider._is_transient(e):
                         if attempt < 3:
                             wait_time = 2 ** attempt
                             logger.warning(f"{model} failed on attempt {attempt}. Retrying in {wait_time}s... Error: {e}")
