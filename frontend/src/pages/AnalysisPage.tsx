@@ -83,7 +83,7 @@ export function AnalysisPage() {
     if (hasStartedGenerate.current) return;
     hasStartedGenerate.current = true;
 
-    generateDesign.mutateAsync(analysis.analysis_id)
+    generateDesign.mutateAsync({ analysisId: analysis.analysis_id })
       .then((gen) => setGenerationId(gen.id))
       .catch((err) => {
         setGenerateError(err instanceof Error ? err.message : 'Generation failed');
@@ -112,7 +112,7 @@ export function AnalysisPage() {
     setCurrentStep(0);
     setStepperDone(false);
 
-    generateDesign.mutateAsync(analysis.analysis_id)
+    generateDesign.mutateAsync({ analysisId: analysis.analysis_id })
       .then((gen) => setGenerationId(gen.id))
       .catch((err) => setGenerateError(err instanceof Error ? err.message : 'Generation failed'));
   };

@@ -45,7 +45,8 @@ export function useAnalyzeRoom() {
 export function useGenerateDesign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (analysis_id: number) => api.post<GenerationOut>('/generate', { analysis_id }),
+    mutationFn: ({ analysisId, forceNew }: { analysisId: number; forceNew?: boolean }) =>
+      api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
   });
 }

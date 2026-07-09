@@ -114,23 +114,9 @@ export function ResultsPage() {
   };
 
   const handleGenerateAgain = async () => {
-    // Extract analysis_id from the stored analysis_json
-    const analysisId: number | null = (() => {
-      if (!generation.analysis_json) return null;
-      try {
-        const parsed = JSON.parse(generation.analysis_json) as { analysis_id?: number };
-        return parsed.analysis_id ?? null;
-      } catch {
-        return null;
-      }
-    })();
-
-    if (!analysisId) {
-      toast.error('Cannot regenerate — original analysis data not found.');
-      return;
-    }
+    // The generation's OWN id is the analysis reference the backend expects
     try {
-      const result = await generateDesign.mutateAsync(analysisId);
+      const result = await generateDesign.mutateAsync({ analysisId: generation.id, forceNew: true });
       toast.success('New version started — navigating to results.');
       navigate(`/results/${result.id}`);
     } catch (err) {
