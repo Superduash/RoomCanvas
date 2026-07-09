@@ -66,7 +66,19 @@ class GenerationService:
         asyncio.run() starts a fresh event loop in this background thread to
         drive the async provider without fighting the main event loop.
         """
-        asyncio.run(self._generate_async(analysis_id))
+        try:
+            asyncio.run(self._generate_async(analysis_id))
+        except Exception as e:
+            logger.error(f"Background task critically failed for Generation id={analysis_id}: {e}", exc_info=True)
+            from app.database.session import BackgroundSessionLocal
+            try:
+                db = BackgroundSessionLocal()
+                repo = GenerationRepository(db)
+                repo.update_status(analysis_id, "failed")
+                repo.set_error(analysis_id, str(e))
+                db.close()
+            except Exception as db_err:
+                logger.error(f"Failed to update error state in DB for Generation id={analysis_id}: {db_err}")
 
     async def _generate_async(self, analysis_id: int):
         """Actual async work — image load, Replicate call, DB write."""

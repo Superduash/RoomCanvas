@@ -37,6 +37,7 @@ def init_providers() -> None:
         )
 
     if settings.ACTIVE_GENERATION_PROVIDER == "replicate":
+        logger.info(f"Replicate API Token loaded: {bool(settings.REPLICATE_API_TOKEN)}")
         _generation_provider = ReplicateProvider()
         logger.info(f"Generation provider: ReplicateProvider (model={_generation_provider.model})")
     else:
