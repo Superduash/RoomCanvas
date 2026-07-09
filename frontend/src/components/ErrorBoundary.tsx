@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { logger } from '../lib/logger';
 import { Button } from './primitives/Button';
 
 interface Props { children: ReactNode }
@@ -14,7 +15,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error) {
     // eslint-disable-next-line no-console
-    console.error('Unhandled render error:', error);
+    logger.error('Unhandled render error:', error);
   }
 
   render() {

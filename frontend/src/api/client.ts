@@ -1,3 +1,5 @@
+import { logger } from '../lib/logger';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 const API_PREFIX = `${API_BASE}/api`;
 
@@ -10,7 +12,10 @@ export class ApiError extends Error {
   }
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: Response, method: string, path: string, startMs: number): Promise<T> {
+  const elapsed = performance.now() - startMs;
+  logger.api(method, `/api${path}`, res.status, elapsed);
+
   if (!res.ok) {
     let detail = `Request failed with status ${res.status}`;
     try {
@@ -19,27 +24,39 @@ async function handleResponse<T>(res: Response): Promise<T> {
     } catch {
       /* body wasn't JSON — keep default message */
     }
+    logger.error(`API Error on ${method} ${path}: ${detail}`);
     throw new ApiError(detail, res.status);
   }
   return res.json() as Promise<T>;
 }
 
 export const api = {
-  get: <T>(path: string): Promise<T> =>
-    fetch(`${API_PREFIX}${path}`, { method: 'GET' }).then((r) => handleResponse<T>(r)),
+  get: <T>(path: string): Promise<T> => {
+    const start = performance.now();
+    return fetch(`${API_PREFIX}${path}`, { method: 'GET' })
+      .then((r) => handleResponse<T>(r, 'GET', path, start));
+  },
 
-  post: <T>(path: string, body: unknown): Promise<T> =>
-    fetch(`${API_PREFIX}${path}`, {
+  post: <T>(path: string, body: unknown): Promise<T> => {
+    const start = performance.now();
+    return fetch(`${API_PREFIX}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).then((r) => handleResponse<T>(r)),
+    }).then((r) => handleResponse<T>(r, 'POST', path, start));
+  },
 
-  postForm: <T>(path: string, formData: FormData): Promise<T> =>
-    fetch(`${API_PREFIX}${path}`, { method: 'POST', body: formData }).then((r) => handleResponse<T>(r)),
+  postForm: <T>(path: string, formData: FormData): Promise<T> => {
+    const start = performance.now();
+    return fetch(`${API_PREFIX}${path}`, { method: 'POST', body: formData })
+      .then((r) => handleResponse<T>(r, 'POST', path, start));
+  },
 
-  del: <T>(path: string): Promise<T> =>
-    fetch(`${API_PREFIX}${path}`, { method: 'DELETE' }).then((r) => handleResponse<T>(r)),
+  del: <T>(path: string): Promise<T> => {
+    const start = performance.now();
+    return fetch(`${API_PREFIX}${path}`, { method: 'DELETE' })
+      .then((r) => handleResponse<T>(r, 'DELETE', path, start));
+  },
 };
 
 // Image paths are relative POSIX paths from repo root

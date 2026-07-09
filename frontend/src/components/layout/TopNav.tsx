@@ -171,15 +171,17 @@ function MobileNavLink({ to, label, icon, onClick }: { to: string; label: string
   );
 }
 
-/* ── Logo mark — using the official logo asset ── */
+/* ── Logo mark — using dedicated UI assets ── */
 export function RoomCanvasLogoMark({ size = 28 }: { size?: number }) {
   return (
     <img
-      src="/logo.png"
+      src="/logo-ui-1x.png"
+      srcSet="/logo-ui-1x.png 1x, /logo-ui-2x.png 2x, /logo-ui-3x.png 3x"
       alt="RoomCanvas Logo"
       width={size}
       height={size}
-      className="object-contain"
+      style={{ width: size, height: size }}
+      className="object-contain flex-shrink-0"
     />
   );
 }

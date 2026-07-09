@@ -167,7 +167,7 @@ export function LandingPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              <HeroVisual recentCompleted={recentCompleted} historyLoading={historyLoading} />
+              <HeroVisual />
             </motion.div>
           </div>
         </div>
@@ -371,79 +371,18 @@ export function LandingPage() {
   );
 }
 
-/* ── Hero visual — before/after or placeholder ─── */
-function HeroVisual({ recentCompleted, historyLoading }: { recentCompleted: ReturnType<typeof useHistory>['data'] extends (infer T)[] | undefined ? T[] : never; historyLoading: boolean }) {
-  const first = recentCompleted[0];
-
-  if (historyLoading) {
-    return (
-      <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
-        <CompareSliderSkeleton />
-      </div>
-    );
-  }
-
-  if (first) {
-    return (
-      <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
-        <CompareSlider
-          beforeSrc={resolveImageUrl(first.original_image_path)}
-          afterSrc={resolveImageUrl(first.variations[0].image_path)}
-          beforeLabel="Original"
-          afterLabel="Redesigned"
-        />
-      </div>
-    );
-  }
-
-  // Placeholder when no designs yet — elegant architectural illustration
+/* ── Hero visual — using static before/after images ─── */
+function HeroVisual() {
   return (
-    <div className="rounded-2xl overflow-hidden border border-border shadow-xl bg-surface-alt aspect-[4/3] flex flex-col items-center justify-center gap-5 px-8 text-center">
-      <RoomPlaceholderIllustration />
-      <div>
-        <p className="text-sm font-medium text-text-primary mb-1.5">Your first redesign will appear here</p>
-        <p className="text-xs text-text-tertiary leading-relaxed max-w-xs">
-          After you generate a design, we'll show a live before &amp; after comparison in this spot.
-        </p>
-      </div>
-      <Link to="/upload">
-        <Button size="sm" variant="outline" iconRight={<ArrowRight className="h-3.5 w-3.5" />}>
-          Create first design
-        </Button>
-      </Link>
+    <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
+      <CompareSlider
+        beforeSrc="/originalroom.jpg"
+        afterSrc="/redesignedroom.png"
+        beforeLabel="Original"
+        afterLabel="Redesigned"
+      />
     </div>
   );
 }
 
-function RoomPlaceholderIllustration() {
-  return (
-    <svg width="200" height="140" viewBox="0 0 200 140" fill="none" aria-hidden="true" className="opacity-60">
-      {/* Floor plane */}
-      <path d="M20 110 L100 70 L180 110 Z" fill="var(--color-surface-alt)" stroke="var(--color-border)" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Left wall */}
-      <path d="M20 20 L100 60 L100 70 L20 110 Z" fill="var(--color-surface)" stroke="var(--color-border)" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Right wall */}
-      <path d="M180 20 L100 60 L100 70 L180 110 Z" fill="var(--color-surface-alt)" stroke="var(--color-border)" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Ceiling */}
-      <path d="M20 20 L100 60 L180 20 Z" fill="var(--color-border)" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Window on left wall */}
-      <rect x="32" y="38" width="38" height="28" rx="2" fill="var(--color-info-subtle)" stroke="var(--color-info)" strokeWidth="1.25" />
-      <line x1="51" y1="38" x2="51" y2="66" stroke="var(--color-info)" strokeWidth="0.75" />
-      <line x1="32" y1="52" x2="70" y2="52" stroke="var(--color-info)" strokeWidth="0.75" />
-      {/* Sofa */}
-      <rect x="72" y="82" width="56" height="20" rx="5" fill="var(--color-accent-subtle)" stroke="var(--color-accent)" strokeWidth="1.5" />
-      <rect x="72" y="76" width="56" height="10" rx="5" fill="var(--color-accent)" />
-      {/* Cushion dividers */}
-      <line x1="100" y1="76" x2="100" y2="102" stroke="rgba(183,110,77,0.3)" strokeWidth="1" />
-      {/* Legs */}
-      <line x1="78" y1="102" x2="78" y2="108" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="122" y1="102" x2="122" y2="108" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Plant */}
-      <rect x="155" y="93" width="14" height="12" rx="2" fill="var(--color-success-subtle)" stroke="var(--color-success)" strokeWidth="1.25" />
-      <ellipse cx="162" cy="84" rx="9" ry="12" fill="var(--color-success)" opacity="0.5" />
-      <ellipse cx="156" cy="87" rx="7" ry="9" fill="var(--color-success)" opacity="0.4" />
-      {/* Coffee table */}
-      <rect x="88" y="103" width="24" height="4" rx="2" fill="var(--color-border-strong)" />
-    </svg>
-  );
-}
+

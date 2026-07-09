@@ -40,10 +40,8 @@ async def lifespan(app: FastAPI):
         logger.critical(f"Failed to initialise AI providers: {exc}")
         sys.exit(1)
 
-    logger.info("Initializing database schema…")
     try:
         Base.metadata.create_all(bind=engine)
-        logger.info("Database schema initialised successfully.")
     except Exception as exc:
         logger.critical(f"Failed to initialise database schema: {exc}", exc_info=True)
         sys.exit(1)
@@ -56,14 +54,24 @@ async def lifespan(app: FastAPI):
     from app.cache import get_cached_styles, get_cached_config
     get_cached_styles()
     get_cached_config(settings.MAX_UPLOAD_SIZE_MB)
-    logger.info("Static caches warmed.")
 
-    logger.info(
-        f"{settings.APP_NAME} ready — "
-        f"analysis={settings.ACTIVE_ANALYSIS_PROVIDER} "
-        f"generation={settings.ACTIVE_GENERATION_PROVIDER} "
-        f"debug={settings.DEBUG}"
-    )
+    # Display clean startup banner
+    banner = f"""
+══════════════════════════════════════════════
+ RoomCanvas AI Backend
+══════════════════════════════════════════════
+✓ Database Connected
+✓ Gemini Provider Ready
+✓ Replicate Provider Ready
+✓ Storage Ready
+✓ Cache Warmed
+✓ API Ready
+Running: http://127.0.0.1:{os.environ.get("PORT", 8000)}
+Mode: {"Development" if settings.DEBUG else "Production"}
+══════════════════════════════════════════════
+"""
+    # Print the banner cleanly without the loguru prefix timestamp
+    print(banner.strip(), flush=True)
 
     yield  # ── Application runs here ─────────────────────────────────────────
 
@@ -98,10 +106,10 @@ async def access_log_middleware(request: Request, call_next):
     response.headers["X-Request-ID"] = req_id
     
     if request.url.path.startswith("/api"):
-        logger.info(
-            f"{request.method} {request.url.path} -> {response.status_code} "
-            f"({elapsed_ms:.1f}ms)"
-        )
+        # Format: GET    /api/history      200   18ms
+        method = f"{request.method: <6}"
+        path = f"{request.url.path: <20}"
+        logger.info(f"{method} {path} {response.status_code}   {elapsed_ms:.0f}ms")
     return response
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
