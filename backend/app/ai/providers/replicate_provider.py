@@ -11,18 +11,17 @@ from app.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
+def _is_transient(exc: Exception) -> bool:
+    if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError, httpx.TimeoutException, httpx.NetworkError)):
+        return True
+    return False
+
 class ReplicateProvider(GenerationProvider):
     def __init__(self):
         if not settings.REPLICATE_API_TOKEN:
             raise InferenceServiceError("REPLICATE_API_TOKEN is not configured", 500)
         self.model = "black-forest-labs/flux-kontext-pro"
-        pass
-        
-    @staticmethod
-    def _is_transient(exc: Exception) -> bool:
-        if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError, httpx.TimeoutException, httpx.NetworkError)):
-            return True
-        return False
+        self.model = "black-forest-labs/flux-kontext-pro"
 
     @retry(
         stop=stop_after_attempt(2),

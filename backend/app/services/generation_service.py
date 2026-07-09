@@ -56,8 +56,8 @@ class GenerationService:
             })
             return new_generation
 
-        self.repository.update_status(generation.id, "pending")
-        return generation
+        updated_gen = self.repository.update_status(generation.id, "pending")
+        return updated_gen
 
     # ── SYNC background task — called by FastAPI BackgroundTasks in a thread ──
     def run_generation_task(self, analysis_id: int):

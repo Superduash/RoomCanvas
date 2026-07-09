@@ -41,12 +41,16 @@ class AnalysisService:
             status = "failed_analysis"
             analysis_dict = {
                 "room_type": "Unknown",
-                "furniture": [],
+                "furniture": [
+                    {"item": "Main structural elements", "description": "Unable to map detailed furniture", "estimated_price_range": "Pending"}
+                ],
                 "estimated_dimensions": {"width_ft": 0.0, "length_ft": 0.0, "confidence": "low"},
                 "layout_notes": "Unable to analyze room layout dynamically. You can still generate a design manually by specifying options.",
-                "color_palette": [],
-                "lighting_suggestions": "Unable to analyze lighting.",
-                "estimated_budget_range": "N/A",
+                "color_palette": [
+                    {"name": "Neutral Tone", "hex": "#808080"}
+                ],
+                "lighting_suggestions": "Unable to analyze lighting context.",
+                "estimated_budget_range": "Pending Design Choices",
                 "style_explanation": "Unable to analyze style dynamically.",
                 "redesign_prompt": (
                     f"Fully redesign this room in {style_id.replace('_', ' ')} style. "
