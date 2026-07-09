@@ -57,6 +57,17 @@ class StorageService:
             raise RuntimeError(f"Could not save generated image: {e}")
 
     @staticmethod
+    def delete_file_if_exists(file_path: str):
+        if not file_path:
+            return
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"Deleted file {file_path}")
+        except Exception as e:
+            logger.warning(f"Could not delete file {file_path}: {e}")
+
+    @staticmethod
     def delete_generation_files(generation_id: int, repository: GenerationRepository):
         generation = repository.get_by_id(generation_id)
         if not generation:

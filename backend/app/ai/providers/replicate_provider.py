@@ -1,6 +1,8 @@
 import logging
 import replicate
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import socket
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from app.config import settings
 from app.ai.providers.base_provider import GenerationProvider
@@ -23,10 +25,15 @@ class ReplicateProvider(GenerationProvider):
             timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
         )
         
+    def _is_transient(exc: Exception) -> bool:
+        if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError, httpx.TimeoutException, httpx.NetworkError)):
+            return True
+        return False
+
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception),
+        retry=retry_if_exception(_is_transient),
         reraise=True
     )
     async def generate(self, image_bytes: bytes, mime_type: str, prompt: str) -> str:
@@ -60,7 +67,7 @@ class ReplicateProvider(GenerationProvider):
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception),
+        retry=retry_if_exception(_is_transient),
         reraise=True
     )
     async def refine(self, image_bytes: bytes, mime_type: str, instruction: str) -> str:

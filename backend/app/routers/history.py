@@ -135,14 +135,10 @@ def delete_all_history(
     # Clear all cache keys
     invalidate_history_cache()
     
-    import os
+    from app.services.storage_service import StorageService
     def _delete_files():
         for f in files:
-            try:
-                if os.path.exists(f):
-                    os.remove(f)
-            except Exception as ex:
-                pass
+            StorageService.delete_file_if_exists(f)
     background_tasks.add_task(_delete_files)
     
     return {"deleted": True}
@@ -309,14 +305,10 @@ def delete_generation(
     invalidate_generation_cache(generation_id)
     invalidate_history_cache()
 
-    import os
+    from app.services.storage_service import StorageService
     def _delete_files():
         for f in files:
-            try:
-                if os.path.exists(f):
-                    os.remove(f)
-            except Exception as ex:
-                logger.warning(f"Could not delete file {f}: {ex}")
+            StorageService.delete_file_if_exists(f)
 
     background_tasks.add_task(_delete_files)
 
@@ -416,14 +408,10 @@ def delete_refinement(
     invalidate_generation_cache(parent_id)
     invalidate_history_cache()
     
-    import os
+    from app.services.storage_service import StorageService
     def _delete_files():
         for f in files:
-            try:
-                if os.path.exists(f):
-                    os.remove(f)
-            except Exception as e:
-                logger.warning(f"Could not delete file {f}: {e}")
+            StorageService.delete_file_if_exists(f)
     background_tasks.add_task(_delete_files)
     
     return {"deleted": True}

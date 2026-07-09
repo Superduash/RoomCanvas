@@ -2,7 +2,9 @@ import json
 import logging
 from google import genai
 from google.genai import types
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import socket
+from google.genai import errors as genai_errors
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from app.config import settings
 from app.ai.providers.base_provider import AnalysisProvider
@@ -16,13 +18,24 @@ class GeminiProvider(AnalysisProvider):
     def __init__(self):
         if not settings.GEMINI_API_KEY:
             raise AnalysisServiceError("GEMINI_API_KEY is not configured", 500)
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        self.client = genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=settings.GEMINI_TIMEOUT_SECONDS * 1000),
+        )
         self.model_name = "gemini-2.5-flash"
+
+    def _is_transient(exc: Exception) -> bool:
+        if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError)):
+            return True
+        if isinstance(exc, genai_errors.APIError): # using APIError as genai_errors base
+            if hasattr(exc, 'code') and exc.code >= 500:
+                return True
+        return False
 
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception), # Could be more specific based on SDK
+        retry=retry_if_exception(_is_transient),
         reraise=True
     )
     async def analyze_room(self, image_bytes: bytes, mime_type: str, style_hint: str) -> dict:

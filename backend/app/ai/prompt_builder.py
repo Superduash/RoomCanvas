@@ -28,16 +28,28 @@ def get_analysis_prompt(style_id: str) -> str:
 
     return ANALYSIS_PROMPT_V1.format(style_hint=style_hint)
 
+QUALITY_SUFFIX = """
+Render as a photorealistic architectural visualization: physically accurate lighting
+and shadows consistent with the original light sources, realistic material textures
+(fabric weave, wood grain, metal reflectivity), and clean, precise geometry with no
+warping or distortion. This should look like a professional interior design rendering
+for a high-end residential project, not a stylized or illustrative image.
+"""
+
 def build_generation_prompt(gemini_redesign_prompt: str) -> str:
     gemini_redesign_prompt = sanitize_prompt(gemini_redesign_prompt)
     return f"""{gemini_redesign_prompt}
-Keep the room's structural layout unchanged — walls, windows, doors, and camera
-perspective must match the original photo exactly. Only change furniture, decor,
-colors, and lighting."""
+Keep the room's structural layout, walls, windows, doors, ceiling height, and camera
+angle/perspective exactly as in the original photo. Preserve the original direction
+and quality of natural and ambient light — only add or adjust light sources the
+redesign explicitly calls for. Only change furniture, decor, surface colors/materials,
+and lighting fixtures.
+{QUALITY_SUFFIX}"""
 
 def build_refinement_prompt(user_instruction: str) -> str:
     user_instruction = sanitize_prompt(user_instruction)
     return f"""{user_instruction}
-Apply this change only. Keep everything else in the image exactly as it is —
-same furniture placement, same room structure, same lighting style, same camera
-angle — unless the instruction explicitly says otherwise."""
+Apply this change only. Keep everything else in the image exactly as it is — same
+furniture placement, same room structure, same lighting direction, same camera
+angle — unless the instruction explicitly says otherwise.
+{QUALITY_SUFFIX}"""

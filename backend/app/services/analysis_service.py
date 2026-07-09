@@ -8,6 +8,7 @@ from app.ai.providers.provider_registry import get_analysis_provider
 from app.schemas.generation import AnalyzeResponse
 from app.repositories.generation_repository import GenerationRepository
 from app.utils.exceptions import AnalysisServiceError, InteriorAIError
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,10 @@ class AnalysisService:
         t0 = time.perf_counter()
         try:
             analysis_dict = await self.provider.analyze_room(image_bytes, mime_type, style_id)
-
+            try:
+                _ = AnalyzeResponse(analysis_id=0, **analysis_dict)
+            except (ValidationError, TypeError) as e:
+                raise AnalysisServiceError(f"Gemini returned an unexpected response shape: {e}", 500)
             generation_data = {
                 "original_image_path": original_image_path,
                 "style": style_id,
