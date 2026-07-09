@@ -1,0 +1,32 @@
+/* cmdk token-driven overrides */
+[cmdk-group-heading] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  padding: 8px 8px 4px;
+}
+
+.cmd-group {
+  margin-bottom: 4px;
+}
+
+.cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.cmd-item[aria-selected='true'],
+.cmd-item:hover {
+  background-color: var(--color-accent-subtle);
+  color: var(--color-accent);
+}

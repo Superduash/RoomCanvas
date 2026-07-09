@@ -1,0 +1,73 @@
+export interface Variation {
+  id: number;
+  generation_id: number;
+  image_path: string;
+  seed: number;
+  created_at: string;
+}
+
+export type GenerationStatus = 'pending' | 'analyzed' | 'completed' | 'failed' | 'failed_analysis';
+
+export interface GenerationOut {
+  id: number;
+  original_image_path: string;
+  room_type_detected: string | null;
+  room_confidence: number | null;
+  style: string;
+  redesign_prompt: string;
+  prompt_version: string | null;
+  analysis_json: string | null;
+  parent_generation_id: number | null;
+  provider: string | null;
+  provider_version: string | null;
+  model_used: string;
+  model_version: string | null;
+  status: GenerationStatus;
+  error: string | null;
+  processing_time_sec: number;
+  selected_variation_id: number | null;
+  created_at: string;
+  variations: Variation[];
+}
+
+export interface FurnitureItem {
+  item: string;
+  description: string;
+  estimated_price_range: string;
+}
+
+export interface ColorSwatch {
+  name: string;
+  hex: string;
+}
+
+export interface AnalyzeResponse {
+  analysis_id: number;
+  room_type: string;
+  furniture: FurnitureItem[];
+  estimated_dimensions: { width_ft: number; length_ft: number; confidence: 'low' | 'medium' | 'high' };
+  layout_notes: string;
+  color_palette: ColorSwatch[];
+  lighting_suggestions: string;
+  estimated_budget_range: string;
+  style_explanation: string;
+  redesign_prompt: string;
+}
+
+export interface StyleOption {
+  id: string;
+  furniture: string[];
+  palette: string[];
+  budget_tag: 'Budget-Friendly' | 'Mid-Range' | 'Premium';
+  reason_template: string;
+}
+
+export interface AppConfig {
+  max_upload_mb: number;
+  allowed_types: string[];
+}
+
+export interface HealthStatus {
+  status: string;
+  providers: { gemini: boolean; replicate: boolean };
+}

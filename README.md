@@ -1,160 +1,162 @@
-# RoomCanvas AI
+# RoomCanvas AI Backend
 
-**RoomCanvas AI** is an intelligent interior space redesign application. Upload a photo of any room, choose a design aesthetic, and receive three AI-generated variations — complete with a colour palette, furniture recommendations, and a design rationale.
+**RoomCanvas AI** is an intelligent interior space redesign application. It implements a robust, two-stage AI pipeline:
+1. **Gemini 2.5/3 Flash** for deep multimodal room analysis (detects room types, furniture items, color palettes, dimensions, budget estimates, and generates a tailored design prompt).
+2. **`black-forest-labs/flux-kontext-pro` on Replicate** for structure-preserving generation and iterative refinement (e.g. "make the sofa blue").
 
 ---
 
-## Pipeline Overview
+## AI Redesign Pipeline Overview
 
 ```
-Room Photo
-   ↓
-Prompt Builder
-(auto-formats room type + user-selected style → templated prompt)
-   ↓
-AI Service
-(orchestrates the generation workflow via unified provider interface)
-   ↓
-Replicate Provider (or any future provider)
-(Batched Inference: 1 call · 3 seeds · 3 design variations)
-   ↓
-User selects a variation → Design Explanation Panel + Generation Summary
+[ Upload Room Photo ]
+         │
+         ▼
+ POST /api/analyze (Gemini 2.5 Flash)
+ ├── Analyzes room structure, furniture, colors, and layout
+ └── Generates a tailored redesign_prompt matching the style
+         │
+         ▼
+ POST /api/generate (Flux-Kontext-Pro Background Task)
+ ├── Schedules the redesign task in the background
+ └── Returns "pending" status with generation ID immediately
+         │
+         ▼
+ [ Poll GET /api/history/{id} ]
+ └── Wait until status becomes "completed" (or "failed")
+         │
+         ▼
+ POST /api/refine (Iterative Refinement - Flux-Kontext-Pro Task)
+ ├── Submits a change instruction (e.g. "make the sofa blue")
+ ├── Schedules background task to edit previous generation in-place
+ └── Poll GET /api/history/{id} for the updated image
 ```
 
 ---
 
 ## Tech Stack
 
-| Layer     | Technology                                    |
-|-----------|-----------------------------------------------|
-| Frontend  | React 18 + Vite + Vanilla CSS                 |
-| Backend   | Python 3.12 · FastAPI · SQLAlchemy 2 · SQLite |
-| AI        | Replicate API (Model: adirik/interior-design) |
+| Layer    | Technology |
+|----------|------------|
+| API Core | Python 3.12 · FastAPI · Uvicorn |
+| Database | SQLite · SQLAlchemy 2.0 · WAL mode |
+| Analysis | Google Gemini (SDK: `google-genai`) |
+| Redesign | Replicate API (Model: `black-forest-labs/flux-kontext-pro`) |
 
 ---
 
 ## API Reference
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET`  | `/api/health` | Server status + AI mode |
-| `POST` | `/api/generate` | Run pipeline → 3 variations |
-| `GET`  | `/api/history` | List all past generations |
-| `GET`  | `/api/history/{id}` | Single generation detail |
-| `POST` | `/api/history/{id}/select/{var_id}` | Lock a variation choice |
+### Core AI Pipeline
+* **`POST /api/analyze`**: Upload a room photo and get structured recommendations + the redesign prompt.
+  * **Payload**: `multipart/form-data` with `image` (file) and `style` (form field).
+  * **Response**: `AnalyzeResponse` containing structured metadata and `analysis_id`.
+* **`POST /api/generate`**: Turn an analysis into a redesigned image via a background task.
+  * **Payload**: JSON `{ "analysis_id": <int> }`.
+  * **Response**: `GenerationOut` with `status: "pending"`.
+* **`POST /api/refine`**: Edit an existing generation in-place with a natural language instruction.
+  * **Payload**: JSON `{ "generation_id": <int>, "instruction": <str> }`.
+  * **Response**: `GenerationOut` (new child generation row, `status: "pending"`).
 
-Full interactive docs: **http://localhost:8000/docs**
+### History & Selections
+* **`GET /api/history`**: List past generations, ordered newest first.
+* **`GET /api/history/{id}`** or **`GET /api/generation/{id}`**: Fetch details of a single generation.
+* **`POST /api/history/{id}/select/{variation_id}`**: Register which design variation was chosen/saved.
+* **`DELETE /api/history/{id}`**: Delete a generation, its variations, and clean up their image files from disk.
 
----
-
-## Local Development
-
-### Prerequisites
-
-- Python 3.12+
-- Node.js 18+
-- Replicate API Token (`REPLICATE_API_TOKEN`)
-
-### Backend & AI
-
-```bash
-# Create + activate virtual environment (at project root)
-python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS / Linux
-
-pip install -r backend/requirements.txt
-pip install replicate
-
-# Copy environment config
-copy backend\.env.example backend\.env         # Windows
-# cp backend/.env.example backend/.env         # macOS / Linux
-
-# Make sure to add your REPLICATE_API_TOKEN to backend/.env!
-
-# Start the API server (port 8000)
-# Ensure the root folder is in the Python path so the ai module is found
-set PYTHONPATH=.
-uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-### Frontend
-
-```bash
-cd frontend
-
-npm install
-
-# Start the Vite dev server (port 3000)
-npm run dev
-```
-
-Open **http://localhost:3000** in your browser.
-
----
-
-## Design Styles
-
-| Key | Style | Budget Tier |
-|-----|-------|-------------|
-| `modern_minimalist` | Modern Minimalist | Mid-Range |
-| `scandinavian` | Scandinavian | Budget-Friendly |
-| `industrial` | Industrial | Mid-Range |
-| `bohemian` | Bohemian | Budget-Friendly |
-| `luxury_contemporary` | Luxury Contemporary | Premium |
-
----
-
-## Provider Architecture
-
-We use a modular `Provider` pattern for all AI models. Changing models or providers (e.g., to OpenAI or local Stable Diffusion) is as easy as modifying the `ACTIVE_PROVIDER` in `ai/config.py` and implementing `BaseAIProvider`.
+### Metadata & Configuration
+* **`GET /api/styles`**: Retrieve list of supported style templates and hints.
+* **`GET /api/providers`**: Check active status and configuration state of Gemini and Replicate.
+* **`GET /api/config`**: Fetch runtime configurations (allowed file types, max upload size).
+* **`GET /api/health`**: Basic server health check.
 
 ---
 
 ## Project Structure
 
 ```
-RoomCanvas AI/
-├── ai/
-│   ├── config.py                  # AI parameters and model selection
-│   ├── service.py                 # Main entry point for the backend
-│   ├── storage.py                 # File download and saving handlers
-│   ├── formatter.py
-│   ├── providers/
-│   │   ├── base_provider.py       # Abstract Base Provider
-│   │   ├── registry.py            # Provider factory
-│   │   └── replicate_provider.py  # Replicate implementation
-│   ├── prompts/
-│   │   ├── builder.py
-│   │   ├── negative.py
-│   │   └── system.py
+backend/
+├── app/
+│   ├── ai/
+│   │   ├── prompts/
+│   │   │   ├── schemas.py              # Gemini JSON schemas
+│   │   │   └── style_hints.py          # Style definitions / templates
+│   │   ├── providers/
+│   │   │   ├── base_provider.py        # Abstract AI interfaces
+│   │   │   ├── gemini_provider.py      # Google GenAI integration
+│   │   │   ├── replicate_provider.py   # Flux-Kontext-Pro integration
+│   │   │   └── provider_registry.py    # Provider factory registry
+│   │   └── prompt_builder.py           # Sanitization and prompt wrapping
+│   ├── database/
+│   │   ├── models.py                   # SQLAlchemy ORM schemas
+│   │   └── session.py                  # Request & Background SQLite session managers
+│   ├── repositories/
+│   │   └── generation_repository.py     # Database CRUD operations
+│   ├── routers/
+│   │   └── (health, analyze, generate, refine, history, styles, providers, config).py
+│   ├── schemas/
+│   │   ├── common.py                   # Health schemas
+│   │   └── generation.py               # Pydantic schemas (Request / Response validation)
 │   ├── services/
-│   │   └── orchestrator.py        # Pipeline workflow coordinator
-│   ├── styles/
-│   │   └── templates.py
-│   └── image/
-│       ├── preprocess.py
-│       └── postprocess.py
-├── backend/
-│   ├── app/
-│   │   ├── config.py              # App settings
-│   │   ├── main.py                # FastAPI app
-│   │   ├── database/
-│   │   ├── repositories/
-│   │   ├── routers/
-│   │   ├── schemas/
-│   │   └── utils/
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/
-│   ├── src/
-│   └── package.json
-├── docs/
-│   └── plan.md
-├── scripts/
-│   └── export.py
-└── README.md
+│   │   ├── analysis_service.py         # Room analysis orchestration
+│   │   ├── generation_service.py       # Async generation coordinator
+│   │   ├── refinement_service.py       # Async refinement coordinator
+│   │   └── storage_service.py          # Image upload, download, and file cleanup
+│   ├── utils/
+│   │   ├── exceptions.py               # Custom application exceptions
+│   │   ├── image_utils.py              # Pillow verification & resizing utilities
+│   │   └── request_id.py               # Request tracing middleware helper
+│   ├── config.py                       # App settings loader (Pydantic Settings)
+│   ├── logging_config.py               # Structured log formatting (UTF-8)
+│   └── main.py                         # FastAPI startup & lifecycle management
+├── tests/
+│   ├── integration/                    # Endpoint & workflow integration tests
+│   ├── unit/                           # Repository, image validation, & prompt builder tests
+│   └── conftest.py                     # Pytest DB, client, and provider stubs
+├── requirements.txt                    # Project package dependencies
+└── .env.example                        # Template environment configuration file
 ```
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+- Python 3.12+
+- Gemini API Key
+- Replicate API Token
+
+### Setup
+1. **Initialize and Activate Virtual Environment**:
+   ```bash
+   cd backend
+   python -m venv venv
+   venv\Scripts\activate      # On Windows
+   # source venv/bin/activate # On macOS/Linux
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configure Environment Variables**:
+   Copy `.env.example` to `.env` and fill in your real API credentials:
+   ```bash
+   copy .env.example .env
+   ```
+
+4. **Start the FastAPI Development Server**:
+   ```bash
+   python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+   Interactive API docs will be available at **http://127.0.0.1:8000/docs**.
+
+5. **Run the Test Suite**:
+   Verify everything is fully functional by running:
+   ```bash
+   python -m pytest
+   ```
 
 ---
 

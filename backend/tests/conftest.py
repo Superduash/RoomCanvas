@@ -20,6 +20,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 import app.database.session as session_module
 session_module.SessionLocal = TestingSessionLocal
+session_module.BackgroundSessionLocal = TestingSessionLocal
 
 from app.main import app
 from app.database.session import Base, get_db

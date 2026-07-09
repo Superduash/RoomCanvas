@@ -1,0 +1,116 @@
+:root {
+  /* ── Color: warm architectural neutrals ── */
+  --color-bg:              #FAF7F2;
+  --color-surface:         #FFFFFF;
+  --color-surface-alt:     #F4EFE8;
+  --color-surface-raised:  #FFFFFF;
+  --color-border:          #E6DED4;
+  --color-border-strong:   #CEC5B8;
+  --color-text-primary:    #1F1F1F;
+  --color-text-secondary:  #6F6A64;
+  --color-text-tertiary:   #9E9891;
+  --color-text-inverse:    #FAF7F2;
+
+  /* ── Color: terracotta accent — the brand color ── */
+  --color-accent:          #B76E4D;
+  --color-accent-hover:    #A35F42;
+  --color-accent-subtle:   #F5EAE2;
+  --color-accent-text-on:  #FFFFFF;
+
+  /* ── Color: semantic ── */
+  --color-success:         #3C7A52;
+  --color-success-subtle:  #E3F0E9;
+  --color-warning:         #D89B34;
+  --color-warning-subtle:  #FDF4E1;
+  --color-danger:          #C44B4B;
+  --color-danger-subtle:   #FAEBEB;
+  --color-info:            #3B6EA5;
+  --color-info-subtle:     #E2ECF5;
+
+  /* ── Spacing — 8px base grid ── */
+  --space-0:   2px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+  --space-10: 128px;
+
+  /* ── Radius ── */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* ── Typography ── */
+  --font-sans:   'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --text-xs:    11px;
+  --text-sm:    13px;
+  --text-base:  15px;
+  --text-md:    16px;
+  --text-lg:    18px;
+  --text-xl:    22px;
+  --text-2xl:   28px;
+  --text-3xl:   36px;
+  --text-4xl:   48px;
+  --text-5xl:   64px;
+  --text-hero:  72px;
+
+  --leading-none:    1;
+  --leading-tight:   1.2;
+  --leading-snug:    1.35;
+  --leading-normal:  1.55;
+  --leading-relaxed: 1.75;
+
+  --tracking-tighter: -0.04em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:   0;
+  --tracking-wide:     0.05em;
+  --tracking-widest:   0.12em;
+
+  /* ── Shadows — soft layered, warm-tinted ── */
+  --shadow-xs:    0 1px 2px rgba(31,24,18,0.04);
+  --shadow-sm:    0 1px 3px rgba(31,24,18,0.06), 0 1px 2px rgba(31,24,18,0.04);
+  --shadow-md:    0 4px 12px rgba(31,24,18,0.08), 0 2px 4px rgba(31,24,18,0.04);
+  --shadow-lg:    0 12px 32px rgba(31,24,18,0.10), 0 4px 8px rgba(31,24,18,0.04);
+  --shadow-xl:    0 24px 64px rgba(31,24,18,0.12), 0 8px 16px rgba(31,24,18,0.06);
+  --shadow-focus: 0 0 0 3px rgba(183,110,77,0.28);
+  --shadow-focus-danger: 0 0 0 3px rgba(196,75,75,0.24);
+
+  /* ── Motion ── */
+  --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:    cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard:  cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  --duration-instant: 80ms;
+  --duration-fast:   150ms;
+  --duration-base:   220ms;
+  --duration-slow:   350ms;
+  --duration-slower: 500ms;
+
+  /* ── Layout ── */
+  --content-max-width: 1280px;
+  --nav-height: 64px;
+  --page-gutter: clamp(16px, 5vw, 48px);
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
