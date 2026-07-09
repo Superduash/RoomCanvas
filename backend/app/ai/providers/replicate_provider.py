@@ -16,14 +16,7 @@ class ReplicateProvider(GenerationProvider):
         if not settings.REPLICATE_API_TOKEN:
             raise InferenceServiceError("REPLICATE_API_TOKEN is not configured", 500)
         self.model = "black-forest-labs/flux-kontext-pro"
-        
-        # Initialize an explicit client to pass the timeout
-        from replicate.client import Client
-        import httpx
-        self.client = Client(
-            api_token=settings.REPLICATE_API_TOKEN,
-            timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
-        )
+        pass
         
     def _is_transient(exc: Exception) -> bool:
         if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError, httpx.TimeoutException, httpx.NetworkError)):
@@ -39,11 +32,21 @@ class ReplicateProvider(GenerationProvider):
     async def generate(self, image_bytes: bytes, mime_type: str, prompt: str) -> str:
         try:
             import io
+            import uuid
             file_obj = io.BytesIO(image_bytes)
+            file_obj.name = f"upload_{uuid.uuid4().hex}.jpg"
             
             logger.info(f"Calling Replicate model {self.model} for generation...")
             
-            output = await self.client.async_run(
+            # Instantiate client here to ensure it binds to the current event loop
+            from replicate.client import Client
+            import httpx
+            client = Client(
+                api_token=settings.REPLICATE_API_TOKEN,
+                timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
+            )
+            
+            output = await client.async_run(
                 self.model,
                 input={
                     "input_image": file_obj,

@@ -89,6 +89,11 @@ class GenerationService:
             final_prompt = build_generation_prompt(generation.redesign_prompt)
 
             # 3. Call Replicate
+            logger.info(
+                f"Generation id={generation.id} starting. "
+                f"Image: '{generation.original_image_path}' ({len(image_bytes)} bytes). "
+                f"Prompt: '{final_prompt}'"
+            )
             logger.info(f"Background task: calling Replicate for Generation id={generation.id}…")
             output_url = await self.provider.generate(
                 image_bytes=image_bytes,

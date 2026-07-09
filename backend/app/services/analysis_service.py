@@ -48,7 +48,11 @@ class AnalysisService:
                 "lighting_suggestions": "Unable to analyze lighting.",
                 "estimated_budget_range": "N/A",
                 "style_explanation": "Unable to analyze style dynamically.",
-                "redesign_prompt": f"Redesign this room in {style_id.replace('_', ' ')} style."
+                "redesign_prompt": (
+                    f"Fully redesign this room in {style_id.replace('_', ' ')} style. "
+                    f"Add appropriate furniture, decor, and lighting fixtures for a {style_id.replace('_', ' ')} "
+                    f"living space — this room should look furnished and complete, not empty."
+                )
             }
 
         # 2. Save generation to DB
