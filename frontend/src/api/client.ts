@@ -60,6 +60,12 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  patch: <T>(path: string, body: unknown): Promise<T> =>
+    safeFetch<T>('PATCH', path, {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+
   postForm: <T>(path: string, formData: FormData): Promise<T> =>
     safeFetch<T>('POST', path, { body: formData }),
 

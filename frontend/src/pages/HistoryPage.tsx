@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle, RefreshCw, Search, LayoutGrid } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Search, LayoutGrid, Trash2 } from 'lucide-react';
 import { useHistory } from '../api/queries';
 import { type GenerationOut } from '../api/types';
 import { HistoryCard, HistoryCardSkeleton, EmptyHistory } from '../components/history/HistoryCard';

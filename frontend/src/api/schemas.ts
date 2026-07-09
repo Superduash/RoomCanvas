@@ -57,7 +57,7 @@ export const StyleOptionSchema = z.object({
   id: z.string(),
   furniture: z.array(z.string()),
   palette: z.array(z.string()),
-  budget_tag: z.enum(['Budget-Friendly', 'Mid-Range', 'Premium']),
+  budget_tag: z.enum(['Budget', 'Mid', 'Premium']),
   reason_template: z.string(),
 });
 

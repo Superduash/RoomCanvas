@@ -1,10 +1,10 @@
 import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, ImagePlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, ImagePlus, ChevronDown, ChevronUp, MoreVertical, Edit2, Download, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type GenerationOut } from '../../api/types';
 import { resolveImageUrl } from '../../api/client';
-import { useDeleteGeneration } from '../../api/queries';
+import { useDeleteGeneration, useRenameGeneration, useDeleteRefinement } from '../../api/queries';
 import { useUIStore } from '../../store/uiStore';
 import { Badge } from '../primitives/Badge';
 import { Button } from '../primitives/Button';
@@ -12,7 +12,6 @@ import { Dialog } from '../primitives/Dialog';
 import { Skeleton } from '../primitives/Skeleton';
 import { formatRelativeTime, titleCase } from '../../lib/utils';
 import { toast } from '../../lib/toast';
-import { useDeleteRefinement } from '../../api/queries';
 
 interface HistoryCardProps {
   generation: GenerationOut;
@@ -21,9 +20,13 @@ interface HistoryCardProps {
 
 export const HistoryCard = memo(function HistoryCard({ generation: g, refinements = [] }: HistoryCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renameTitle, setRenameTitle] = useState(g.room_type_detected || '');
   const [refinementToDelete, setRefinementToDelete] = useState<number | null>(null);
   const [refinementsOpen, setRefinementsOpen] = useState(false);
   const deleteGen = useDeleteGeneration();
+  const renameGen = useRenameGeneration();
   const deleteRefinement = useDeleteRefinement();
   const setRefinementDraft = useUIStore((s) => s.setRefinementDraft);
 
@@ -35,10 +38,33 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
     try {
       await deleteGen.mutateAsync(g.id);
       setDeleteOpen(false);
-      toast.success('Design deleted');
+      toast.success('Project deleted');
     } catch {
-      toast.error('Failed to delete design');
+      toast.error('Failed to delete project');
     }
+  };
+
+  const handleRename = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renameTitle.trim()) return;
+    try {
+      await renameGen.mutateAsync({ id: g.id, title: renameTitle.trim() });
+      setRenameOpen(false);
+      toast.success('Project renamed');
+    } catch {
+      toast.error('Failed to rename project');
+    }
+  };
+
+  const handleDownload = () => {
+    if (!g.variations[0]?.image_path) return;
+    const link = document.createElement('a');
+    link.href = resolveImageUrl(g.variations[0].image_path);
+    link.download = `roomcanvas-${g.id}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setMenuOpen(false);
   };
 
   const statusBadge = () => {
@@ -56,9 +82,9 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
 
   return (
     <>
-      <div className="flex flex-col h-full rounded-2xl border border-border bg-surface shadow-sm overflow-hidden group hover:border-accent/40 transition-all duration-base">
+      <div className="flex flex-col h-full rounded-2xl border border-border bg-surface shadow-sm group hover:border-accent/40 transition-all duration-base relative">
         {/* Thumbnail Hero */}
-        <Link to={`/results/${g.id}`} className="block relative aspect-[4/3] w-full overflow-hidden bg-surface-alt">
+        <Link to={`/results/${g.id}`} className="block relative aspect-[4/3] w-full overflow-hidden bg-surface-alt rounded-t-2xl">
           <img
             src={thumbnail}
             alt={`${g.room_type_detected ?? 'Room'} design`}
@@ -111,16 +137,68 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
                 <span className="text-xs text-text-tertiary">No refinements yet</span>
              )}
 
-            <div className="flex gap-1.5">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-text-tertiary hover:text-danger hover:bg-danger-subtle"
-                onClick={() => setDeleteOpen(true)}
-                title="Delete project"
+            {/* Action Menu */}
+            <div className="relative">
+              <button
+                className="flex items-center justify-center h-8 w-8 rounded-full text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="More actions"
+                aria-expanded={menuOpen}
               >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+                <MoreVertical className="h-4 w-4" />
+              </button>
+              
+              <AnimatePresence>
+                {menuOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setMenuOpen(false)}
+                      aria-hidden="true"
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-1 w-48 bg-surface rounded-lg shadow-xl border border-border z-50 py-1 flex flex-col"
+                      role="menu"
+                    >
+                      <Link
+                        to={`/analysis/${g.id}`}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-alt transition-colors"
+                        role="menuitem"
+                      >
+                        <Eye className="h-4 w-4 text-text-tertiary" /> View Project
+                      </Link>
+                      <button
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-alt transition-colors text-left"
+                        onClick={() => { setMenuOpen(false); setRenameOpen(true); }}
+                        role="menuitem"
+                      >
+                        <Edit2 className="h-4 w-4 text-text-tertiary" /> Rename
+                      </button>
+                      {g.variations.length > 0 && (
+                        <button
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-alt transition-colors text-left"
+                          onClick={handleDownload}
+                          role="menuitem"
+                        >
+                          <Download className="h-4 w-4 text-text-tertiary" /> Download
+                        </button>
+                      )}
+                      <div className="h-px bg-border my-1" />
+                      <button
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger-subtle transition-colors text-left"
+                        onClick={() => { setMenuOpen(false); setDeleteOpen(true); }}
+                        role="menuitem"
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete Project
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -133,7 +211,7 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="overflow-hidden bg-surface-alt border-t border-border"
+              className="overflow-hidden bg-surface-alt border-t border-border rounded-b-2xl"
             >
               <div className="flex flex-col divide-y divide-border/50 max-h-48 overflow-y-auto">
                 {refinements.map((r) => (
@@ -177,26 +255,56 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
         </AnimatePresence>
       </div>
 
-      {/* Delete confirm dialog */}
+      {/* Delete Project Dialog */}
       <Dialog
         open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        title="Delete this project?"
-        description="This will permanently delete the design, all its iterative refinements, and generated images. This action cannot be undone."
+        onClose={() => !deleteGen.isPending && setDeleteOpen(false)}
+        title="Delete Project"
       >
-        <div className="flex gap-3 justify-end mt-4">
-          <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
+        <p className="text-text-secondary text-sm mb-6">
+          Are you sure you want to delete this project? This will permanently remove the original photo, all generated variations, and refinements.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleteGen.isPending}>
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            loading={deleteGen.isPending}
-            onClick={handleDelete}
-            icon={<Trash2 className="h-4 w-4" />}
-          >
-            Delete Project
+          <Button variant="destructive" onClick={handleDelete} disabled={deleteGen.isPending}>
+            {deleteGen.isPending ? 'Deleting...' : 'Delete'}
           </Button>
         </div>
+      </Dialog>
+
+      {/* Rename Project Dialog */}
+      <Dialog
+        open={renameOpen}
+        onClose={() => !renameGen.isPending && setRenameOpen(false)}
+        title="Rename Project"
+      >
+        <form onSubmit={handleRename}>
+          <div className="mb-6">
+            <label htmlFor={`rename-${g.id}`} className="block text-sm font-medium text-text-secondary mb-2">
+              Project Name
+            </label>
+            <input
+              id={`rename-${g.id}`}
+              type="text"
+              value={renameTitle}
+              onChange={(e) => setRenameTitle(e.target.value)}
+              className="w-full h-10 rounded-lg border border-border bg-surface-alt px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+              placeholder="e.g. Modern Living Room"
+              autoFocus
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} disabled={renameGen.isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={renameGen.isPending || !renameTitle.trim()}>
+              {renameGen.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
       </Dialog>
 
       {/* Delete refinement confirm dialog */}

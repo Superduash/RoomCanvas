@@ -7,8 +7,8 @@
   --color-border:          #E6DED4;
   --color-border-strong:   #CEC5B8;
   --color-text-primary:    #1F1F1F;
-  --color-text-secondary:  #6F6A64;
-  --color-text-tertiary:   #9E9891;
+  --color-text-secondary:  #524E48;
+  --color-text-tertiary:   #757069;
   --color-text-inverse:    #FAF7F2;
 
   /* ── Color: terracotta accent — the brand color ── */
@@ -101,7 +101,7 @@
 
   /* ── Layout ── */
   --content-max-width: 1280px;
-  --nav-height: 64px;
+  --nav-height: 72px;
   --page-gutter: clamp(16px, 5vw, 48px);
 }
 

@@ -58,7 +58,7 @@ export interface StyleOption {
   id: string;
   furniture: string[];
   palette: string[];
-  budget_tag: 'Budget-Friendly' | 'Mid-Range' | 'Premium';
+  budget_tag: 'Budget' | 'Mid' | 'Premium';
   reason_template: string;
 }
 

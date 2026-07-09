@@ -45,18 +45,19 @@ export function TopNav() {
 
       {/* Main nav */}
       <header
-        className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border"
-        style={{ height: 'var(--nav-height)' }}
+        className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-border h-[60px] md:h-[var(--nav-height)]"
       >
         <div className="mx-auto max-w-content h-full flex items-center justify-between px-6">
 
           {/* Logo */}
           <Link
             to="/"
-            className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:shadow-focus rounded-md"
+            className="flex items-center gap-2 group focus-visible:outline-none focus-visible:shadow-focus rounded-md"
             aria-label="RoomCanvas home"
           >
-            <RoomCanvasLogoMark />
+            <div className="-translate-y-[1px]">
+              <RoomCanvasLogoMark size={32} />
+            </div>
             <span className="text-[15px] font-semibold text-text-primary tracking-tight group-hover:text-accent transition-colors duration-fast">
               RoomCanvas
             </span>
@@ -144,8 +145,10 @@ export function TopNav() {
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-2"
                 >
-                  <RoomCanvasLogoMark size={24} />
-                  <span className="text-sm font-semibold text-text-primary">RoomCanvas</span>
+                  <div className="-translate-y-[1px]">
+                    <RoomCanvasLogoMark size={32} />
+                  </div>
+                  <span className="text-sm font-semibold text-text-primary tracking-tight">RoomCanvas</span>
                 </Link>
                 <button
                   onClick={() => setMobileOpen(false)}
@@ -213,7 +216,7 @@ function MobileNavLink({ to, label, icon, onClick }: { to: string; label: string
 }
 
 /* ── Logo mark — using dedicated UI assets ── */
-export function RoomCanvasLogoMark({ size = 28 }: { size?: number }) {
+export function RoomCanvasLogoMark({ size = 32 }: { size?: number }) {
   return (
     <img
       src="/branding/logo.svg"

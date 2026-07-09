@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.repositories.generation_repository import GenerationRepository
 from app.schemas.generation import GenerationOut
+from pydantic import BaseModel
 from app.cache import (
     get_cached_history, set_cached_history, invalidate_history_cache,
     get_cached_generation, set_cached_generation, invalidate_generation_cache,
@@ -226,6 +227,19 @@ def delete_generation(
                             detail=f"Generation {generation_id} not found.")
 
     files = []
+    
+    # Collect files from refinement generations (children) first to avoid FK constraint failures
+    children = repo.get_children(generation_id)
+    for child in children:
+        if child.original_image_path:
+            files.append(child.original_image_path)
+        for v in child.variations:
+            if v.image_path:
+                files.append(v.image_path)
+        repo.delete(child.id)
+        invalidate_generation_cache(child.id)
+
+    # Collect files from parent generation
     if generation.original_image_path:
         files.append(generation.original_image_path)
     for v in generation.variations:
@@ -234,6 +248,7 @@ def delete_generation(
 
     repo.delete(generation_id)
     invalidate_generation_cache(generation_id)
+    invalidate_history_cache()
 
     import os
     def _delete_files():
@@ -247,6 +262,37 @@ def delete_generation(
     background_tasks.add_task(_delete_files)
 
     return {"deleted": True}
+
+
+class RenameRequest(BaseModel):
+    room_type_detected: str
+
+# ── PATCH /api/history/{id} ───────────────────────────────────────────────────
+@router.patch(
+    "/history/{generation_id}",
+    response_model=GenerationOut,
+    tags=["History"],
+)
+def rename_generation(
+    generation_id: int,
+    req: RenameRequest,
+    repo: GenerationRepository = Depends(get_repo),
+):
+    """
+    Rename a generation (updates room_type_detected).
+    """
+    generation = repo.get_by_id(generation_id)
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found.")
+
+    generation.room_type_detected = req.room_type_detected
+    repo.db.commit()
+    repo.db.refresh(generation)
+
+    invalidate_generation_cache(generation_id)
+    invalidate_history_cache()
+
+    return generation
 
 
 # ── DELETE /api/history/all ───────────────────────────────────────────────────
@@ -274,7 +320,26 @@ def delete_all_history(
         for v in g.variations:
             if v.image_path:
                 files.append(v.image_path)
-        repo.delete(g.id)
+    
+    # In SQLite, refinements reference parent generations via parent_generation_id.
+    # To delete all successfully, we must delete refinements (children) first.
+    from app.database.models import Generation
+    try:
+        # 1. Delete all generations that have a parent (refinements)
+        repo.db.query(Generation).filter(Generation.parent_generation_id.isnot(None)).delete(synchronize_session=False)
+        # 2. Delete all root generations
+        repo.db.query(Generation).filter(Generation.parent_generation_id.is_(None)).delete(synchronize_session=False)
+        repo.db.commit()
+    except Exception as ex:
+        repo.db.rollback()
+        logger.error(f"Error truncating generations: {ex}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error clearing history: {ex}"
+        )
+    
+    # Clear all cache keys
+    invalidate_history_cache()
     
     import os
     def _delete_files():

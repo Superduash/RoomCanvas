@@ -117,3 +117,12 @@ export function useDeleteRefinement() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
   });
 }
+
+export function useRenameGeneration() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, title }: { id: number; title: string }) => 
+      api.patch<GenerationOut>(`/history/${id}`, { room_type_detected: title }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'] }),
+  });
+}

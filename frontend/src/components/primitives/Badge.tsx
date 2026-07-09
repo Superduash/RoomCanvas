@@ -33,7 +33,7 @@ export function Badge({ variant = 'default', children, className, dot }: BadgePr
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 h-6 text-xs font-medium leading-none whitespace-nowrap',
+        'inline-flex items-center gap-1.5 rounded-full px-3 h-7 text-[13px] font-semibold leading-none whitespace-nowrap',
         badgeVariants[variant],
         className
       )}

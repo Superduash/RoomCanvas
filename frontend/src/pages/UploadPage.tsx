@@ -58,7 +58,7 @@ export function UploadPage() {
   };
 
   const budgetVariant = (tag: string) => {
-    if (tag === 'Budget-Friendly') return 'success';
+    if (tag === 'Budget') return 'success';
     if (tag === 'Premium') return 'accent';
     return 'info';
   };
@@ -116,9 +116,9 @@ export function UploadPage() {
                   className="p-5 flex flex-col justify-between h-full"
                 >
                   <div>
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-base font-semibold text-text-primary">{titleCase(style.id)}</h3>
-                      <Badge variant={budgetVariant(style.budget_tag) as any} dot>
+                    <div className="flex items-center justify-between gap-3 mb-3 w-full">
+                      <h3 className="text-base font-semibold text-text-primary truncate flex-1">{titleCase(style.id)}</h3>
+                      <Badge variant={budgetVariant(style.budget_tag) as any} dot className="flex-shrink-0">
                         {style.budget_tag}
                       </Badge>
                     </div>
@@ -127,17 +127,19 @@ export function UploadPage() {
                     </p>
                   </div>
                   {/* Palette swatches */}
-                  <div className="flex items-center gap-1.5 mt-auto pt-2 border-t border-border border-opacity-50">
-                    <span className="text-xs text-text-tertiary mr-2 font-medium">Palette:</span>
-                    {style.palette.slice(0, 4).map((color, i) => (
-                      <div
+                  <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-border border-opacity-50">
+                    <span className="text-xs text-text-tertiary mr-1 font-medium">Palette:</span>
+                    {style.palette.slice(0, 3).map((color, i) => (
+                      <span
                         key={i}
-                        className="h-5 w-5 rounded-full shadow-xs border border-border/50"
-                        style={{ backgroundColor: color.startsWith('#') ? color : undefined }}
-                        title={color}
-                        aria-hidden="true"
-                      />
+                        className="text-[11px] px-2 py-0.5 rounded bg-surface border border-border text-text-secondary"
+                      >
+                        {color}
+                      </span>
                     ))}
+                    {style.palette.length > 3 && (
+                      <span className="text-[11px] text-text-tertiary">+{style.palette.length - 3}</span>
+                    )}
                   </div>
                 </Card>
               ))}
