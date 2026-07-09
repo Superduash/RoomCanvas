@@ -47,6 +47,7 @@ class AnalyzeResponse(BaseModel):
 
 class GenerateRequest(BaseModel):
     analysis_id: int
+    force_new: bool = False
 
 class GenerateResponse(GenerationOut):
     pass

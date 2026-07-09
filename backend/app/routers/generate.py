@@ -58,12 +58,13 @@ async def generate_design(
     service = GenerationService(repository)
     
     # 1. Prepare row to pending state
-    result = service.prepare_generation(request.analysis_id)
+    result = service.prepare_generation(request.analysis_id, force_new=request.force_new)
     
     # 2. Invalidate cache so UI sees status change
     invalidate_history_cache()
     
     # 3. Schedule Replicate task
-    background_tasks.add_task(service.run_generation_task, request.analysis_id)
+    if result.status == "pending":
+        background_tasks.add_task(service.run_generation_task, result.id)
     
     return result

@@ -31,14 +31,30 @@ class GenerationService:
         self.repository = repository
         self.provider = get_generation_provider()  # singleton
 
-    def prepare_generation(self, analysis_id: int):
+    def prepare_generation(self, analysis_id: int, force_new: bool = False):
         generation = self.repository.get_by_id(analysis_id)
         if not generation:
             raise InferenceServiceError(f"Analysis id={analysis_id} not found", 404)
 
-        if generation.status == "completed" and generation.variations:
+        if generation.status == "completed" and generation.variations and not force_new:
             logger.info(f"Generation id={analysis_id} already completed — returning cached result")
             return generation
+
+        if generation.status == "completed" and force_new:
+            new_generation = self.repository.create_generation({
+                "original_image_path": generation.original_image_path,
+                "style": generation.style,
+                "redesign_prompt": generation.redesign_prompt,
+                "prompt_version": generation.prompt_version,
+                "analysis_json": generation.analysis_json,
+                "provider": generation.provider,
+                "provider_version": generation.provider_version,
+                "model_used": generation.model_used,
+                "model_version": generation.model_version,
+                "status": "pending",
+                "processing_time_sec": 0.0,
+            })
+            return new_generation
 
         self.repository.update_status(generation.id, "pending")
         return generation
