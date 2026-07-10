@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Search, LayoutGrid, Trash2 } from 'lucide-react';
 import { useHistory } from '../api/queries';
-import { type GenerationOut } from '../api/types';
 import { HistoryCard, HistoryCardSkeleton, EmptyHistory } from '../components/history/HistoryCard';
 import { Button } from '../components/primitives/Button';
 import { Dialog } from '../components/primitives/Dialog';
@@ -21,50 +20,26 @@ export function HistoryPage() {
   const [clearOpen, setClearOpen] = useState(false);
   const deleteAll = useDeleteAllHistory();
 
-  // Build tree: group refinements under their root parent
-  const { roots, refinementMap } = useMemo(() => {
-    if (!data) return { roots: [], refinementMap: new Map<number, GenerationOut[]>() };
-
-    const map = new Map<number, GenerationOut[]>();
-    const rootList: GenerationOut[] = [];
-
-    for (const g of data) {
-      if (g.parent_generation_id === null) {
-        rootList.push(g);
-      } else {
-        const existing = map.get(g.parent_generation_id) ?? [];
-        existing.push(g);
-        map.set(g.parent_generation_id, existing);
-      }
-    }
-
-    return { roots: rootList, refinementMap: map };
-  }, [data]);
-
-  // Search now matches a root's own fields OR any of its refinements' instructions —
-  // a match on a child surfaces the parent card, since that's the unit the UI navigates to.
+  // Search matches project details or latest generation prompt
   const filtered = useMemo(() => {
-    let list = roots;
+    let list = data ?? [];
     const q = deferredSearch.trim().toLowerCase();
 
     if (q) {
-      list = list.filter((g) => {
-        const ownMatch =
-          g.room_type_detected?.toLowerCase().includes(q) ||
-          g.redesign_prompt?.toLowerCase().includes(q) ||
-          g.style?.toLowerCase().includes(q);
-        if (ownMatch) return true;
-
-        const children = refinementMap.get(g.id) ?? [];
-        return children.some((c) => c.redesign_prompt?.toLowerCase().includes(q));
+      list = list.filter((p) => {
+        return (
+          p.room_type_detected?.toLowerCase().includes(q) ||
+          p.latest_generation.redesign_prompt?.toLowerCase().includes(q) ||
+          p.style?.toLowerCase().includes(q)
+        );
       });
     }
 
     return [...list].sort((a, b) => {
-      const diff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      const diff = new Date(b.last_updated_at).getTime() - new Date(a.last_updated_at).getTime();
       return sort === 'newest' ? diff : -diff;
     });
-  }, [roots, refinementMap, deferredSearch, sort]);
+  }, [data, deferredSearch, sort]);
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-6 py-12 page-enter">
@@ -77,7 +52,7 @@ export function HistoryPage() {
             <h1 className="text-3xl font-semibold text-text-primary tracking-tight">Your Library</h1>
             {data && (
               <p className="text-sm text-text-secondary mt-1">
-                {roots.length} project{roots.length !== 1 ? 's' : ''}
+                {data.length} project{data.length !== 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -152,12 +127,12 @@ export function HistoryPage() {
       )}
 
       {/* Empty */}
-      {!isLoading && !isError && roots.length === 0 && (
+      {!isLoading && !isError && data?.length === 0 && (
         <EmptyHistory />
       )}
 
       {/* No search results */}
-      {!isLoading && !isError && roots.length > 0 && filtered.length === 0 && (
+      {!isLoading && !isError && data && data.length > 0 && filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center bg-surface-alt rounded-2xl border border-border border-dashed">
           <p className="text-base text-text-secondary mb-4">No designs match &ldquo;{search}&rdquo;</p>
           <Button variant="outline" size="md" onClick={() => setSearchParams({})}>
@@ -173,12 +148,9 @@ export function HistoryPage() {
           role="list"
           aria-label="Design history"
         >
-          {filtered.map((g) => (
-            <div key={g.id} role="listitem">
-              <HistoryCard
-                generation={g}
-                refinements={refinementMap.get(g.id) ?? []}
-              />
+          {filtered.map((p) => (
+            <div key={p.id} role="listitem">
+              <HistoryCard project={p} />
             </div>
           ))}
         </div>

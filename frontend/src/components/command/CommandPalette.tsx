@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, History, Home, Search } from 'lucide-react';
 import { useHistory } from '../../api/queries';
 import { resolveImageUrl } from '../../api/client';
+import { formatStyleName } from '../../utils/formatters';
 import './CommandPalette.css';
 
 export function CommandPalette() {
@@ -73,12 +74,12 @@ export function CommandPalette() {
                   className="cmd-item"
                 >
                   <img
-                    src={resolveImageUrl(g.variations[0]?.image_path ?? g.original_image_path)}
+                    src={resolveImageUrl(g.latest_generation.variations[0]?.image_path ?? g.original_image_path)}
                     alt=""
                     className="h-8 w-8 rounded object-cover flex-shrink-0"
                   />
                   <span className="line-clamp-2">
-                    {g.room_type_detected ?? 'Untitled room'} — {g.style}
+                    {g.room_type_detected ?? 'Untitled room'} — {formatStyleName(g.style)}
                   </span>
                 </Command.Item>
               ))}

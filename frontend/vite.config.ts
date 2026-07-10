@@ -38,7 +38,8 @@ export default defineConfig({
       console.info(msg);
     },
     warn: (warning, warn) => {
-      if (warning.message.includes('vite-tsconfig-paths')) return;
+      const msg = typeof warning === 'string' ? warning : warning.message;
+      if (msg?.includes('vite-tsconfig-paths')) return;
       warn(warning);
     },
     warnOnce: console.warn,

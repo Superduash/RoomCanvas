@@ -64,6 +64,74 @@ class GenerationRepository:
         )
         return list(self.db.execute(query).scalars().all())
 
+    def list_projects(self, limit: int = 50) -> list[dict]:
+        # Get all root generations
+        query = (
+            select(Generation)
+            .where(Generation.parent_generation_id.is_(None))
+            .options(*_GENERATION_LOAD_OPTIONS)
+        )
+        roots = list(self.db.execute(query).scalars().all())
+        
+        projects = []
+        for root in roots:
+            # We need to find all descendants to determine latest and count.
+            # In SQLite, recursive CTE is complex, so we will fetch all generations
+            # that are part of this tree.
+            # Note: For simple non-branching refinements this is just root + children + grandchildren.
+            # A simpler way in this specific app is to fetch all generations
+            # where root is ancestor, but since refinements are linear we can just loop,
+            # or better, fetch all generations and build trees in memory.
+            # Let's fetch all descendants for this root manually.
+            
+            descendants = self._get_all_descendants(root.id)
+            all_gens = [root] + descendants
+            
+            # Latest generation is the one with highest created_at (completed ideally)
+            completed_gens = [g for g in all_gens if g.status == "completed"]
+            
+            if not completed_gens:
+                latest = all_gens[-1]
+            else:
+                latest = max(completed_gens, key=lambda g: g.created_at)
+                
+            last_updated_at = max(g.created_at for g in all_gens)
+            version_count = len(all_gens)
+            
+            projects.append({
+                "id": root.id,
+                "original_image_path": root.original_image_path,
+                "room_type_detected": root.room_type_detected,
+                "style": root.style,
+                "created_at": root.created_at,
+                "last_updated_at": last_updated_at,
+                "version_count": version_count,
+                "latest_generation": latest
+            })
+            
+        # Sort projects by last updated time descending
+        projects.sort(key=lambda p: p["last_updated_at"], reverse=True)
+        return projects[:limit]
+        
+    def _get_all_descendants(self, root_id: int) -> list[Generation]:
+        # Recursive fetch
+        descendants = []
+        children = self.get_children(root_id)
+        for child in children:
+            descendants.append(child)
+            descendants.extend(self._get_all_descendants(child.id))
+        return descendants
+
+    def get_project_timeline(self, root_id: int) -> list[Generation]:
+        root = self.get_by_id(root_id)
+        if not root:
+            return []
+        
+        all_gens = [root] + self._get_all_descendants(root.id)
+        # Sort by creation time (timeline order)
+        all_gens.sort(key=lambda g: g.created_at)
+        return all_gens
+
     def set_selected_variation(self, generation_id: int, variation_id: int) -> Generation:
         generation = self.get_by_id(generation_id)
         if not generation:

@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.repositories.generation_repository import GenerationRepository
-from app.schemas.generation import GenerationOut
+from app.schemas.project import ProjectOut, ProjectDetailsOut
 from pydantic import BaseModel
 from app.cache import (
     get_cached_history, set_cached_history, invalidate_history_cache,
@@ -26,7 +26,7 @@ def get_repo(db: Session = Depends(get_db)) -> GenerationRepository:
 # ── GET /api/history ───────────────────────────────────────────────────────────
 @router.get(
     "/history",
-    response_model=list[GenerationOut],
+    response_model=list[ProjectOut],
     tags=["History"],
     responses={
         200: {
@@ -80,13 +80,62 @@ def list_history(
     if cached is not None:
         return JSONResponse(content=cached)
 
-    results = repo.list_all(limit=limit)
-    serialized = [GenerationOut.model_validate(r).model_dump(mode="json") for r in results]
+    results = repo.list_projects(limit=limit)
+    serialized = [ProjectOut.model_validate(r).model_dump(mode="json") for r in results]
     set_cached_history(limit, serialized)
 
     response = JSONResponse(content=serialized)
     response.headers["Cache-Control"] = "no-store"  # Mutates frequently
     return response
+
+# ── GET /api/projects/{project_id} ────────────────────────────────────────────
+@router.get(
+    "/projects/{project_id}",
+    response_model=ProjectDetailsOut,
+    tags=["History"],
+    responses={
+        200: {"description": "Successfully retrieved project details and timeline."},
+        404: {"description": "Project not found."}
+    }
+)
+def get_project_timeline(
+    project_id: int,
+    repo: GenerationRepository = Depends(get_repo),
+):
+    """
+    Fetch a project's details and its complete timeline of generations.
+    """
+    timeline = repo.get_project_timeline(project_id)
+    if not timeline:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project {project_id} not found.")
+        
+    root = timeline[0]
+    
+    # Latest generation is the one with highest created_at (completed ideally)
+    completed_gens = [g for g in timeline if g.status == "completed"]
+    if not completed_gens:
+        latest = timeline[-1]
+    else:
+        latest = max(completed_gens, key=lambda g: g.created_at)
+        
+    last_updated_at = max(g.created_at for g in timeline)
+    version_count = len(timeline)
+    
+    project = {
+        "id": root.id,
+        "original_image_path": root.original_image_path,
+        "room_type_detected": root.room_type_detected,
+        "style": root.style,
+        "created_at": root.created_at,
+        "last_updated_at": last_updated_at,
+        "version_count": version_count,
+        "latest_generation": latest
+    }
+    
+    return {
+        "project": project,
+        "timeline": timeline
+    }
 
 
 # ── DELETE /api/history/all ───────────────────────────────────────────────────

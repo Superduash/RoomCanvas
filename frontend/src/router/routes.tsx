@@ -51,7 +51,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'results/:generationId',
+        path: 'results/:projectId',
         element: (
           <Suspense fallback={<PageLoader />}>
             <ResultsPage />

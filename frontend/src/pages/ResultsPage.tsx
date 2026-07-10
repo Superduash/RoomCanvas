@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Download, Check, RefreshCw, Share2, ChevronLeft, AlertTriangle, Layers
+  Download, Check, RefreshCw, Share2, ChevronLeft, AlertTriangle, Layers, Clock, Sparkles
 } from 'lucide-react';
 import React, { Suspense } from 'react';
 import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
@@ -16,72 +16,91 @@ import {
 import { Button } from '../components/primitives/Button';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton, SkeletonText } from '../components/primitives/Skeleton';
-import { useGeneration, useGenerateDesign, useSelectVariation } from '../api/queries';
+import { useProjectTimeline, useGenerateDesign, useSelectVariation } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { resolveImageUrl } from '../api/client';
-import { titleCase } from '../lib/utils';
+import { formatRelativeTime } from '../lib/utils';
 import type { AnalyzeResponse } from '../api/types';
 import { toast } from '../lib/toast';
+import { formatStyleName } from '../utils/formatters';
 
 type ViewMode = 'compare' | 'side-by-side' | 'generated';
 
 export function ResultsPage() {
-  const { generationId } = useParams<{ generationId: string }>();
-  const navigate = useNavigate();
-  const id = generationId ? parseInt(generationId, 10) : null;
+  const { projectId } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const id = projectId ? parseInt(projectId, 10) : null;
+  const versionParam = searchParams.get('v');
+  const requestedVersionId = versionParam ? parseInt(versionParam, 10) : null;
 
   const setActiveGenerationId = useUIStore((s) => s.setActiveGenerationId);
   const [viewMode, setViewMode] = useState<ViewMode>('compare');
   const [downloadDone, setDownloadDone] = useState(false);
 
-  // Determine if we should poll (page loaded on a still-pending generation)
-  const initialQuery = useGeneration(id, { poll: false });
-  const shouldPoll = initialQuery.data?.status === 'pending' || initialQuery.data?.status === 'analyzed';
-  const { data: generation, isLoading, isError } = useGeneration(id, { poll: shouldPoll });
+  // Fetch the entire project timeline
+  const { data: projectDetails, isLoading, isError } = useProjectTimeline(id);
+
+  // Determine the active generation based on URL param or default to latest
+  const activeGeneration = useMemo(() => {
+    if (!projectDetails) return null;
+    if (requestedVersionId) {
+      const found = projectDetails.timeline.find(g => g.id === requestedVersionId);
+      if (found) return found;
+    }
+    return projectDetails.project.latest_generation;
+  }, [projectDetails, requestedVersionId]);
+
+  // Sync to store for other components (like RefinementPanel which needs the specific generation ID)
+  useEffect(() => {
+    if (activeGeneration) setActiveGenerationId(activeGeneration.id);
+    return () => setActiveGenerationId(null);
+  }, [activeGeneration, setActiveGenerationId]);
 
   const generateDesign = useGenerateDesign();
   const selectVariation = useSelectVariation();
 
-  useEffect(() => {
-    if (id) setActiveGenerationId(id);
-    return () => setActiveGenerationId(null);
-  }, [id, setActiveGenerationId]);
-
-  // Parse analysis JSON once
+  // Parse analysis JSON once for the active generation
   const analysisData = useMemo<AnalyzeResponse | null>(() => {
-    if (!generation?.analysis_json) return null;
+    if (!activeGeneration?.analysis_json) return null;
     try {
-      return JSON.parse(generation.analysis_json) as AnalyzeResponse;
+      return JSON.parse(activeGeneration.analysis_json) as AnalyzeResponse;
     } catch {
       return null;
     }
-  }, [generation?.id, generation?.analysis_json]);
+  }, [activeGeneration?.id, activeGeneration?.analysis_json]);
 
   if (isLoading) {
     return <ResultsSkeleton />;
   }
 
-  if (isError || !generation) {
+  if (isError || !projectDetails || !activeGeneration) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center page-enter">
         <div className="h-16 w-16 rounded-2xl bg-surface-alt border border-border flex items-center justify-center mb-6 shadow-sm">
           <AlertTriangle className="h-7 w-7 text-text-tertiary" />
         </div>
-        <h1 className="text-xl font-semibold text-text-primary mb-2">Couldn't load this design</h1>
-        <p className="text-base text-text-secondary mb-8">This design might have been deleted or never completed.</p>
+        <h1 className="text-xl font-semibold text-text-primary mb-2">Couldn't load this project</h1>
+        <p className="text-base text-text-secondary mb-8">This project might have been deleted or never completed.</p>
         <Link to="/history"><Button variant="primary" size="lg">Back to History</Button></Link>
       </div>
     );
   }
 
-  const variation = generation.variations[0];
-  const originalSrc = resolveImageUrl(generation.original_image_path);
+  const project = projectDetails.project;
+  const timeline = projectDetails.timeline;
+  const variation = activeGeneration.variations[0];
+  
+  // The original image for the compare slider is ALWAYS the root project's image
+  const originalSrc = resolveImageUrl(project.original_image_path);
   const generatedSrc = variation ? resolveImageUrl(variation.image_path) : '';
-  const isCompleted = generation.status === 'completed';
-  const isFailed = generation.status === 'failed' || generation.status === 'failed_analysis';
-  const isRefinement = generation.parent_generation_id !== null;
-  const alreadySaved = generation.selected_variation_id !== null && variation
-    ? generation.selected_variation_id === variation.id
+  
+  const isCompleted = activeGeneration.status === 'completed';
+  const isFailed = activeGeneration.status === 'failed' || activeGeneration.status === 'failed_analysis';
+  const isRefinement = activeGeneration.parent_generation_id !== null;
+  
+  const alreadySaved = activeGeneration.selected_variation_id !== null && variation
+    ? activeGeneration.selected_variation_id === variation.id
     : false;
 
   const handleDownload = async () => {
@@ -92,7 +111,7 @@ export function ResultsPage() {
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `roomcanvas-${generation.id}.png`;
+      a.download = `roomcanvas-${activeGeneration.id}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -118,11 +137,10 @@ export function ResultsPage() {
   };
 
   const handleGenerateAgain = async () => {
-    // The generation's OWN id is the analysis reference the backend expects
     try {
-      const result = await generateDesign.mutateAsync({ analysisId: generation.id, forceNew: true });
-      toast.success('New version started — navigating to results.');
-      navigate(`/results/${result.id}`);
+      const result = await generateDesign.mutateAsync({ analysisId: activeGeneration.id, forceNew: true });
+      toast.success('New version started.');
+      setSearchParams({ v: result.id.toString() });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to regenerate');
     }
@@ -130,9 +148,9 @@ export function ResultsPage() {
 
   const handleCustomize = async (options: import('../api/types').CustomizationOptions) => {
     try {
-      const result = await generateDesign.mutateAsync({ analysisId: generation.id, forceNew: true, customization: options });
-      toast.success('New version started — navigating to results.');
-      navigate(`/results/${result.id}`);
+      const result = await generateDesign.mutateAsync({ analysisId: activeGeneration.id, forceNew: true, customization: options });
+      toast.success('New customized version started.');
+      setSearchParams({ v: result.id.toString() });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to regenerate with options');
     }
@@ -141,7 +159,7 @@ export function ResultsPage() {
   const handleSave = async () => {
     if (!variation) return;
     try {
-      await selectVariation.mutateAsync({ generationId: generation.id, variationId: variation.id });
+      await selectVariation.mutateAsync({ generationId: activeGeneration.id, variationId: variation.id });
       toast.success('Design saved!');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -159,16 +177,10 @@ export function ResultsPage() {
               History
             </Button>
           </Link>
-          {isRefinement && (
-            <>
-              <span className="text-text-tertiary">/</span>
-              <Link to={`/results/${generation.parent_generation_id}`}>
-                <Button variant="ghost" size="sm" className="text-text-secondary px-2 hover:text-accent">
-                  Original design
-                </Button>
-              </Link>
-            </>
-          )}
+          <span className="text-text-tertiary">/</span>
+          <span className="text-sm font-medium text-text-primary">
+            {project.room_type_detected ?? 'Project'}
+          </span>
         </div>
         
         {/* Action row */}
@@ -225,7 +237,7 @@ export function ResultsPage() {
           <AlertTriangle className="h-5 w-5 text-danger flex-shrink-0 mt-0.5" />
           <div>
             <h2 className="text-base font-semibold text-danger mb-1">Generation failed</h2>
-            <p className="text-sm text-danger/80">{generation.error ?? 'An unexpected error occurred.'}</p>
+            <p className="text-sm text-danger/80">{activeGeneration.error ?? 'An unexpected error occurred.'}</p>
             <div className="flex gap-2 mt-4">
               <Button size="sm" variant="destructive" onClick={handleGenerateAgain} icon={<RefreshCw className="h-4 w-4" />}>
                 Try Again
@@ -237,12 +249,12 @@ export function ResultsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-10 lg:gap-12 items-start">
         
-        {/* Left: Image workspace */}
+        {/* Left: Image workspace & Timeline */}
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                {generation.status === 'pending' || generation.status === 'analyzed' ? (
+                {activeGeneration.status === 'pending' || activeGeneration.status === 'analyzed' ? (
                   <Badge variant="info" dot>Generating</Badge>
                 ) : isCompleted ? null : (
                   <Badge variant="danger" dot>Failed</Badge>
@@ -250,10 +262,10 @@ export function ResultsPage() {
                 {isRefinement && (
                   <Badge variant="accent" dot>Refinement</Badge>
                 )}
-                <Badge variant="outline">{titleCase(generation.style)}</Badge>
+                <Badge variant="outline">{formatStyleName(activeGeneration.style)}</Badge>
               </div>
               <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
-                {generation.room_type_detected ?? 'Your Space'}
+                {activeGeneration.room_type_detected ?? 'Your Space'}
               </h1>
             </div>
 
@@ -317,6 +329,52 @@ export function ResultsPage() {
               </div>
             )}
           </div>
+          
+          {/* Timeline UI */}
+          {timeline.length > 1 && (
+            <div className="bg-surface rounded-2xl border border-border shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="h-4 w-4 text-text-secondary" />
+                <h3 className="text-sm font-semibold text-text-primary">Version History</h3>
+              </div>
+              
+              <div className="flex overflow-x-auto gap-3 pb-2 snap-x hide-scrollbar">
+                {timeline.map((g, index) => {
+                  const isActive = g.id === activeGeneration.id;
+                  const thumb = g.variations[0]?.image_path ? resolveImageUrl(g.variations[0].image_path) : originalSrc;
+                  const isRoot = g.parent_generation_id === null;
+                  
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setSearchParams({ v: g.id.toString() })}
+                      className={`relative flex-shrink-0 w-32 rounded-xl overflow-hidden snap-start transition-all duration-200 border-2 text-left ${
+                        isActive ? 'border-accent shadow-md scale-[1.02]' : 'border-transparent hover:border-border-strong opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      <div className="aspect-[4/3] w-full">
+                        <img src={thumb} className="w-full h-full object-cover" alt="Version thumbnail" />
+                      </div>
+                      <div className={`p-2 ${isActive ? 'bg-accent/5' : 'bg-surface-alt'}`}>
+                        <div className="text-[10px] font-medium text-text-tertiary mb-0.5 uppercase tracking-wide">
+                          {isRoot ? 'Original Base' : `Refinement ${timeline.length - index - (timeline.some(x => x.parent_generation_id === null) ? 1 : 0)}`}
+                        </div>
+                        <div className="text-xs font-medium text-text-primary truncate">
+                          {g.status === 'pending' || g.status === 'analyzed' ? 'Generating...' : formatRelativeTime(g.created_at)}
+                        </div>
+                      </div>
+                      
+                      {isActive && (
+                        <div className="absolute top-1 right-1 bg-accent rounded-full p-0.5">
+                          <Check className="h-2 w-2 text-white" strokeWidth={4} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Panel */}
@@ -333,13 +391,13 @@ export function ResultsPage() {
             {isRefinement && (
               <div className="mb-4 rounded-xl border border-accent/20 bg-accent-subtle p-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-2">Current Edit</p>
-                <p className="text-sm text-text-primary leading-relaxed text-lg italic">&ldquo;{generation.redesign_prompt}&rdquo;</p>
+                <p className="text-sm text-text-primary leading-relaxed text-lg italic">&ldquo;{activeGeneration.redesign_prompt}&rdquo;</p>
               </div>
             )}
             
             <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}>
               <RefinementPanel
-                generationId={generation.id}
+                generationId={activeGeneration.id}
                 disabled={!isCompleted}
               />
             </Suspense>
@@ -360,7 +418,10 @@ export function ResultsPage() {
           {/* AI Analysis Recommendations */}
           {analysisData && (
             <div>
-              <h2 className="text-lg font-semibold text-text-primary mb-5">AI Analysis</h2>
+              <div className="flex items-center gap-2 mb-5">
+                <Sparkles className="h-5 w-5 text-accent" />
+                <h2 className="text-lg font-semibold text-text-primary">AI Analysis</h2>
+              </div>
               <div className="space-y-6">
                 <DimensionCard
                   width={analysisData.estimated_dimensions.width_ft}

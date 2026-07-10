@@ -10,6 +10,7 @@ import { Button } from '../components/primitives/Button';
 import { CompareSlider, CompareSliderSkeleton } from '../components/results/CompareSlider';
 import { useHistory } from '../api/queries';
 import { resolveImageUrl } from '../api/client';
+import { formatStyleName } from '../utils/formatters';
 
 const STEPS: { icon: ReactNode; step: string; label: string; desc: string; link?: string }[] = [
   {
@@ -75,10 +76,10 @@ const stagger = {
 };
 
 export function LandingPage() {
-  const { data: historyItems, isLoading: historyLoading } = useHistory(3);
+  const { data: projects, isLoading: historyLoading } = useHistory(3);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const recentCompleted = historyItems?.filter((g) => g.status === 'completed' && g.variations.length > 0) ?? [];
+  const recentCompleted = projects?.filter((p) => p.latest_generation?.status === 'completed' && p.latest_generation?.variations.length > 0) ?? [];
 
   return (
     <div className="flex flex-col page-enter">
@@ -270,21 +271,28 @@ export function LandingPage() {
                       <CompareSliderSkeleton />
                     </div>
                   ))
-                : recentCompleted.map((g) => (
+                : recentCompleted.map((p) => (
                     <Link
-                      key={g.id}
-                      to={`/results/${g.id}`}
+                      key={p.id}
+                      to={`/results/${p.id}`}
                       className="group block rounded-2xl overflow-hidden border border-border hover:border-accent/30 hover:shadow-md transition-all duration-base"
                     >
                       <CompareSlider
-                        beforeSrc={resolveImageUrl(g.original_image_path)}
-                        afterSrc={resolveImageUrl(g.variations[0].image_path)}
+                        beforeSrc={resolveImageUrl(p.original_image_path)}
+                        afterSrc={resolveImageUrl(p.latest_generation.variations[0].image_path)}
                       />
-                      <div className="px-4 py-3 flex items-center justify-between bg-surface">
-                        <p className="text-xs font-medium text-text-secondary">
-                          {g.room_type_detected ?? 'Room'} &middot; {g.style}
-                        </p>
-                        <ArrowRight className="h-3.5 w-3.5 text-text-tertiary group-hover:text-accent group-hover:translate-x-0.5 transition-all duration-fast" aria-hidden="true" />
+                      <div className="px-4 py-3 bg-surface border-t border-border/50">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-sm font-semibold text-text-primary">
+                            {p.room_type_detected ?? 'Room'} &middot; {formatStyleName(p.style)}
+                          </p>
+                          <ArrowRight className="h-4 w-4 text-text-tertiary group-hover:text-accent group-hover:translate-x-1 transition-transform duration-base" aria-hidden="true" />
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
+                          <span className="flex items-center gap-1 text-accent"><Sparkles className="h-3 w-3" /> Latest</span>
+                          <span>&bull;</span>
+                          <span>{p.version_count} {p.version_count === 1 ? 'Version' : 'Versions'}</span>
+                        </div>
                       </div>
                     </Link>
                   ))}

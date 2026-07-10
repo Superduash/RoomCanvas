@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { api, ApiError } from './client';
-import type { AnalyzeResponse, AppConfig, GenerationOut, HealthStatus, StyleOption } from './types';
+import type { AnalyzeResponse, AppConfig, GenerationOut, HealthStatus, StyleOption, Project, ProjectDetails } from './types';
 import { logger } from '../lib/logger';
 
 // ── Boot-time static data ──────────────────────────────────────────────
@@ -80,8 +80,22 @@ export function useGeneration(id: number | null, opts?: { poll?: boolean }): Use
 export function useHistory(limit = 50) {
   return useQuery({
     queryKey: ['history', limit],
-    queryFn: () => api.get<GenerationOut[]>(`/history?limit=${limit}`),
+    queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
     staleTime: 5000,
+  });
+}
+
+export function useProjectTimeline(projectId: number | null) {
+  return useQuery({
+    queryKey: ['project_timeline', projectId],
+    queryFn: () => api.get<ProjectDetails>(`/projects/${projectId}`),
+    enabled: projectId !== null,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return false;
+      const isGenerating = data.timeline.some(g => g.status === 'pending' || g.status === 'analyzed');
+      return isGenerating ? 2000 : false;
+    },
   });
 }
 

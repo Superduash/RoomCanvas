@@ -30,6 +30,22 @@ export interface GenerationOut {
   variations: Variation[];
 }
 
+export interface Project {
+    id: number;
+    original_image_path: string;
+    room_type_detected: string | null;
+    style: string;
+    created_at: string;
+    last_updated_at: string;
+    version_count: number;
+    latest_generation: GenerationOut;
+}
+
+export interface ProjectDetails {
+    project: Project;
+    timeline: GenerationOut[];
+}
+
 export interface FurnitureItem {
   item: string;
   description: string;
