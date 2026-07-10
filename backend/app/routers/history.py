@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.repositories.generation_repository import GenerationRepository
 from app.schemas.project import ProjectOut, ProjectDetailsOut
+from app.schemas.generation import GenerationOut
 from pydantic import BaseModel
 from app.cache import (
     get_cached_history, set_cached_history, invalidate_history_cache,
