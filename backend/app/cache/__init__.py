@@ -10,27 +10,31 @@ Three layers of caching:
 """
 import time
 import logging
-from functools import lru_cache
 from threading import Lock
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ── Static data (build once, never expires) ────────────────────────────────────
-@lru_cache(maxsize=1)
+from app.cache.redis_cache import cached_json
+
 def get_cached_styles() -> list[dict]:
     """Cached /api/styles response — built from STYLE_TEMPLATES once."""
-    from app.ai.prompts.style_hints import STYLE_TEMPLATES
-    return [{"id": k, **v} for k, v in STYLE_TEMPLATES.items()]
+    def compute_fn():
+        from app.ai.prompts.style_hints import STYLE_TEMPLATES, ADDITIONAL_STYLES
+        styles = [{"id": k, **v} for k, v in STYLE_TEMPLATES.items()]
+        styles.extend(ADDITIONAL_STYLES)
+        return styles
+    return cached_json("styles:v1", 3600, compute_fn)
 
 
-@lru_cache(maxsize=1)
 def get_cached_config(max_upload_mb: int) -> dict:
     """Cached /api/config — never changes during a process lifetime."""
-    return {
-        "max_upload_mb": max_upload_mb,
-        "allowed_types": ["image/jpeg", "image/png", "image/webp"],
-    }
+    def compute_fn():
+        return {
+            "max_upload_mb": max_upload_mb,
+            "allowed_types": ["image/jpeg", "image/png", "image/webp"],
+        }
+    return cached_json("config:v1", 3600, compute_fn)
 
 
 # ── TTL cache for history list ─────────────────────────────────────────────────

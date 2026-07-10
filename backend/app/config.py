@@ -32,9 +32,11 @@ class Settings(BaseSettings):
     # API Keys
     GEMINI_API_KEY: str = ""
     REPLICATE_API_TOKEN: str = ""
+    UPSTASH_REDIS_URL: str = ""
+    UPSTASH_REDIS_TOKEN: str = ""
 
     # Timeouts
-    GEMINI_TIMEOUT_SECONDS: int = 20
+    GEMINI_TIMEOUT_SECONDS: int = 60
     REPLICATE_TIMEOUT_SECONDS: int = 45
 
     @field_validator("MAX_UPLOAD_SIZE_MB")

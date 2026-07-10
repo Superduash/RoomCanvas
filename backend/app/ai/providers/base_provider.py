@@ -8,11 +8,11 @@ class AnalysisProvider(ABC):
 
 class GenerationProvider(ABC):
     @abstractmethod
-    async def generate(self, image_bytes: bytes, mime_type: str, prompt: str) -> str:
-        """Returns a URL to the generated image."""
+    async def generate(self, image_bytes: bytes, mime_type: str, prompt: str, seed: int = None) -> tuple[str, int]:
+        """Returns a tuple of (URL to generated image, seed used)."""
         pass
 
     @abstractmethod
-    async def refine(self, image_bytes: bytes, mime_type: str, instruction: str) -> str:
+    async def refine(self, image_bytes: bytes, mime_type: str, instruction: str, seed: int = None) -> tuple[str, int]:
         """Same contract as generate(), but source image is a prior generation."""
         pass

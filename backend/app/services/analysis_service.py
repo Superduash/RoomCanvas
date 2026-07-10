@@ -7,8 +7,6 @@ import json
 from app.ai.providers.provider_registry import get_analysis_provider
 from app.schemas.generation import AnalyzeResponse
 from app.repositories.generation_repository import GenerationRepository
-from app.utils.exceptions import AnalysisServiceError, InteriorAIError
-from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 

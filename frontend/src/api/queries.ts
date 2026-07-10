@@ -45,8 +45,8 @@ export function useAnalyzeRoom() {
 export function useGenerateDesign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ analysisId, forceNew }: { analysisId: number; forceNew?: boolean }) =>
-      api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false }),
+    mutationFn: ({ analysisId, forceNew, customization }: { analysisId: number; forceNew?: boolean; customization?: any }) =>
+      api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false, customization }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
   });
 }
@@ -81,6 +81,7 @@ export function useHistory(limit = 50) {
   return useQuery({
     queryKey: ['history', limit],
     queryFn: () => api.get<GenerationOut[]>(`/history?limit=${limit}`),
+    staleTime: 5000,
   });
 }
 

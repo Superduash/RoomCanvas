@@ -62,6 +62,16 @@ export interface StyleOption {
   reason_template: string;
 }
 
+export interface CustomizationOptions {
+  must_have_furniture?: string[];
+  color_preference?: string;
+  budget_tier?: 'Budget-Friendly' | 'Mid-Range' | 'Premium';
+  lighting_preference?: 'Warm' | 'Cool' | 'Natural daylight';
+  room_width_ft?: number;
+  room_length_ft?: number;
+  avoid?: string[];
+}
+
 export interface AppConfig {
   max_upload_mb: number;
   allowed_types: string[];

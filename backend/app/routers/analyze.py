@@ -6,6 +6,7 @@ from app.services.analysis_service import AnalysisService
 from app.services.storage_service import StorageService
 from app.utils.image_utils import validate_image_file
 from app.schemas.generation import AnalyzeResponse
+from app.middleware.rate_limit import RateLimiter
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -13,6 +14,8 @@ router = APIRouter(prefix="/analyze", tags=["Analysis"])
     "",
     response_model=AnalyzeResponse,
     status_code=201,
+    dependencies=[Depends(RateLimiter("analyze", 10, 3600))],
+
     responses={
         201: {
             "description": "Room analyzed successfully (or gracefully handled fallback in case of AI provider failure).",

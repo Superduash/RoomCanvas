@@ -362,6 +362,13 @@ export const HistoryCard = memo(function HistoryCard({ generation: g, refinement
       </Dialog>
     </>
   );
+}, (prev, next) => {
+  return (
+    prev.generation.id === next.generation.id &&
+    prev.generation.status === next.generation.status &&
+    prev.generation.room_type_detected === next.generation.room_type_detected &&
+    prev.refinements?.length === next.refinements?.length
+  );
 });
 
 export function HistoryCardSkeleton() {

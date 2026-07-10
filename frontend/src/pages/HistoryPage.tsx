@@ -1,4 +1,4 @@
-import { useMemo, useState, useDeferredValue } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Search, LayoutGrid, Trash2 } from 'lucide-react';
 import { useHistory } from '../api/queries';
@@ -8,6 +8,7 @@ import { Button } from '../components/primitives/Button';
 import { Dialog } from '../components/primitives/Dialog';
 import { useDeleteAllHistory } from '../api/queries';
 import { toast } from '../lib/toast';
+import { useDebounce } from '../hooks/useDebounce';
 
 type SortOrder = 'newest' | 'oldest';
 
@@ -15,7 +16,7 @@ export function HistoryPage() {
   const { data, isLoading, isError, refetch } = useHistory(50);
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search') || '';
-  const deferredSearch = useDeferredValue(search); // smooths filtering on large libraries without adding input lag
+  const deferredSearch = useDebounce(search, 300); // smooths filtering on large libraries without adding input lag
   const [sort, setSort] = useState<SortOrder>('newest');
   const [clearOpen, setClearOpen] = useState(false);
   const deleteAll = useDeleteAllHistory();

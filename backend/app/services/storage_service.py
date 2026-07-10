@@ -1,6 +1,6 @@
 import os
 import uuid
-import requests
+import httpx
 import logging
 from pathlib import Path
 from fastapi import UploadFile
@@ -28,11 +28,21 @@ class StorageService:
         dest_path = base_dir / new_filename
 
         try:
+            from app.utils.image_utils import resize_for_upload
+            from PIL import Image
+            import io
+            
             upload_file.file.seek(0)
+            img_bytes = upload_file.file.read()
+            img = Image.open(io.BytesIO(img_bytes))
+            
+            # Downscale for performance and storage
+            resized_bytes = resize_for_upload(img, max_dimension=1536) # using 1536 as a good trade-off
+            
             with open(dest_path, "wb") as buffer:
-                while chunk := upload_file.file.read(8192):
-                    buffer.write(chunk)
-            logger.info(f"Saved upload file to {dest_path}")
+                buffer.write(resized_bytes)
+                
+            logger.info(f"Saved and downscaled upload file to {dest_path}")
         except Exception as e:
             logger.error(f"Error saving upload file: {e}")
             raise RuntimeError(f"Could not save upload file: {e}")
@@ -40,22 +50,24 @@ class StorageService:
         return dest_path.as_posix()
 
     @staticmethod
-    def download_and_save(image_url: str, save_dir: str = settings.GENERATED_DIR) -> str:
+    async def download_and_save(image_url: str, save_dir: str = settings.GENERATED_DIR) -> str:
         base_dir = Path(save_dir)
         base_dir.mkdir(parents=True, exist_ok=True)
         filename = f"{uuid.uuid4().hex}_gen.png"
         filepath = base_dir / filename
 
         try:
-            resp = requests.get(str(image_url), timeout=30)
-            resp.raise_for_status()
-            with open(filepath, "wb") as f:
-                f.write(resp.content)
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(str(image_url))
+                resp.raise_for_status()
+                with open(filepath, "wb") as f:
+                    f.write(resp.content)
             logger.info(f"Downloaded generated image to {filepath}")
             return filepath.as_posix()
         except Exception as e:
             logger.error(f"Failed to download image from {image_url}: {e}")
             raise RuntimeError(f"Could not save generated image: {e}")
+
 
     @staticmethod
     def delete_file_if_exists(file_path: str):

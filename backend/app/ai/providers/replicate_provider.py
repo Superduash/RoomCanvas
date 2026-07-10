@@ -1,5 +1,4 @@
 import logging
-import replicate
 import socket
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
@@ -7,7 +6,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from app.config import settings
 from app.ai.providers.base_provider import GenerationProvider
 from app.utils.exceptions import InferenceServiceError
-from app.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +27,7 @@ class ReplicateProvider(GenerationProvider):
         retry=retry_if_exception(_is_transient),
         reraise=True
     )
-    async def generate(self, image_bytes: bytes, mime_type: str, prompt: str) -> str:
+    async def generate(self, image_bytes: bytes, mime_type: str, prompt: str, seed: int = None) -> tuple[str, int]:
         try:
             import io
             import uuid
@@ -46,19 +44,24 @@ class ReplicateProvider(GenerationProvider):
                 timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
             )
             
+            if seed is None:
+                import random
+                seed = random.randint(0, 2**32 - 1)
+            
             output = await client.async_run(
                 self.model,
                 input={
                     "input_image": file_obj,
-                    "prompt": prompt
+                    "prompt": prompt,
+                    "seed": seed
                 }
             )
             
             if isinstance(output, list):
                 if not output:
                     raise InferenceServiceError("Empty response from Replicate")
-                return str(output[0])
-            return str(output)
+                return (str(output[0]), seed)
+            return (str(output), seed)
             
         except Exception as e:
             logger.error(f"Replicate generation failed: {e}")
@@ -73,7 +76,7 @@ class ReplicateProvider(GenerationProvider):
         retry=retry_if_exception(_is_transient),
         reraise=True
     )
-    async def refine(self, image_bytes: bytes, mime_type: str, instruction: str) -> str:
+    async def refine(self, image_bytes: bytes, mime_type: str, instruction: str, seed: int = None) -> tuple[str, int]:
         try:
             import io
             file_obj = io.BytesIO(image_bytes)
@@ -87,19 +90,24 @@ class ReplicateProvider(GenerationProvider):
                 timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
             )
             
+            if seed is None:
+                import random
+                seed = random.randint(0, 2**32 - 1)
+
             output = await client.async_run(
                 self.model,
                 input={
                     "input_image": file_obj,
-                    "prompt": instruction
+                    "prompt": instruction,
+                    "seed": seed
                 }
             )
             
             if isinstance(output, list):
                 if not output:
                     raise InferenceServiceError("Empty response from Replicate")
-                return str(output[0])
-            return str(output)
+                return (str(output[0]), seed)
+            return (str(output), seed)
             
         except Exception as e:
             logger.error(f"Replicate refinement failed: {e}")

@@ -45,9 +45,19 @@ class AnalyzeResponse(BaseModel):
     style_explanation: str
     redesign_prompt: str
 
+class CustomizationOptions(BaseModel):
+    must_have_furniture: list[str] = []
+    color_preference: str | None = None
+    budget_tier: str | None = None
+    lighting_preference: str | None = None
+    room_width_ft: float | None = None
+    room_length_ft: float | None = None
+    avoid: list[str] = []
+
 class GenerateRequest(BaseModel):
     analysis_id: int
     force_new: bool = False
+    customization: CustomizationOptions | None = None
 
 class GenerateResponse(GenerationOut):
     pass

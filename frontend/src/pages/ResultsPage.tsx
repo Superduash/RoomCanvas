@@ -4,8 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Check, RefreshCw, Share2, ChevronLeft, AlertTriangle, Layers
 } from 'lucide-react';
-import { CompareSlider, CompareSliderSkeleton } from '../components/results/CompareSlider';
-import { RefinementPanel } from '../components/refine/RefinementPanel';
+import React, { Suspense } from 'react';
+import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
+import { CompareSliderSkeleton } from '../components/results/CompareSlider';
+const CompareSlider = React.lazy(() => import('../components/results/CompareSlider').then(m => ({ default: m.CompareSlider })));
+const RefinementPanel = React.lazy(() => import('../components/refine/RefinementPanel').then(m => ({ default: m.RefinementPanel })));
+const CustomizationPanel = React.lazy(() => import('../components/refine/CustomizationPanel').then(m => ({ default: m.CustomizationPanel })));
 import {
   FurnitureList, DimensionCard, PaletteSwatches, BudgetCard, TextBlock
 } from '../components/results/RecommendationPanel';
@@ -121,6 +125,16 @@ export function ResultsPage() {
       navigate(`/results/${result.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to regenerate');
+    }
+  };
+
+  const handleCustomize = async (options: import('../api/types').CustomizationOptions) => {
+    try {
+      const result = await generateDesign.mutateAsync({ analysisId: generation.id, forceNew: true, customization: options });
+      toast.success('New version started — navigating to results.');
+      navigate(`/results/${result.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to regenerate with options');
     }
   };
 
@@ -265,15 +279,17 @@ export function ResultsPage() {
           {/* Image display */}
           <div className="bg-surface rounded-2xl border border-border shadow-sm p-2">
             {!isCompleted && !isFailed ? (
-              <CompareSliderSkeleton />
+              <RegeneratingState isCompleted={isCompleted} isFailed={isFailed} />
             ) : isCompleted && variation ? (
               <>
                 {viewMode === 'compare' && (
                   <div className="rounded-xl overflow-hidden">
-                    <CompareSlider
-                      beforeSrc={originalSrc}
-                      afterSrc={generatedSrc}
-                    />
+                    <Suspense fallback={<CompareSliderSkeleton />}>
+                      <CompareSlider
+                        beforeSrc={originalSrc}
+                        afterSrc={generatedSrc}
+                      />
+                    </Suspense>
                   </div>
                 )}
                 {viewMode === 'side-by-side' && (
@@ -321,10 +337,22 @@ export function ResultsPage() {
               </div>
             )}
             
-            <RefinementPanel
-              generationId={generation.id}
-              disabled={!isCompleted}
-            />
+            <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}>
+              <RefinementPanel
+                generationId={generation.id}
+                disabled={!isCompleted}
+              />
+            </Suspense>
+            
+            <div className="mt-4">
+              <Suspense fallback={<Skeleton className="h-10 w-full rounded-xl" />}>
+                <CustomizationPanel
+                  onCustomize={handleCustomize}
+                  disabled={!isCompleted}
+                  defaultDimensions={analysisData?.estimated_dimensions}
+                />
+              </Suspense>
+            </div>
           </div>
 
           <div className="border-t border-border" />
@@ -387,6 +415,36 @@ function ResultsSkeleton() {
             <Skeleton className="h-24 w-full rounded-xl" />
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const REGEN_STEPS = [
+  'Applying your changes...',
+  'Adjusting layout...',
+  'Rendering materials and lighting...',
+  'Finalizing your design...',
+];
+
+function RegeneratingState({ isCompleted, isFailed }: { isCompleted: boolean; isFailed: boolean }) {
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    if (isCompleted || isFailed) {
+      setCurrentStep(REGEN_STEPS.length - 1);
+      return;
+    }
+    const interval = setInterval(() => {
+      setCurrentStep(prev => prev < REGEN_STEPS.length - 1 ? prev + 1 : prev);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isCompleted, isFailed]);
+
+  return (
+    <div className="w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9] flex flex-col items-center justify-center bg-surface-alt rounded-xl border border-border p-6 shadow-inner">
+      <div className="max-w-md w-full">
+        <AnalysisStepper steps={REGEN_STEPS} currentIndex={currentStep} />
       </div>
     </div>
   );

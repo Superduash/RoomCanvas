@@ -74,7 +74,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
         {/* Overlay controls */}
         <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-base focus-within:opacity-100">
           <div {...getRootProps()}>
-            <input {...getInputProps()} />
+            <input {...getInputProps({ capture: 'environment' } as any)} />
             <button
               type="button"
               className="flex items-center gap-2 rounded-lg bg-surface/95 backdrop-blur-sm border border-border/50 px-3 py-2 text-sm font-medium text-text-primary shadow-sm hover:bg-surface transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -113,19 +113,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
             : 'border-border-strong bg-surface hover:border-accent/40 hover:bg-accent/[0.02]'
         )}
       >
-        <input {...getInputProps()} />
-        {/* Camera capture for mobile */}
-        <input
-          type="file"
-          accept={allowedTypes.join(',')}
-          capture="environment"
-          className="sr-only"
-          aria-label="Capture photo with camera"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onFileAccepted(f);
-          }}
-        />
+        <input {...getInputProps({ capture: 'environment' } as any)} />
 
         <div className="flex flex-col items-center gap-4 text-center px-6">
           <div className={cn(

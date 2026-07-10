@@ -10,14 +10,16 @@ from app.repositories.generation_repository import GenerationRepository
 from app.services.refinement_service import RefinementService
 from app.schemas.generation import RefineRequest, RefineResponse
 from app.cache import invalidate_history_cache, invalidate_generation_cache
+from app.middleware.rate_limit import RateLimiter
 
 router = APIRouter(prefix="/refine", tags=["Refinement"])
-
 
 @router.post(
     "",
     response_model=RefineResponse,
     status_code=201,
+    dependencies=[Depends(RateLimiter("refine", 20, 3600))],
+
     responses={
         201: {
             "description": "Refinement task scheduled in background.",

@@ -2,12 +2,11 @@
 refinement_service.py — Orchestrates Replicate refinement on an existing image.
 
 Same design as generation_service:
-- `run_refinement_task()` is a sync def that calls asyncio.run() internally.
+- `run_refinement_task()` is an async def that runs on the main event loop.
 - Uses BackgroundSessionLocal (NullPool) to avoid StaticPool deadlocks.
 """
 import time
 import logging
-import asyncio
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_refinement_prompt
 from app.repositories.generation_repository import GenerationRepository
@@ -62,16 +61,12 @@ class RefinementService:
         })
         return new_gen
 
-    # ── SYNC background task — called by FastAPI BackgroundTasks in a thread ──
-    def run_refinement_task(self, new_gen_id: int, parent_id: int, instruction: str):
+    # ── ASYNC background task — called by FastAPI BackgroundTasks ──
+    async def run_refinement_task(self, new_gen_id: int, parent_id: int, instruction: str):
         """
-        Synchronous wrapper — asyncio.run() starts a fresh event loop in this
-        background thread to drive the async provider.
+        Runs on the main event loop. Uses BackgroundSessionLocal to avoid
+        sharing the HTTP request's DB session.
         """
-        asyncio.run(self._refine_async(new_gen_id, parent_id, instruction))
-
-    async def _refine_async(self, new_gen_id: int, parent_id: int, instruction: str):
-        """Actual async work — image load, Replicate refine call, DB write."""
         t0 = time.perf_counter()
         from app.database.session import BackgroundSessionLocal
 
@@ -100,17 +95,17 @@ class RefinementService:
 
             # 3. Call Replicate
             logger.info(f"Background task: calling Replicate for Refinement id={new_gen.id} (parent={parent_id})…")
-            output_url = await self.provider.refine(
+            output_url, seed_used = await self.provider.refine(
                 image_bytes=image_bytes,
                 mime_type="image/jpeg",
                 instruction=final_prompt,
             )
 
             # 4. Download result
-            generated_filepath = StorageService.download_and_save(output_url)
+            generated_filepath = await StorageService.download_and_save(output_url)
 
             # 5. Persist variation
-            repo.add_variations(new_gen.id, [{"image_path": generated_filepath, "seed": 0}])
+            repo.add_variations(new_gen.id, [{"image_path": generated_filepath, "seed": seed_used}])
 
             # 6. Commit processing time + mark complete
             elapsed = round(time.perf_counter() - t0, 2)

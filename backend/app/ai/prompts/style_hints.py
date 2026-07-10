@@ -55,3 +55,94 @@ STYLE_TEMPLATES = {
         "reason_template": "Merges high-end materials, sophisticated textures, and custom-made statements. It delivers an elegant, refined aesthetic that exudes luxury while preserving the comfort and utility of your {room_type}."
     }
 }
+
+ADDITIONAL_STYLES = [
+    {
+        "id": "indian_contemporary",
+        "furniture": ["low-profile teak wood sofa", "brass-inlay coffee table", "hand-block-print cushions", "jali-pattern room divider"],
+        "palette": ["#8B4513", "#D4AF37", "#F5F0E6", "#2E5339"],
+        "budget_tag": "Mid-Range",
+        "reason_template": "A {room_type} that blends contemporary form with traditional Indian craft details — brass accents, block-print textiles, and warm wood tones.",
+    },
+    {
+        "id": "japandi",
+        "furniture": ["low platform bed or seating", "natural oak furniture", "paper/rice-weave lighting", "minimal ceramic decor"],
+        "palette": ["#E8E2D5", "#4A4238", "#B8A88A", "#1C1C1C"],
+        "budget_tag": "Mid-Range",
+        "reason_template": "A {room_type} combining Japanese minimalism with Scandinavian warmth — natural materials, low furniture, and quiet, uncluttered lines.",
+    },
+    {
+        "id": "mediterranean",
+        "furniture": ["wrought-iron accents", "terracotta planters", "linen upholstered seating", "carved wood console"],
+        "palette": ["#F2E9D8", "#3B6E8F", "#C97C4A", "#7A8B69"],
+        "budget_tag": "Mid-Range",
+        "reason_template": "A sun-washed {room_type} inspired by coastal Mediterranean homes — terracotta, whitewashed textures, and warm blue accents.",
+    },
+    {
+        "id": "traditional_indian_heritage",
+        "furniture": ["hand-carved wooden furniture", "jaali screens", "brass lanterns", "rich jewel-tone textiles"],
+        "palette": ["#7B1E3A", "#D4AF37", "#1B4332", "#F4E9CD"],
+        "budget_tag": "Premium",
+        "reason_template": "A {room_type} rooted in traditional Indian heritage design — carved wood, brass detailing, and rich jewel-toned textiles.",
+    },
+    {
+        "id": "coastal",
+        "furniture": ["woven rattan chairs", "light driftwood tones", "linen slipcovers", "nautical-inspired accents"],
+        "palette": ["#F7F5F0", "#A8C5D6", "#E8DCC8", "#2C3E50"],
+        "budget_tag": "Budget-Friendly",
+        "reason_template": "A breezy, light-filled {room_type} with coastal textures — rattan, driftwood tones, and soft ocean-inspired color.",
+    },
+]
+
+STYLE_VARIATION_POOLS = {
+    "modern_minimalist": {
+        "accent_materials": ["brushed brass", "matte black steel", "warm oak"],
+        "focal_points": ["a sculptural pendant light", "a large abstract canvas", "a statement bookshelf wall"],
+        "textile_moods": ["neutral linen textures", "soft bouclé accents", "subtle geometric-pattern textiles"],
+    },
+    "scandinavian": {
+        "accent_materials": ["ash wood", "matte ceramic", "black iron details"],
+        "focal_points": ["a minimal woven rug", "an oversized paper lantern", "a gallery wall of line art"],
+        "textile_moods": ["chunky knit throws", "soft muted cottons", "natural sheepskin textures"],
+    },
+    "industrial": {
+        "accent_materials": ["exposed brick", "aged copper", "concrete elements"],
+        "focal_points": ["a large factory-style window", "a distressed leather anchor piece", "industrial pipe shelving"],
+        "textile_moods": ["heavy canvas", "dark neutral wools", "vintage leather"],
+    },
+    "bohemian": {
+        "accent_materials": ["rattan", "macrame", "hammered brass"],
+        "focal_points": ["a vibrant patterned rug", "a cluster of hanging plants", "a vintage carved room divider"],
+        "textile_moods": ["rich velvet", "embroidered cotton", "layered kilim patterns"],
+    },
+    "luxury_contemporary": {
+        "accent_materials": ["polished marble", "gold leaf", "smoked glass"],
+        "focal_points": ["a bespoke crystal chandelier", "a sleek marble fireplace", "a large metallic abstract art piece"],
+        "textile_moods": ["silk drapery", "plush velvet", "high-gloss leather"],
+    },
+    "indian_contemporary": {
+        "accent_materials": ["polished brass", "carved teak", "terracotta"],
+        "focal_points": ["a jali-patterned accent wall", "a brass Urli bowl with floating flowers", "a low carved daybed"],
+        "textile_moods": ["block-printed cottons", "silk blend cushions", "warm earthy linens"],
+    },
+    "japandi": {
+        "accent_materials": ["bamboo", "wabi-sabi ceramics", "paper lanterns"],
+        "focal_points": ["a minimal bonsai arrangement", "a low slatted wood screen", "a Zen-inspired rock element"],
+        "textile_moods": ["unbleached linen", "soft tatami textures", "quiet neutral cottons"],
+    },
+    "mediterranean": {
+        "accent_materials": ["wrought iron", "painted ceramic tiles", "limewash walls"],
+        "focal_points": ["an arched alcove", "a large terracotta olive jar", "a rustic wooden beam ceiling"],
+        "textile_moods": ["breezy white linen", "sun-faded cotton", "woven sea-grass"],
+    },
+    "traditional_indian_heritage": {
+        "accent_materials": ["antique brass", "dark rosewood", "intricate inlay work"],
+        "focal_points": ["a majestic carved archway", "a cluster of hanging brass diyas", "a traditional swing (jhoola)"],
+        "textile_moods": ["rich brocade", "hand-woven silk", "vibrant jewel-toned velvets"],
+    },
+    "coastal": {
+        "accent_materials": ["driftwood", "sea glass", "woven seagrass"],
+        "focal_points": ["a large nautical-inspired pendant", "a collection of coastal photography", "a light washed-wood console"],
+        "textile_moods": ["striped cotton", "light airy linen", "soft blue-toned textiles"],
+    },
+}

@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
+from fastapi.middleware.gzip import GZipMiddleware
 import uvicorn
 
 import app.logging_config as logging_config
@@ -110,6 +111,13 @@ async def access_log_middleware(request: Request, call_next):
         method = f"{request.method: <6}"
         path = f"{request.url.path: <20}"
         logger.info(f"{method} {path} {response.status_code}   {elapsed_ms:.0f}ms")
+    
+    # Security Headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    
     return response
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
@@ -121,6 +129,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # ── Static file serving ───────────────────────────────────────────────────────
 # Mount the parent storage directory so /static/uploads/…, /static/generated/… all work.

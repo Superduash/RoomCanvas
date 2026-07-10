@@ -4,18 +4,13 @@ generation_service.py — Orchestrates Replicate generation from an analysis.
 Key design decisions:
 - `prepare_generation()` — synchronous; called from the FastAPI request handler.
   Creates the DB row in 'pending' state and returns immediately.
-- `run_generation_task()` — synchronous def (NOT async); FastAPI BackgroundTasks
-  calls it in a thread pool. We use asyncio.run() inside to drive the async
-  provider. Using async def here would require FastAPI to schedule it on the
-  event loop via run_coroutine_threadsafe, which is fragile; sync def + asyncio.run
-  is the reliable pattern for background tasks that call async code.
-- Uses BackgroundSessionLocal (NullPool) to avoid sharing the StaticPool
-  connection that the request session holds, which would deadlock.
+- `run_generation_task()` — async def; FastAPI BackgroundTasks runs it on the
+  main event loop. DB calls are still made using BackgroundSessionLocal so we 
+  don't share the request's connection.
 """
 import time
 import json
 import logging
-import asyncio
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_generation_prompt
 from app.repositories.generation_repository import GenerationRepository
@@ -59,31 +54,15 @@ class GenerationService:
         updated_gen = self.repository.update_status(generation.id, "pending")
         return updated_gen
 
-    # ── SYNC background task — called by FastAPI BackgroundTasks in a thread ──
-    def run_generation_task(self, analysis_id: int):
+    # ── ASYNC background task — called by FastAPI BackgroundTasks ──
+    async def run_generation_task(self, analysis_id: int, customization=None, is_regenerate=False):
         """
-        Synchronous wrapper so FastAPI BackgroundTasks can call us directly.
-        asyncio.run() starts a fresh event loop in this background thread to
-        drive the async provider without fighting the main event loop.
+        Runs on the main event loop. Uses BackgroundSessionLocal to avoid
+        sharing the HTTP request's DB session.
         """
-        try:
-            asyncio.run(self._generate_async(analysis_id))
-        except Exception as e:
-            logger.error(f"Background task critically failed for Generation id={analysis_id}: {e}", exc_info=True)
-            from app.database.session import BackgroundSessionLocal
-            try:
-                db = BackgroundSessionLocal()
-                repo = GenerationRepository(db)
-                repo.update_status(analysis_id, "failed")
-                repo.set_error(analysis_id, str(e))
-                db.close()
-            except Exception as db_err:
-                logger.error(f"Failed to update error state in DB for Generation id={analysis_id}: {db_err}")
-
-    async def _generate_async(self, analysis_id: int):
-        """Actual async work — image load, Replicate call, DB write."""
         t0 = time.perf_counter()
         from app.database.session import BackgroundSessionLocal
+
 
         db = BackgroundSessionLocal()
         repo = GenerationRepository(db)
@@ -104,7 +83,7 @@ class GenerationService:
                     analysis_data = json.loads(generation.analysis_json)
                 except Exception:
                     pass
-            final_prompt = build_generation_prompt(generation.redesign_prompt, analysis_data)
+            final_prompt = build_generation_prompt(generation.redesign_prompt, analysis_data, customization, is_regenerate, generation.style)
 
             # 3. Call Replicate
             logger.info(
@@ -113,17 +92,17 @@ class GenerationService:
                 f"Prompt: '{final_prompt}'"
             )
             logger.info(f"Background task: calling Replicate for Generation id={generation.id}…")
-            output_url = await self.provider.generate(
+            output_url, seed_used = await self.provider.generate(
                 image_bytes=image_bytes,
                 mime_type="image/jpeg",
                 prompt=final_prompt,
             )
 
             # 4. Download result
-            generated_filepath = StorageService.download_and_save(output_url)
+            generated_filepath = await StorageService.download_and_save(output_url)
 
             # 5. Persist variation
-            repo.add_variations(generation.id, [{"image_path": generated_filepath, "seed": 0}])
+            repo.add_variations(generation.id, [{"image_path": generated_filepath, "seed": seed_used}])
 
             # 6. Back-fill room_type_detected from analysis_json if not already set
             if not generation.room_type_detected and generation.analysis_json:

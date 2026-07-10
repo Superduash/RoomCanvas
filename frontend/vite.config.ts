@@ -37,7 +37,10 @@ export default defineConfig({
       if (msg.includes('VITE') || msg.includes('ready in') || msg.includes('Local:')) return;
       console.info(msg);
     },
-    warn: console.warn,
+    warn: (warning, warn) => {
+      if (warning.message.includes('vite-tsconfig-paths')) return;
+      warn(warning);
+    },
     warnOnce: console.warn,
     error: console.error,
     clearScreen: () => {},

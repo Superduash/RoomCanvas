@@ -10,14 +10,16 @@ from app.repositories.generation_repository import GenerationRepository
 from app.services.generation_service import GenerationService
 from app.schemas.generation import GenerateRequest, GenerateResponse
 from app.cache import invalidate_history_cache
+from app.middleware.rate_limit import RateLimiter
 
 router = APIRouter(prefix="/generate", tags=["Generation"])
-
 
 @router.post(
     "",
     response_model=GenerateResponse,
     status_code=201,
+    dependencies=[Depends(RateLimiter("generate", 15, 3600))],
+
     responses={
         201: {
             "description": "Generation task scheduled in background.",
@@ -65,6 +67,6 @@ async def generate_design(
     
     # 3. Schedule Replicate task
     if result.status == "pending":
-        background_tasks.add_task(service.run_generation_task, result.id)
+        background_tasks.add_task(service.run_generation_task, result.id, request.customization, request.force_new)
     
     return result
