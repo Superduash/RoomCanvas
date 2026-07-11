@@ -75,17 +75,18 @@ def get_repo(db: Session = Depends(get_db), current_user: User = Depends(get_cur
 def list_history(
     limit: int = 50,
     repo: GenerationRepository = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Retrieve list of past design generations ordered from newest to oldest.
     """
-    cached = get_cached_history(limit)
+    cached = get_cached_history(current_user.id, limit)
     if cached is not None:
         return JSONResponse(content=cached)
 
     results = repo.list_projects(limit=limit)
     serialized = [ProjectOut.model_validate(r).model_dump(mode="json") for r in results]
-    set_cached_history(limit, serialized)
+    set_cached_history(current_user.id, limit, serialized)
 
     response = JSONResponse(content=serialized)
     response.headers["Cache-Control"] = "no-store"  # Mutates frequently
@@ -191,7 +192,7 @@ def delete_all_history(
         )
     
     # Clear all cache keys
-    invalidate_history_cache()
+    invalidate_history_cache(repo.user_id)
     
     from app.services.storage_service import StorageService
     def _delete_files():
@@ -274,6 +275,49 @@ def get_generation_by_id(
     return serialized
 
 
+# ── GET /api/generation/{id}/status (SSE) ─────────────────────────────────────
+from sse_starlette.sse import EventSourceResponse
+import asyncio
+from fastapi.concurrency import run_in_threadpool
+import json
+
+@router.get(
+    "/generation/{generation_id}/status",
+    tags=["Generation"],
+    responses={
+        200: {
+            "description": "Server-Sent Events for generation status.",
+        }
+    }
+)
+async def generation_status_sse(
+    generation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Stream updates for a generation until it reaches a terminal state.
+    """
+    repo = GenerationRepository(db, user_id=current_user.id)
+    
+    async def event_generator():
+        while True:
+            generation = await run_in_threadpool(repo.get_by_id, generation_id)
+            if not generation:
+                yield {"event": "error", "data": "Not found"}
+                break
+                
+            serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
+            yield {"event": "message", "data": json.dumps(serialized)}
+            
+            if generation.status in ("completed", "failed", "failed_analysis"):
+                break
+                
+            await asyncio.sleep(2)
+
+    return EventSourceResponse(event_generator())
+
+
 # ── POST /api/history/{id}/select/{variation_id} ──────────────────────────────
 @router.post(
     "/history/{generation_id}/select/{variation_id}",
@@ -299,7 +343,7 @@ def select_variation(
     """
     try:
         generation = repo.set_selected_variation(generation_id, variation_id)
-        invalidate_generation_cache(generation_id)
+        invalidate_generation_cache(generation_id, user_id=repo.user_id)
         return generation
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
@@ -350,7 +394,7 @@ def delete_generation(
             if v.image_path:
                 files.append(v.image_path)
         repo.delete(child.id)
-        invalidate_generation_cache(child.id)
+        invalidate_generation_cache(child.id, user_id=repo.user_id)
 
     # Collect files from parent generation
     if generation.original_image_path:
@@ -360,8 +404,7 @@ def delete_generation(
             files.append(v.image_path)
 
     repo.delete(generation_id)
-    invalidate_generation_cache(generation_id)
-    invalidate_history_cache()
+    invalidate_generation_cache(generation_id, user_id=repo.user_id)
 
     from app.services.storage_service import StorageService
     def _delete_files():
@@ -415,8 +458,7 @@ def rename_generation(
             detail=f"Database error renaming generation: {ex}"
         )
 
-    invalidate_generation_cache(generation_id)
-    invalidate_history_cache()
+    invalidate_generation_cache(generation_id, user_id=repo.user_id)
     logger.info(f"Renamed Generation id={generation_id} to '{generation.room_type_detected}'")
 
     return generation
@@ -463,8 +505,7 @@ def delete_refinement(
         )
     
     # Invalidate both the parent generation and the full history list
-    invalidate_generation_cache(parent_id)
-    invalidate_history_cache()
+    invalidate_generation_cache(parent_id, user_id=repo.user_id)
     
     from app.services.storage_service import StorageService
     def _delete_files():

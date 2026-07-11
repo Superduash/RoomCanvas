@@ -1,3 +1,26 @@
+export interface User {
+  id: number;
+  email: string;
+  display_name: string | null;
+  photo_url: string | null;
+  username: string | null;
+  bio: string | null;
+  theme_preference: string;
+  email_notifications: boolean;
+  created_at: string;
+}
+
+export interface UserUpdate {
+  display_name?: string | null;
+  username?: string | null;
+  bio?: string | null;
+}
+
+export interface SettingsUpdate {
+  theme_preference?: string | null;
+  email_notifications?: boolean | null;
+}
+
 export interface Variation {
   id: number;
   generation_id: number;

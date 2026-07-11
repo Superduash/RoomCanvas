@@ -4,7 +4,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
@@ -20,17 +19,12 @@ import {
 import { api } from '../api/client';
 import { useAuthModalStore } from './authModalStore';
 
-export interface UserProfile {
-  id: number;
-  email: string;
-  display_name: string | null;
-  photo_url: string | null;
-  created_at: string;
-}
+import { type User as ApiUser } from '../api/types';
 
 interface AuthContextValue {
   user: User | null | undefined; // undefined = not resolved, null = signed out
-  profile: UserProfile | null;
+  profile: ApiUser | null;
+  setProfile: (profile: ApiUser) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
   signUpWithEmail: (args: any) => Promise<User>;
@@ -72,16 +66,61 @@ function friendlyError(err: any) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<ApiUser | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
-  const syncBackendUser = useCallback(async () => {
-    try {
-      const data = await api.post<UserProfile>('/auth/sync', {});
-      setProfile(data);
-      setSyncError(null);
-    } catch (err) {
-      setSyncError('Your account signed in, but we couldn\u2019t load your profile. Some features may be unavailable \u2014 try refreshing.');
+  const syncBackendUser = useCallback(async (fbUser: User) => {
+    let attempts = 0;
+    const delays = [0, 800, 2000];
+    
+    // Attempt the sync with exponential backoff
+    while (attempts < 3) {
+      try {
+        // Force refresh the token on the very first attempt to avoid race conditions on signup
+        if (attempts === 0) {
+          await fbUser.getIdToken(true);
+        }
+        
+        const data = await api.post<ApiUser>('/auth/sync', {});
+        setProfile(data);
+        setSyncError(null);
+        return; // Success, exit loop
+      } catch (err: any) {
+        attempts++;
+        const isAuthError = err?.response?.status === 401 || err?.response?.status === 403;
+        
+        // If 401/403, force token refresh for the next attempt
+        if (isAuthError && attempts < 3) {
+          try { await fbUser.getIdToken(true); } catch (e) {}
+        }
+        
+        if (attempts >= 3) {
+          setSyncError('Your account signed in, but we couldn\u2019t load your profile. Some features may be unavailable \u2014 try refreshing.');
+          
+          // Start background silent retries
+          let bgAttempts = 0;
+          const bgInterval = setInterval(async () => {
+            bgAttempts++;
+            if (bgAttempts > 4) {
+              clearInterval(bgInterval);
+              return;
+            }
+            try {
+              const data = await api.post<ApiUser>('/auth/sync', {});
+              setProfile(data);
+              setSyncError(null);
+              clearInterval(bgInterval);
+            } catch (e) {
+              // Ignore background errors
+            }
+          }, 15000);
+          
+          break;
+        }
+        
+        // Wait before next attempt
+        await new Promise(resolve => setTimeout(resolve, delays[attempts]));
+      }
     }
   }, []);
 
@@ -91,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (fbUser) => {
       setUser(fbUser);
       if (fbUser) {
-        syncBackendUser();
+        syncBackendUser(fbUser);
         
         // Handle pending auth action
         const pending = useAuthModalStore.getState().consumePendingAction();
@@ -138,8 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return cred.user;
     } catch (err: any) {
       if (POPUP_FALLBACK_CODES.has(err?.code)) {
-        await signInWithRedirect(firebaseAuth, googleProvider);
-        return null;
+        throw new Error('Popup blocked. Please allow popups for this site to sign in with Google.');
       }
       throw new Error(friendlyError(err));
     }
@@ -167,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = {
     user,
     profile,
+    setProfile,
     isAuthenticated: !!user,
     isLoading: user === undefined,
     signUpWithEmail,

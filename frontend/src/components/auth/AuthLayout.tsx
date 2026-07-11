@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const VALUE_PROPS = [
   { title: 'Grounded in your room', desc: 'Every recommendation comes from an AI analysis of your actual photo, not a generic template.' },
@@ -7,21 +8,31 @@ const VALUE_PROPS = [
   { title: 'Your designs, saved', desc: 'Every generation lives in your private history — searchable, downloadable, deletable, anytime.' },
 ];
 
+function BackButton() {
+  const navigate = useNavigate();
+  const canGoBack = window.history.length > 1 && document.referrer.includes(window.location.host);
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => (canGoBack ? navigate(-1) : navigate('/'))}
+        aria-label="Go back"
+        className="flex items-center gap-2 w-fit bg-surface p-1.5 rounded-lg shadow-sm border border-border hover:bg-surface-alt transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <ArrowLeft size={20} className="text-text-primary" />
+      </button>
+      <span className="text-[18px] font-semibold tracking-tight text-text-primary">RoomCanvas</span>
+    </div>
+  );
+}
+
 export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: React.ReactNode; panelTitle: string; panelSubtitle: string; }) {
   return (
     <div className="min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-bg">
       {/* Left Info Panel (Hidden on Mobile) */}
       <div className="hidden lg:flex flex-col justify-between p-6 xl:p-10 bg-surface-alt border-r border-border">
         {/* Brand */}
-        <Link to="/" className="flex items-center gap-3 w-fit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg">
-          <div className="bg-surface p-1.5 rounded-lg shadow-sm border border-border">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-accent">
-              <path d="M3 11.5 12 4l9 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M5.5 10v9a1 1 0 0 0 1 1H10v-5.5h4V20h3.5a1 1 0 0 0 1-1v-9" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span className="text-[18px] font-semibold tracking-tight text-text-primary">RoomCanvas</span>
-        </Link>
+        <BackButton />
 
         {/* Content */}
         <div className="flex flex-col gap-5 max-w-[480px]">

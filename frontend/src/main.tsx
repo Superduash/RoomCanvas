@@ -13,10 +13,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((error) => {
-      console.error('ServiceWorker registration failed: ', error);
-    });
-  });
-}
+import { registerSW } from 'virtual:pwa-register';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Because we set autoUpdate in vite.config, this may not fire, 
+    // but if it does, auto-refresh to get the new assets.
+    updateSW(true);
+  },
+});

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "RoomCanvas AI"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    PUBLIC_BASE_URL: str = "https://roomcanvas.onrender.com"
 
     # ── Database ──────────────────────────────────────────────────────────────
     DATABASE_URL: str = "sqlite:///./storage/interior_ai.db"

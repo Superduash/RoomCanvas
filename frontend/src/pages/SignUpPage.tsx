@@ -69,22 +69,22 @@ export function SignUpPage() {
       panelTitle="Design your first room in minutes."
       panelSubtitle="Join RoomCanvas to start transforming your spaces instantly."
     >
-      <div className="flex flex-col mb-4">
-        <h2 className="text-2xl font-semibold text-text-primary tracking-tight mb-1">Sign up</h2>
-        <p className="text-[14px] text-text-secondary">
+      <div className="flex flex-col mb-2">
+        <h2 className="text-xl font-semibold text-text-primary tracking-tight mb-0.5">Sign up</h2>
+        <p className="text-[13px] text-text-secondary">
           Already have an account? <Link to="/signin" className="text-accent font-semibold hover:underline">Sign in</Link>
         </p>
       </div>
 
       <SocialAuthButton loading={googleLoading} onClick={handleGoogle} />
 
-      <div className="flex items-center gap-4 my-5">
+      <div className="flex items-center gap-4 my-3">
         <div className="flex-1 h-px bg-border"></div>
         <span className="text-[12px] text-text-tertiary font-medium uppercase tracking-wider">or email</span>
         <div className="flex-1 h-px bg-border"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
         <div className="flex flex-col gap-1">
           <label htmlFor="name" className="text-[13px] font-semibold text-text-primary">Full Name</label>
           <input

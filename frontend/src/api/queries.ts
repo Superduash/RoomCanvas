@@ -61,18 +61,11 @@ export function useRefineDesign() {
   });
 }
 
-// ── Single generation fetch — used directly AND by the polling hook ────
-export function useGeneration(id: number | null, opts?: { poll?: boolean }): UseQueryResult<GenerationOut> {
+export function useGeneration(id: number | null): UseQueryResult<GenerationOut> {
   return useQuery({
     queryKey: ['generation', id],
     queryFn: () => api.get<GenerationOut>(`/generation/${id}`),
     enabled: id !== null,
-    refetchInterval: (query) => {
-      if (!opts?.poll) return false;
-      const status = query.state.data?.status;
-      if (status === 'completed' || status === 'failed') return false;
-      return 2000;
-    },
   });
 }
 

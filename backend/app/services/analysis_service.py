@@ -4,6 +4,7 @@ analysis_service.py — Orchestrates Gemini room analysis.
 import time
 import logging
 import json
+from fastapi.concurrency import run_in_threadpool
 from app.ai.providers.provider_registry import get_analysis_provider
 from app.schemas.generation import AnalyzeResponse
 from app.repositories.generation_repository import GenerationRepository
@@ -30,10 +31,23 @@ class AnalysisService:
         status = "analyzed"
 
         # 1. Try to get analysis from AI Provider
-        try:
-            analysis_dict = await self.provider.analyze_room(image_bytes, mime_type, style_id)
+        async def fetch_analysis():
+            res = await self.provider.analyze_room(image_bytes, mime_type, style_id)
             # Validate response shape
-            _ = AnalyzeResponse(analysis_id=0, **analysis_dict)
+            _ = AnalyzeResponse(analysis_id=0, **res)
+            return res
+
+        try:
+            import hashlib
+            from app.cache.redis_cache import cached_json_async
+            
+            h = hashlib.sha256()
+            h.update(image_bytes)
+            h.update(style_id.encode('utf-8'))
+            cache_key = f"analysis:{h.hexdigest()}"
+            
+            # Cache for 2 hours
+            analysis_dict = await cached_json_async(cache_key, 7200, fetch_analysis)
         except Exception as e:
             logger.error(f"Analysis provider failed: {e}. Falling back to default skeleton.")
             error_msg = f"Provider failed: {str(e)}"
@@ -58,6 +72,7 @@ class AnalysisService:
                 )
             }
 
+
         # 2. Save generation to DB
         generation_data = {
             "original_image_path": original_image_path,
@@ -78,7 +93,7 @@ class AnalysisService:
 
         analysis_id = 0
         try:
-            generation = self.repository.create_generation(generation_data)
+            generation = await run_in_threadpool(self.repository.create_generation, generation_data)
             analysis_id = generation.id
             elapsed = round(time.perf_counter() - t0, 2)
             logger.info(f"Analysis complete — id={analysis_id} style={style_id} ({elapsed}s) status={status}")

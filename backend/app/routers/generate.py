@@ -4,6 +4,7 @@ Turns an analysis into a redesigned room image via Replicate.
 Invalidates history cache after successful generation.
 """
 from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.repositories.generation_repository import GenerationRepository
@@ -53,6 +54,7 @@ router = APIRouter(prefix="/generate", tags=["Generation"])
         }
     }
 )
+
 async def generate_design(
     request: GenerateRequest,
     background_tasks: BackgroundTasks,
@@ -63,10 +65,16 @@ async def generate_design(
     service = GenerationService(repository)
     
     # 1. Prepare row to pending state
-    result = service.prepare_generation(request.analysis_id, force_new=request.force_new, customization=request.customization, user_id=current_user.id)
+    result = await run_in_threadpool(
+        service.prepare_generation,
+        request.analysis_id,
+        force_new=request.force_new,
+        customization=request.customization,
+        user_id=current_user.id
+    )
     
     # 2. Invalidate cache so UI sees status change
-    invalidate_history_cache()
+    await run_in_threadpool(invalidate_history_cache, current_user.id)
     
     # 3. Schedule Replicate task
     if result.status == "pending":

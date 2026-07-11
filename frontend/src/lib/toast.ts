@@ -15,6 +15,7 @@ export const toast = {
     return hotToast.success(message, {
       id: options?.id,
       duration: options?.duration ?? 4000,
+      iconTheme: { primary: '#16A34A', secondary: '#FFFFFF' },
     });
   },
 
@@ -34,6 +35,7 @@ export const toast = {
       // Critical errors persist until explicitly dismissed by the user navigating or retrying (Infinity),
       // but standard errors auto-dismiss after 6 seconds.
       duration: options?.duration ?? 6000,
+      iconTheme: { primary: '#DC2626', secondary: '#FFFFFF' },
     });
   },
 

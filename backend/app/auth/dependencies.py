@@ -5,21 +5,9 @@ from app.database.session import get_db
 from app.database.models import User
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from fastapi.concurrency import run_in_threadpool
 
-async def get_current_user(
-    authorization: str = Header(None),
-    db: Session = Depends(get_db),
-) -> User:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
-    token = authorization.removeprefix("Bearer ").strip()
-    try:
-        decoded = firebase_auth.verify_id_token(token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired session — please sign in again")
-
-    firebase_uid = decoded["uid"]
-    email = decoded.get("email", "")
+def _get_or_create_user(db: Session, firebase_uid: str, email: str, decoded: dict) -> tuple[User, bool]:
     user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
     is_new = False
     
@@ -53,5 +41,26 @@ async def get_current_user(
         user.last_login_at = datetime.utcnow()
         db.commit()
         
+    return user, is_new
+
+async def get_current_user(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db),
+) -> User:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    token = authorization.removeprefix("Bearer ").strip()
+    
+    try:
+        # verify_id_token can be a blocking network call, moving it to threadpool
+        decoded = await run_in_threadpool(firebase_auth.verify_id_token, token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired session — please sign in again")
+
+    firebase_uid = decoded["uid"]
+    email = decoded.get("email", "")
+    
+    user, is_new = await run_in_threadpool(_get_or_create_user, db, firebase_uid, email, decoded)
     user._is_new = is_new
+    
     return user

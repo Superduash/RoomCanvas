@@ -57,7 +57,7 @@ def load_image(path: str) -> Image.Image:
         logger.error(f"Failed to load image from {path}: {e}")
         raise InvalidImageError(f"Could not load image: {e}")
 
-def resize_for_upload(image: Image.Image, max_dimension: int = 2048) -> bytes:
+def resize_for_upload(image: Image.Image, max_dimension: int = 1536) -> bytes:
     w, h = image.size
     if max(w, h) > max_dimension:
         scale = max_dimension / max(w, h)

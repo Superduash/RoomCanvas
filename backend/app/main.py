@@ -1,6 +1,8 @@
 import os
 import sys
 import time
+import asyncio
+import httpx
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -15,11 +17,23 @@ from app.config import settings
 from app.database.session import engine, Base
 from app.ai.providers.provider_registry import init_providers
 from app.auth.firebase_admin_init import init_firebase_admin
-from app.routers import health, analyze, generate, refine, history, styles, providers, config, auth
+from app.routers import health, analyze, generate, refine, history, styles, providers, config, auth, measure
 from app.utils.exceptions import InteriorAIError
 
 logger = logging_config.logger
 
+async def _self_ping_loop():
+    if settings.DEBUG:
+        return
+    url = f"{settings.PUBLIC_BASE_URL}/api/health"
+    while True:
+        await asyncio.sleep(600)
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.get(url)
+                logger.debug("Keep-alive ping sent.")
+        except Exception:
+            pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -76,9 +90,12 @@ Mode: {"Development" if settings.DEBUG else "Production"}
     # Print the banner cleanly without the loguru prefix timestamp
     print(banner.strip(), flush=True)
 
+    ping_task = asyncio.create_task(_self_ping_loop())
+
     yield  # ── Application runs here ─────────────────────────────────────────
 
     # ── Shutdown ─────────────────────────────────────────────────────────────
+    ping_task.cancel()
     logger.info(f"{settings.APP_NAME} API shutting down.")
 
 
@@ -149,6 +166,7 @@ app.include_router(generate.router, prefix="/api")
 app.include_router(refine.router,   prefix="/api")
 app.include_router(history.router,  prefix="/api")
 app.include_router(auth.router,     prefix="/api")
+app.include_router(measure.router,  prefix="/api")
 
 
 # ── Global Exception Handlers ─────────────────────────────────────────────────

@@ -66,7 +66,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache the app shell; never cache API responses — generation status must always be fresh, not served stale from a cache
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         navigateFallbackDenylist: [/^\/api/, /^\/static/],
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
       },

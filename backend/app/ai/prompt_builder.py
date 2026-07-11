@@ -13,17 +13,18 @@ Detect and explicitly document the room's physical architecture:
 - Ceiling height
 - Primary lighting direction (natural and artificial)
 - Current furniture placement and flow
+- Approximate room shape (rectangular, L-shaped, irregular, etc.)
+- Any visible reference objects and their typical real-world size (e.g. standard door ≈ 2032mm tall)
+- Estimated ceiling height band (8ft, 9ft, 10ft+)
 
 Design it with the following style hint in mind: {style_hint}
 
-Follow the requested JSON schema strictly. Ensure your redesign prompt describes exactly what to change in the image.
+Follow the requested JSON schema strictly. Ensure your redesign prompt describes exactly what to change in the image, using verbs like "change" rather than "transform".
 """
 
 def sanitize_prompt(text: str) -> str:
     """Sanitize user instruction: strip control characters, cap length to 2000, collapse whitespace."""
-    # Strip control characters first
     text = "".join(ch for ch in text if ord(ch) >= 32)
-    # Collapse whitespace
     text = re.sub(r'\s+', ' ', text)
     return text.strip()[:2000]
 
@@ -47,30 +48,14 @@ def pick_variation_descriptors(style_id: str) -> str:
 
 DESIGN_PRINCIPLES = """
 Apply professional interior design principles:
-- Balance: distribute visual weight evenly. If ceiling or wall light fixtures are used,
-  space them symmetrically and evenly across the ceiling/wall — never asymmetric or
-  unevenly clustered. Mirror furniture placement around a central axis where the room
-  layout allows.
-- Scale and proportion: furniture must be sized appropriately for the room's real
-  dimensions — a coffee table roughly two-thirds the width of the sofa it faces,
-  seating that doesn't overwhelm or underfill the floor area.
-- Rhythm: repeat 2-3 colors, materials, or shapes across the room (e.g. the same wood
-  tone on two different furniture pieces) to create visual flow rather than a
-  collection of unrelated objects.
-- Emphasis: establish exactly one clear focal point (a feature wall, a statement
-  light fixture, or an anchor furniture piece) that the rest of the room supports
-  rather than competes with.
-- Contrast: pair at least one light surface against one dark surface, and one smooth
-  material against one textured material, to avoid a flat, monotonous look.
-- Harmony: keep the full palette and material selection coherent with the requested
-  style — no clashing colors or mismatched design eras.
-- Details: include finishing touches appropriate to the style — hardware finishes,
-  trim, small styling objects — not just large furniture.
-Follow the 60-30-10 color rule: roughly 60% dominant wall/floor tone, 30% secondary
-furniture/textile tone, 10% accent color in small decor items. Keep furniture pulled
-slightly away from walls rather than pressed flat against them. If a rug is used, size
-it so at least the front legs of major seating rest on it. Hang any wall art so its
-visual center sits at roughly average eye level relative to the floor.
+- Balance: distribute visual weight evenly. If ceiling or wall light fixtures are used, space them symmetrically and evenly across the ceiling/wall — never asymmetric or unevenly clustered. Mirror furniture placement around a central axis where the room layout allows.
+- Scale and proportion: furniture must be sized appropriately for the room's real dimensions.
+- Rhythm: repeat 2-3 colors, materials, or shapes across the room.
+- Emphasis: establish exactly one clear focal point.
+- Contrast: pair at least one light surface against one dark surface, and one smooth material against one textured material.
+- Harmony: keep the full palette and material selection coherent with the requested style.
+- Details: include finishing touches appropriate to the style.
+Follow the 60-30-10 color rule: roughly 60% dominant wall/floor tone, 30% secondary furniture/textile tone, 10% accent color in small decor items. Keep furniture pulled slightly away from walls rather than pressed flat against them. If a rug is used, size it so at least the front legs of major seating rest on it. Hang any wall art so its visual center sits at roughly average eye level relative to the floor.
 """
 
 QUALITY_SUFFIX = """
@@ -92,22 +77,29 @@ def build_customization_clause(c) -> str:
     if c is None:
         return ""
     parts = []
+    # Hard constraints first
+    if c.avoid:
+        parts.append(f"Avoid the following entirely: {', '.join(c.avoid)}.")
     if c.must_have_furniture:
         parts.append(f"The design must include: {', '.join(c.must_have_furniture)}.")
+    if c.room_width_ft and c.room_length_ft:
+        parts.append(f"The actual room is approximately {c.room_width_ft} by {c.room_length_ft} feet — scale furniture proportionally to this real size.")
+    # Softer constraints after
     if c.color_preference:
         parts.append(f"Favor a color palette centered on {c.color_preference}.")
     if c.budget_tier:
         parts.append(f"Select furniture and materials appropriate for a {c.budget_tier.lower()} budget.")
     if c.lighting_preference:
         parts.append(f"Use {c.lighting_preference.lower()} lighting throughout.")
-    if c.room_width_ft and c.room_length_ft:
-        parts.append(f"The actual room is approximately {c.room_width_ft} by {c.room_length_ft} feet — scale furniture proportionally to this real size.")
-    if c.avoid:
-        parts.append(f"Avoid the following entirely: {', '.join(c.avoid)}.")
     return " ".join(parts)
+
+COMPOSITION_LOCK = "Keep the exact same camera angle, framing, and perspective as the original photo. Do not reposition, resize, or reflect the room."
 
 def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = None, customization=None, is_regenerate=False, style_id=None) -> str:
     gemini_redesign_prompt = sanitize_prompt(gemini_redesign_prompt)
+    
+    # Swap 'transform' with 'change' for better layout retention
+    gemini_redesign_prompt = re.sub(r'\btransform\b', 'change', gemini_redesign_prompt, flags=re.IGNORECASE)
     
     arch_hints = ""
     if analysis_data and "architecture" in analysis_data:
@@ -131,19 +123,18 @@ def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = N
     if custom_clause:
         custom_clause = f"\n{custom_clause}"
 
-    return f"""{gemini_redesign_prompt}
+    return f"""{COMPOSITION_LOCK}
+
+{gemini_redesign_prompt}
+
 {arch_hints}
-Keep the room's structural layout, walls, windows, doors, ceiling height, and camera
-angle/perspective exactly as in the original photo. Preserve the original direction
-and quality of natural and ambient light — only add or adjust light sources the
-redesign explicitly calls for. Only change furniture, decor, surface colors/materials,
-and lighting fixtures.{custom_clause}
+Change the furniture, decor, and finishes while preserving the room's walls, windows, doors, and camera framing exactly as shown. Preserve the original direction and quality of natural and ambient light — only add or adjust light sources the redesign explicitly calls for. Only change furniture, decor, surface colors/materials, and lighting fixtures.{custom_clause}
 {QUALITY_SUFFIX}"""
 
 def build_refinement_prompt(user_instruction: str) -> str:
     user_instruction = sanitize_prompt(user_instruction)
-    return f"""{user_instruction}
-Apply this change only. Keep everything else in the image exactly as it is — same
-furniture placement, same room structure, same lighting direction, same camera
-angle — unless the instruction explicitly says otherwise.
+    return f"""{COMPOSITION_LOCK}
+
+{user_instruction}
+Apply this change only. Keep everything else in the image exactly as it is — same furniture placement, same room structure, same lighting direction, same camera angle — unless the instruction explicitly says otherwise.
 {QUALITY_SUFFIX}"""

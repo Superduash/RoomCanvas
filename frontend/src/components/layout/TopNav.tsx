@@ -238,9 +238,13 @@ export function TopNav() {
                 <MobileNavLink to="/upload" label="New Design" icon={<Plus className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
                 <MobileNavLink to="/history" label="Library" icon={<History className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
                 {user && (
-                  <div className="mt-3 px-2">
-                    <GlobalSearch isMobile onNavigate={() => setMobileOpen(false)} />
-                  </div>
+                  <>
+                    <MobileNavLink to="/profile" label="Profile" onClick={() => setMobileOpen(false)} />
+                    <MobileNavLink to="/settings" label="Settings" onClick={() => setMobileOpen(false)} />
+                    <div className="mt-3 px-2">
+                      <GlobalSearch isMobile onNavigate={() => setMobileOpen(false)} />
+                    </div>
+                  </>
                 )}
               </nav>
 

@@ -5,6 +5,8 @@ import { router } from './router/routes';
 import { AuthProvider } from './auth/AuthProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider } from './hooks/useTheme';
+import { useEffect } from 'react';
+import { api } from './api/client';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,6 +19,11 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  useEffect(() => {
+    // Fire-and-forget warmup ping to wake up free-tier backend (e.g. Render)
+    api.get('/health').catch(() => {});
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

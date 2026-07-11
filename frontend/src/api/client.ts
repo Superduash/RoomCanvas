@@ -2,8 +2,8 @@ import { logger } from '../lib/logger';
 import { firebaseAuth } from '../lib/firebase';
 import { useAuthModalStore } from '../auth/authModalStore';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
-const API_PREFIX = `${API_BASE}/api`;
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+export const API_PREFIX = `${API_BASE}/api`;
 
 export class ApiError extends Error {
   status: number;
@@ -41,7 +41,7 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
   return res.json() as Promise<T>;
 }
 
-async function getAuthHeader(): Promise<Record<string, string>> {
+export async function getAuthHeader(): Promise<Record<string, string>> {
   const user = firebaseAuth.currentUser;
   if (!user) return {};
   try {

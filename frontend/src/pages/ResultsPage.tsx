@@ -13,6 +13,7 @@ const CustomizationPanel = React.lazy(() => import('../components/refine/Customi
 import {
   FurnitureList, DimensionCard, PaletteSwatches, BudgetCard, TextBlock
 } from '../components/results/RecommendationPanel';
+import { MeasurementOverlay } from '../components/measurement/MeasurementOverlay';
 import { Button } from '../components/primitives/Button';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton, SkeletonText } from '../components/primitives/Skeleton';
@@ -38,6 +39,7 @@ export function ResultsPage() {
   const lastCustomizationMap = useUIStore((s) => s.lastCustomization);
   const [viewMode, setViewMode] = useState<ViewMode>('compare');
   const [downloadDone, setDownloadDone] = useState(false);
+  const [showMeasurement, setShowMeasurement] = useState(false);
 
   // Fetch the entire project timeline
   const { data: projectDetails, isLoading, isError } = useProjectTimeline(id);
@@ -207,6 +209,9 @@ export function ResultsPage() {
           <Button variant="secondary" size="sm" onClick={handleShare} icon={<Share2 className="h-4 w-4" />}>
             Share
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => setShowMeasurement(true)} icon={<Layers className="h-4 w-4" />}>
+            Measure Room
+          </Button>
           {!isRefinement && isCompleted && (
             <Button
               variant="secondary"
@@ -234,6 +239,14 @@ export function ResultsPage() {
       </div>
 
       {/* Failed state */}
+      {showMeasurement && originalSrc && (
+        <MeasurementOverlay 
+          imageUrl={originalSrc} 
+          imageId={activeGeneration.id} 
+          onClose={() => setShowMeasurement(false)} 
+        />
+      )}
+
       {isFailed && (
         <div className="rounded-xl border border-danger bg-danger-subtle p-6 mb-8 flex items-start gap-3 shadow-sm">
           <AlertTriangle className="h-5 w-5 text-danger flex-shrink-0 mt-0.5" />

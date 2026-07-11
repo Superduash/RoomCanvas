@@ -12,6 +12,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    username: Mapped[str | None] = mapped_column(String, unique=True, nullable=True, index=True)
+    bio: Mapped[str | None] = mapped_column(String, nullable=True)
+    theme_preference: Mapped[str] = mapped_column(String, default="system", nullable=False)
+    email_notifications: Mapped[bool] = mapped_column(Integer, default=1, nullable=False) # SQLite uses Integer for boolean
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     last_login_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=datetime.utcnow, nullable=False)
 

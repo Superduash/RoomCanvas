@@ -354,32 +354,38 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
                 role="listbox"
                 className="overflow-y-auto flex-1 py-2 overscroll-contain"
               >
-                {!hasResults && debouncedQuery ? (
-                  <div className="px-4 py-8 text-center">
-                    <p className="text-sm text-text-secondary mb-4">No matches for "{debouncedQuery}"</p>
-                    {/* Fallback to popular styles */}
-                    {stylesData && stylesData.length > 0 && (
-                      <div className="text-left mt-4 border-t border-border pt-4">
-                        <div className="px-3 py-1.5 text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-                          Popular Styles
+                {!hasResults ? (
+                  debouncedQuery ? (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm text-text-secondary mb-4">No matches for "{debouncedQuery}"</p>
+                      {/* Fallback to popular styles */}
+                      {stylesData && stylesData.length > 0 && (
+                        <div className="text-left mt-4 border-t border-border pt-4">
+                          <div className="px-3 py-1.5 text-xs font-semibold text-text-tertiary uppercase tracking-wider">
+                            Popular Styles
+                          </div>
+                          {stylesData.slice(0, 4).map((s) => {
+                            return (
+                              <li
+                                key={`fallback-${s.id}`}
+                                onClick={() => handleSelect({ type: 'popular_style', styleId: s.id, index: -1 })}
+                                className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-surface-alt transition-colors group"
+                              >
+                                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-surface-alt group-hover:bg-surface text-text-secondary">
+                                  <Sparkles className="h-4 w-4" />
+                                </div>
+                                <span className="text-sm text-text-secondary group-hover:text-text-primary">{s.id}</span>
+                              </li>
+                            )
+                          })}
                         </div>
-                        {stylesData.slice(0, 4).map((s) => {
-                          return (
-                            <li
-                              key={`fallback-${s.id}`}
-                              onClick={() => handleSelect({ type: 'popular_style', styleId: s.id, index: -1 })}
-                              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-surface-alt transition-colors group"
-                            >
-                              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-surface-alt group-hover:bg-surface text-text-secondary">
-                                <Sparkles className="h-4 w-4" />
-                              </div>
-                              <span className="text-sm text-text-secondary group-hover:text-text-primary">{s.id}</span>
-                            </li>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm text-text-secondary">Start typing to search designs, pages, and styles…</p>
+                    </div>
+                  )
                 ) : (
                   groups.map((group) => (
                     <div key={group.label} className="mb-2 last:mb-0">

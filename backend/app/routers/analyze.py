@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi.concurrency import run_in_threadpool
 from app.database.session import get_db
 from sqlalchemy.orm import Session
 from app.repositories.generation_repository import GenerationRepository
@@ -52,6 +53,7 @@ router = APIRouter(prefix="/analyze", tags=["Analysis"])
         }
     }
 )
+
 async def analyze_room(
     image: UploadFile = File(...),
     style: str = Form(...),
@@ -65,7 +67,7 @@ async def analyze_room(
     will still be generated to allow manual refinement rather than crashing the flow.
     """
     validate_image_file(image)
-    original_image_path = StorageService.save_upload(image)
+    original_image_path = await run_in_threadpool(StorageService.save_upload, image)
     
     repository = GenerationRepository(db)
     service = AnalysisService(repository)
