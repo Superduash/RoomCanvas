@@ -14,7 +14,7 @@ export function SignInPage() {
   
   const from = location.state?.from?.pathname || '/upload';
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);

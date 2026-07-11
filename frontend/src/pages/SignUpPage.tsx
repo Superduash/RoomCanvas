@@ -46,7 +46,12 @@ export function SignUpPage() {
       toast.success('Welcome to RoomCanvas!');
       navigate(from, { replace: true });
     } catch (err: any) {
-      toast.error(err.message);
+      if (err.message === 'An account with this email already exists.') {
+        toast.error('Account already exists. Please sign in.');
+        navigate('/signin', { state: { email, from } });
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setSubmitting(false);
     }

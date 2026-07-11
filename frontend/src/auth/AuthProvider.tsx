@@ -95,26 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         if (attempts >= 3) {
-          setSyncError('Your account signed in, but we couldn\u2019t load your profile. Some features may be unavailable \u2014 try refreshing.');
-          
-          // Start background silent retries
-          let bgAttempts = 0;
-          const bgInterval = setInterval(async () => {
-            bgAttempts++;
-            if (bgAttempts > 4) {
-              clearInterval(bgInterval);
-              return;
-            }
-            try {
-              const data = await api.post<ApiUser>('/auth/sync', {});
-              setProfile(data);
-              setSyncError(null);
-              clearInterval(bgInterval);
-            } catch (e) {
-              // Ignore background errors
-            }
-          }, 15000);
-          
+          setSyncError('Your account signed in, but the backend rejected the session. Please check backend logs.');
           break;
         }
         

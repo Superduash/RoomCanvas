@@ -35,8 +35,13 @@ function PageLoader() {
 function RouterErrorBoundary() {
   const error = useRouteError() as any;
   
-  // If this is a chunk loading error from Vite due to a new deployment, auto-reload once.
-  if (error?.message?.includes('Failed to fetch dynamically imported module')) {
+  const errorMessage = error?.message?.toLowerCase() || '';
+  const isChunkError = 
+    errorMessage.includes('failed to fetch dynamically imported module') || 
+    errorMessage.includes('importing a module script failed') ||
+    (error instanceof TypeError && errorMessage.includes('fetch'));
+
+  if (isChunkError) {
     const isReloaded = sessionStorage.getItem('chunk_reload');
     if (!isReloaded) {
       sessionStorage.setItem('chunk_reload', 'true');

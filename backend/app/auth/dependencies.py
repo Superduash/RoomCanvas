@@ -54,8 +54,10 @@ async def get_current_user(
     try:
         # verify_id_token can be a blocking network call, moving it to threadpool
         decoded = await run_in_threadpool(firebase_auth.verify_id_token, token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired session — please sign in again")
+    except Exception as e:
+        import logging
+        logging.getLogger("app").error(f"Firebase token verification failed: {e}")
+        raise HTTPException(status_code=401, detail=f"Invalid or expired session — please sign in again")
 
     firebase_uid = decoded["uid"]
     email = decoded.get("email", "")

@@ -24,6 +24,8 @@ def init_firebase_admin():
             firebase_admin.initialize_app(cred)
             return
             
-        print("Warning: FIREBASE_SERVICE_ACCOUNT_JSON not set and local cert not found. Firebase Admin not initialized.")
+        import logging
+        logging.getLogger("app").critical("FIREBASE_SERVICE_ACCOUNT_JSON not set and local cert not found. Firebase Admin not initialized. Authentication will fail.")
     except Exception as e:
-        print(f"Failed to initialize Firebase Admin: {e}")
+        import logging
+        logging.getLogger("app").critical(f"Failed to initialize Firebase Admin: {e}")
