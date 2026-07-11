@@ -24,7 +24,7 @@ export function CompareSlider({
   const beforeLabelRef = useRef<HTMLSpanElement>(null);
   const afterLabelRef = useRef<HTMLSpanElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
-  
+
   const [percent, setPercent] = useState(50);
   const percentRef = useRef(50);
   const isDragging = useRef(false);
@@ -48,7 +48,7 @@ export function CompareSlider({
 
   const updateDOM = useCallback((p: number) => {
     percentRef.current = p;
-    
+
     if (beforeWrapperRef.current) {
       beforeWrapperRef.current.style.clipPath = `inset(0 ${100 - p}% 0 0)`;
     }
@@ -71,12 +71,12 @@ export function CompareSlider({
     const rect = containerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const newPercent = (x / rect.width) * 100;
-    
+
     // Throttle rendering via requestAnimationFrame for buttery smooth manual dragging
     if (rafId.current !== null) {
       cancelAnimationFrame(rafId.current);
     }
-    
+
     rafId.current = requestAnimationFrame(() => {
       updateDOM(newPercent);
       setPercent(newPercent);
@@ -86,19 +86,19 @@ export function CompareSlider({
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     isDragging.current = true;
-    
+
     // Stop any ongoing animation immediately when user interacts
     if (rafId.current !== null) {
       cancelAnimationFrame(rafId.current);
       rafId.current = null;
     }
     setIsRevealing(false);
-    
+
     if (handleRef.current) {
       handleRef.current.style.transform = 'translate(-50%, -50%) scale(1.15)';
       handleRef.current.style.boxShadow = '0 12px 40px rgba(0,0,0,0.3)';
     }
-    
+
     // Capture pointer to track dragging even outside the container
     e.currentTarget.setPointerCapture(e.pointerId);
     handlePointerMove(e.clientX);
@@ -112,7 +112,7 @@ export function CompareSlider({
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     isDragging.current = false;
     e.currentTarget.releasePointerCapture(e.pointerId);
-    
+
     if (handleRef.current) {
       handleRef.current.style.transform = 'translate(-50%, -50%) scale(1)';
       handleRef.current.style.boxShadow = '';
@@ -130,14 +130,14 @@ export function CompareSlider({
     } else {
       return;
     }
-    
+
     // Stop any ongoing animation
     if (rafId.current !== null) {
       cancelAnimationFrame(rafId.current);
       rafId.current = null;
     }
     setIsRevealing(false);
-    
+
     updateDOM(newPercent);
     setPercent(newPercent);
   };
@@ -155,22 +155,22 @@ export function CompareSlider({
     setIsRevealing(true);
 
     // One-time reveal: smooth wipe from right to left, then settle at center
-    const START = 0;           // Start with original image fully visible (left side = 0%)
-    const REVEAL_END = 100;    // Wipe all the way to show redesigned image
+    const START = 100;         // Start with slider on right (Original fully visible)
+    const REVEAL_END = 0;      // Wipe all the way to left (Redesigned fully visible)
     const FINAL = 50;          // Settle at center for comparison
-    
-    const WIPE_DURATION = 1200;    // Smooth wipe from left to right (1.2s)
-    const SETTLE_DURATION = 400;   // Quick settle to center (0.4s)
-    const PAUSE_AT_END = 200;      // Brief pause at full reveal before settling
-    
+
+    const WIPE_DURATION = 1600;    // Slow, premium wipe from right to left (2.0s)
+    const SETTLE_DURATION = 800;  // Smooth settle to center (1.0s)
+    const PAUSE_AT_END = 300;      // Brief pause at full reveal before settling
+
     const TOTAL_MS = WIPE_DURATION + PAUSE_AT_END + SETTLE_DURATION;
-    
+
     const startTime = performance.now();
     updateDOM(START);
 
     function step(now: number) {
       const elapsed = now - startTime;
-      
+
       if (elapsed < WIPE_DURATION) {
         // Phase 1: Smooth wipe from left (0) to right (100) to reveal redesigned image
         const t = elapsed / WIPE_DURATION;
@@ -198,7 +198,7 @@ export function CompareSlider({
         rafId.current = null;
       }
     }
-    
+
     rafId.current = requestAnimationFrame(step);
   }, [updateDOM]);
 
@@ -207,7 +207,7 @@ export function CompareSlider({
     if (afterLoaded) {
       // Reset the reveal flag when a new image loads
       hasPlayedReveal.current = false;
-      
+
       if (!prefersReducedMotion.current) {
         runRevealAnimation();
       } else {
@@ -218,7 +218,7 @@ export function CompareSlider({
         hasPlayedReveal.current = true;
       }
     }
-    
+
     return () => {
       if (rafId.current !== null) {
         cancelAnimationFrame(rafId.current);
@@ -251,10 +251,10 @@ export function CompareSlider({
       onPointerUp={isRevealing ? undefined : onPointerUp}
       onPointerCancel={isRevealing ? undefined : onPointerUp}
       onKeyDown={isRevealing ? undefined : onKeyDown}
-      style={{ 
-        touchAction: 'none', 
+      style={{
+        touchAction: 'none',
         cursor: isRevealing ? 'default' : 'ew-resize',
-        willChange: 'auto' 
+        willChange: 'auto'
       }}
     >
       {/* After (redesigned) — full width base layer */}
@@ -290,19 +290,19 @@ export function CompareSlider({
       <div
         ref={sliderLineRef}
         className="absolute top-0 bottom-0 w-[2px] bg-white/95 shadow-[0_0_20px_rgba(0,0,0,0.4)] pointer-events-none z-10 transition-opacity duration-300"
-        style={{ 
-          left: '50%', 
-          transform: 'translateX(-50%)', 
+        style={{
+          left: '50%',
+          transform: 'translateX(-50%)',
           willChange: 'left',
-          opacity: isRevealing ? 0.3 : 1 
+          opacity: isRevealing ? 0.3 : 1
         }}
       >
         {/* Elegant handle with premium feel */}
-        <div 
+        <div
           ref={handleRef}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-11 w-11 sm:h-14 sm:w-14 rounded-full bg-white shadow-[0_6px_20px_rgba(0,0,0,0.15)] flex items-center justify-center border-2 border-white/20 will-change-transform"
-          style={{ 
-            opacity: isRevealing ? 0 : 1, 
+          style={{
+            opacity: isRevealing ? 0 : 1,
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1)',
             transitionDelay: isRevealing ? '0ms' : '200ms'
           }}
@@ -312,7 +312,7 @@ export function CompareSlider({
       </div>
 
       {/* Invisible larger hit area around the handle for better touch usability */}
-      <div 
+      <div
         className="absolute top-0 bottom-0 w-16 -ml-8 pointer-events-none z-20"
         style={{ left: `${percent}%` }}
       />
@@ -322,7 +322,7 @@ export function CompareSlider({
         <span
           ref={beforeLabelRef}
           className="rounded-full bg-surface/95 backdrop-blur-md border border-border/60 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-text-primary shadow-sm will-change-auto"
-          style={{ 
+          style={{
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
@@ -333,7 +333,7 @@ export function CompareSlider({
         <span
           ref={afterLabelRef}
           className="rounded-full bg-surface/95 backdrop-blur-md border border-border/60 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-text-primary shadow-sm will-change-auto"
-          style={{ 
+          style={{
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
