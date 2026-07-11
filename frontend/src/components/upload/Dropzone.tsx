@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, Replace, AlertTriangle, ImageIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -30,8 +30,12 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
     return acc;
   }, {});
 
+  const [customError, setCustomError] = useState('');
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   const onDrop = useCallback(
     (accepted: File[]) => {
+      setCustomError('');
       if (accepted[0]) onFileAccepted(accepted[0]);
     },
     [onFileAccepted]
@@ -44,9 +48,31 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
     multiple: false,
   });
 
+  const handleCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomError('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > maxSizeBytes) {
+      setCustomError(`File is too large — max ${maxSizeMB}MB`);
+      return;
+    }
+    
+    // Optional chaining in case type is somehow missing, though rare
+    if (file.type && !allowedTypes.includes(file.type)) {
+      const fmts = allowedTypes.map(mimeToExtensions).join(', ');
+      setCustomError(`Unsupported format — use ${fmts}`);
+      return;
+    }
+
+    onFileAccepted(file);
+    // Reset input so taking another photo works if they remove and retake
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
   const rejectionReason = fileRejections[0]?.errors[0];
-  let errorMessage = '';
-  if (rejectionReason) {
+  let errorMessage = customError;
+  if (!errorMessage && rejectionReason) {
     if (rejectionReason.code === 'file-too-large') {
       errorMessage = `File is too large — max ${maxSizeMB}MB`;
     } else if (rejectionReason.code === 'file-invalid-type') {
@@ -74,7 +100,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
         {/* Overlay controls */}
         <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-base focus-within:opacity-100">
           <div {...getRootProps()}>
-            <input {...getInputProps({ capture: 'environment' } as any)} />
+            <input {...getInputProps()} />
             <button
               type="button"
               className="flex items-center gap-2 rounded-lg bg-surface/95 backdrop-blur-sm border border-border/50 px-3 py-2 text-sm font-medium text-text-primary shadow-sm hover:bg-surface transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -113,7 +139,18 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
             : 'border-border-strong bg-surface hover:border-accent/40 hover:bg-accent/[0.02]'
         )}
       >
-        <input {...getInputProps({ capture: 'environment' } as any)} />
+        {/* The standard dropzone file picker (without capture) */}
+        <input {...getInputProps()} />
+
+        {/* The hidden native camera input */}
+        <input 
+          type="file" 
+          accept="image/*" 
+          capture="environment" 
+          ref={cameraInputRef} 
+          className="hidden" 
+          onChange={handleCameraChange} 
+        />
 
         <div className="flex flex-col items-center gap-4 text-center px-6">
           <div className={cn(
@@ -133,15 +170,28 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               {isDragActive ? 'Drop your photo here' : 'Drag & drop your photo'}
             </p>
             <p className="text-sm text-text-secondary mb-1">
-              or click to browse from your device
+              or use the options below
             </p>
             <p className="text-xs text-text-tertiary font-mono">
               {allowedTypes.map(mimeToExtensions).join(', ')} up to {maxSizeMB}MB
             </p>
           </div>
-          <Button variant="secondary" size="md" type="button" className="mt-2 pointer-events-none">
-            Browse files
-          </Button>
+          <div className="flex gap-3 mt-2 z-10">
+            <Button variant="secondary" size="md" type="button" className="pointer-events-none">
+              Browse files
+            </Button>
+            <Button 
+              variant="primary" 
+              size="md" 
+              type="button" 
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent the dropzone file picker from opening
+                cameraInputRef.current?.click();
+              }}
+            >
+              Take Photo
+            </Button>
+          </div>
         </div>
       </div>
 
