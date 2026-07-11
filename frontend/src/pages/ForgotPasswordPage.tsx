@@ -64,12 +64,12 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthLayout panelTitle="Let's get you back in." panelSubtitle="Enter the email associated with your account and we'll send you a link to reset your password.">
-      <div className="flex flex-col mb-8">
+      <div className="flex flex-col mb-6">
         <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Forgot password?</h2>
         <p className="text-[15px] text-text-secondary">No worries, we'll send you reset instructions.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="email" className="text-[13px] font-semibold text-text-primary">Email</label>
           <input
@@ -78,12 +78,12 @@ export function ForgotPasswordPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-[14px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
           />
         </div>
 
         <div className="flex flex-col gap-4">
-          <Button type="submit" size="lg" className="w-full" loading={submitting}>Reset password</Button>
+          <Button type="submit" size="md" className="w-full mt-1" loading={submitting}>Reset password</Button>
           <Link to="/signin" className="text-[14px] text-text-secondary font-medium text-center hover:text-text-primary transition-colors">
             Back to sign in
           </Link>

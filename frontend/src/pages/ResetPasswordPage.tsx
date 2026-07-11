@@ -71,16 +71,16 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout panelTitle="Choose a new password." panelSubtitle="Make sure it's at least 8 characters long and contains a mix of letters and numbers.">
-      <div className="flex flex-col mb-8">
+      <div className="flex flex-col mb-6">
         <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Set new password</h2>
         <p className="text-[15px] text-text-secondary">Enter your new password below.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <PasswordField value={password} onChange={setPassword} showStrength id="new-password" />
         <PasswordField value={confirm} onChange={setConfirm} label="Confirm new password" id="confirm-password" />
 
-        <Button type="submit" size="lg" className="w-full mt-2" loading={submitting}>Save password</Button>
+        <Button type="submit" size="md" className="w-full mt-1" loading={submitting}>Save password</Button>
       </form>
     </AuthLayout>
   );

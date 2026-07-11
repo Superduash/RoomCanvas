@@ -51,7 +51,7 @@ export function SignInPage() {
       panelTitle="Welcome back."
       panelSubtitle="Pick up where you left off. Access your saved designs and continue refining."
     >
-      <div className="flex flex-col mb-8">
+      <div className="flex flex-col mb-6">
         <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Sign in</h2>
         <p className="text-[15px] text-text-secondary">
           Don't have an account? <Link to="/signup" className="text-accent font-semibold hover:underline">Sign up</Link>
@@ -60,13 +60,13 @@ export function SignInPage() {
 
       <SocialAuthButton loading={googleLoading} onClick={handleGoogle} />
 
-      <div className="flex items-center gap-4 my-8">
+      <div className="flex items-center gap-4 my-6">
         <div className="flex-1 h-px bg-border"></div>
         <span className="text-[13px] text-text-tertiary font-medium">or continue with email</span>
         <div className="flex-1 h-px bg-border"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="email" className="text-[13px] font-semibold text-text-primary">Email</label>
           <input
@@ -76,7 +76,7 @@ export function SignInPage() {
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
-            className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-[14px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
           />
         </div>
 
@@ -90,12 +90,12 @@ export function SignInPage() {
               onChange={(e) => setRemember(e.target.checked)} 
               className="w-4 h-4 rounded border-border text-accent focus:ring-accent focus:ring-offset-surface cursor-pointer"
             />
-            <span className="text-[14px] text-text-secondary font-medium">Remember me</span>
+            <span className="text-[13px] text-text-secondary font-medium">Remember me</span>
           </label>
-          <Link to="/forgot-password" className="text-[14px] text-accent font-semibold hover:underline">Forgot password?</Link>
+          <Link to="/forgot-password" className="text-[13px] text-accent font-semibold hover:underline">Forgot password?</Link>
         </div>
 
-        <Button type="submit" size="lg" className="w-full" loading={submitting}>Sign in</Button>
+        <Button type="submit" size="md" className="w-full mt-1" loading={submitting}>Sign in</Button>
       </form>
     </AuthLayout>
   );

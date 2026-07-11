@@ -11,7 +11,7 @@ export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: 
   return (
     <div className="min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-bg">
       {/* Left Info Panel (Hidden on Mobile) */}
-      <div className="hidden lg:flex flex-col justify-between p-10 xl:p-14 bg-surface-alt border-r border-border">
+      <div className="hidden lg:flex flex-col justify-between p-8 xl:p-12 bg-surface-alt border-r border-border">
         {/* Brand */}
         <Link to="/" className="flex items-center gap-3 w-fit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg">
           <div className="bg-surface p-1.5 rounded-lg shadow-sm border border-border">
@@ -24,13 +24,13 @@ export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: 
         </Link>
 
         {/* Content */}
-        <div className="flex flex-col gap-8 max-w-[480px]">
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-6 max-w-[480px]">
+          <div className="flex flex-col gap-2">
             <h1 className="text-3xl xl:text-4xl font-semibold text-text-primary leading-[1.15] tracking-tight">{panelTitle}</h1>
-            <p className="text-[17px] text-text-secondary leading-relaxed">{panelSubtitle}</p>
+            <p className="text-[16px] text-text-secondary leading-relaxed">{panelSubtitle}</p>
           </div>
 
-          <ul className="flex flex-col gap-6">
+          <ul className="flex flex-col gap-5">
             {VALUE_PROPS.map((p) => (
               <li key={p.title} className="flex items-start gap-4">
                 <div className="shrink-0 w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center mt-0.5">
@@ -40,7 +40,7 @@ export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: 
                 </div>
                 <div className="flex flex-col gap-1">
                   <p className="font-semibold text-text-primary text-[15px]">{p.title}</p>
-                  <p className="text-sm text-text-secondary leading-relaxed">{p.desc}</p>
+                  <p className="text-[13px] text-text-secondary leading-relaxed">{p.desc}</p>
                 </div>
               </li>
             ))}
@@ -52,7 +52,7 @@ export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: 
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex flex-1 items-center justify-center p-6 sm:p-12 lg:p-16">
+      <div className="flex flex-1 items-center justify-center p-6 sm:p-10 lg:px-12 lg:py-6 xl:p-12">
         <div className="w-full max-w-[400px]">
           {children}
         </div>

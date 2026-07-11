@@ -69,7 +69,7 @@ export function SignUpPage() {
       panelTitle="Design your first room in minutes."
       panelSubtitle="Join RoomCanvas to start transforming your spaces instantly."
     >
-      <div className="flex flex-col mb-8">
+      <div className="flex flex-col mb-6">
         <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Sign up</h2>
         <p className="text-[15px] text-text-secondary">
           Already have an account? <Link to="/signin" className="text-accent font-semibold hover:underline">Sign in</Link>
@@ -78,13 +78,13 @@ export function SignUpPage() {
 
       <SocialAuthButton loading={googleLoading} onClick={handleGoogle} />
 
-      <div className="flex items-center gap-4 my-8">
+      <div className="flex items-center gap-4 my-6">
         <div className="flex-1 h-px bg-border"></div>
         <span className="text-[13px] text-text-tertiary font-medium">or continue with email</span>
         <div className="flex-1 h-px bg-border"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="name" className="text-[13px] font-semibold text-text-primary">Full Name</label>
           <input
@@ -94,7 +94,7 @@ export function SignUpPage() {
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
             required
-            className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-[14px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
           />
           {errors.name && <p className="text-[13px] text-danger">{errors.name}</p>}
         </div>
@@ -108,32 +108,32 @@ export function SignUpPage() {
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
-            className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-[14px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
           />
           {errors.email && <p className="text-[13px] text-danger">{errors.email}</p>}
         </div>
 
         <PasswordField value={password} onChange={setPassword} showStrength id="new-password" />
-        {errors.password && <p className="text-[13px] text-danger">{errors.password}</p>}
+        {errors.password && <p className="text-[13px] text-danger -mt-1">{errors.password}</p>}
 
         <PasswordField value={confirm} onChange={setConfirm} label="Confirm password" id="confirm-password" />
-        {errors.confirm && <p className="text-[13px] text-danger">{errors.confirm}</p>}
+        {errors.confirm && <p className="text-[13px] text-danger -mt-1">{errors.confirm}</p>}
 
-        <label className="flex items-start gap-3 mt-2 mb-2 cursor-pointer select-none">
+        <label className="flex items-start gap-3 mt-1 mb-1 cursor-pointer select-none">
           <input 
             type="checkbox" 
             checked={agreed} 
             onChange={(e) => setAgreed(e.target.checked)} 
             className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-accent focus:ring-offset-surface cursor-pointer shrink-0"
           />
-          <span className="text-[14px] text-text-secondary leading-snug">
+          <span className="text-[13px] text-text-secondary leading-snug">
             I agree to the <Link to="/terms" className="text-text-primary hover:underline">Terms of Service</Link> and{' '}
             <Link to="/privacy" className="text-text-primary hover:underline">Privacy Policy</Link>
           </span>
         </label>
-        {errors.agreed && <p className="text-[13px] text-danger font-medium -mt-2">{errors.agreed}</p>}
+        {errors.agreed && <p className="text-[13px] text-danger font-medium -mt-1">{errors.agreed}</p>}
 
-        <Button type="submit" size="lg" className="w-full" loading={submitting}>Create account</Button>
+        <Button type="submit" size="md" className="w-full mt-1" loading={submitting}>Create account</Button>
       </form>
     </AuthLayout>
   );

@@ -21,10 +21,10 @@ export function TopNav() {
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'text-[13px] font-medium transition-all duration-base relative px-0.5',
+      'text-[13px] font-medium transition-colors duration-fast px-3 py-1.5 rounded-md',
       isActive
-        ? 'text-text-primary after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-[2px] after:rounded-full after:bg-accent after:transition-all after:duration-base'
-        : 'text-text-secondary hover:text-text-primary'
+        ? 'text-text-primary bg-surface-alt'
+        : 'text-text-secondary hover:text-text-primary hover:bg-surface-alt/50'
     );
 
 
@@ -48,32 +48,27 @@ export function TopNav() {
       )}
 
       {/* Main nav */}
-      <header
-        className="sticky top-0 z-30 bg-surface/97 backdrop-blur-md border-b border-border shadow-xs h-14 md:h-16"
-      >
-        <div className="mx-auto max-w-content h-full flex items-center justify-between px-4 md:px-6">
+      <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-border h-14 w-full">
+        <div className="mx-auto max-w-content h-full flex items-center justify-between px-4 md:px-6 gap-4">
           
           {/* Left: Logo & Nav */}
-          <div className="flex items-center gap-6 md:gap-8 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Logo */}
             <Link
               to="/"
-              className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:shadow-focus rounded-lg -ml-1 pl-1 pr-2 py-1.5 -my-1.5"
+              className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:shadow-focus rounded-lg py-1.5 pr-2"
               aria-label="RoomCanvas home"
             >
-              <RoomCanvasLogoMark size={28} />
-              <span className="text-[15px] font-semibold text-text-primary tracking-[-0.01em] group-hover:text-accent transition-colors duration-base">
+              <RoomCanvasLogoMark size={24} />
+              <span className="text-[14px] font-semibold text-text-primary tracking-tight group-hover:text-accent transition-colors duration-base">
                 RoomCanvas
               </span>
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-6 lg:gap-7" aria-label="Main navigation">
+            <nav className="hidden md:flex items-center gap-1 ml-4" aria-label="Main navigation">
               <NavLink to="/" className={navLinkClass} end={true}>
                 Home
-              </NavLink>
-              <NavLink to="/upload" className={navLinkClass} end={false}>
-                New Design
               </NavLink>
               <NavLink to="/history" className={navLinkClass}>
                 Library
@@ -82,30 +77,34 @@ export function TopNav() {
           </div>
 
           {/* Center Search */}
-          <div className="hidden lg:flex flex-1 justify-center px-6 xl:px-8 max-w-[480px]">
-            {user && <GlobalSearch />}
-          </div>
+          {user && (
+            <div className="hidden lg:flex flex-1 justify-center max-w-[400px]">
+              <GlobalSearch />
+            </div>
+          )}
 
           {/* Right: Desktop actions */}
-          <div className="hidden md:flex items-center justify-end gap-2 shrink-0">
+          <div className="hidden md:flex items-center justify-end gap-2 shrink-0 ml-auto">
             {isLoading ? (
               <div className="flex items-center gap-2 mr-2">
-                <Skeleton className="h-9 w-20 rounded-md" />
-                <Skeleton className="h-9 w-24 rounded-md" />
+                <Skeleton className="h-8 w-16 rounded-md" />
+                <Skeleton className="h-8 w-24 rounded-md" />
               </div>
             ) : user ? (
-              <div className="relative">
+              <div className="relative flex items-center gap-2">
                 <button 
                   onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
-                  className="flex items-center gap-2 focus-visible:outline-none focus-visible:shadow-focus rounded-lg px-2 py-1.5 hover:bg-surface-alt transition-colors duration-base"
+                  className="flex items-center gap-2 focus-visible:outline-none focus-visible:shadow-focus rounded-full pl-1 pr-3 py-1 hover:bg-surface-alt border border-transparent hover:border-border transition-all duration-base h-8"
                 >
                   <img 
                     src={profile?.photo_url || user.photoURL || 'https://www.gravatar.com/avatar/?d=mp'} 
                     alt="Profile" 
-                    className="h-7 w-7 rounded-full border border-border/60 shadow-xs" 
+                    className="h-6 w-6 rounded-full shadow-xs" 
                     referrerPolicy="no-referrer" 
                   />
-                  <span className="text-sm font-medium text-text-primary max-w-[120px] truncate">{profile?.display_name || user.email?.split('@')[0]}</span>
+                  <span className="text-[13px] font-medium text-text-primary max-w-[100px] truncate">
+                    {profile?.display_name || user.email?.split('@')[0]}
+                  </span>
                 </button>
                 <AnimatePresence>
                   {avatarMenuOpen && (
@@ -152,11 +151,11 @@ export function TopNav() {
                 </Link>
               </div>
             )}
-            <div className="w-px h-6 bg-border mx-1" aria-hidden="true" />
+            
             <Button 
-              size="icon" 
+              size="sm" 
               variant="ghost" 
-              className="text-text-secondary" 
+              className="w-8 p-0 text-text-secondary" 
               onClick={toggleTheme}
               title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
@@ -167,30 +166,28 @@ export function TopNav() {
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               >
                 {theme === 'light' ? (
-                  <Moon className="h-[18px] w-[18px]" />
+                  <Moon className="h-4 w-4" />
                 ) : (
-                  <Sun className="h-[18px] w-[18px]" />
+                  <Sun className="h-4 w-4" />
                 )}
               </motion.div>
             </Button>
+            
             <Link to="/upload">
-              <Button size="md" variant="primary" icon={<Plus className="h-4 w-4" />}>
+              <Button size="sm" variant="primary" icon={<Plus className="h-3.5 w-3.5" />}>
                 New Design
               </Button>
             </Link>
-            <Button size="icon" variant="ghost" className="text-text-secondary" title="Settings (Coming soon)">
-              <Settings className="h-[18px] w-[18px]" />
-            </Button>
           </div>
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden h-9 w-9 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-base focus-visible:outline-none focus-visible:shadow-focus ml-auto"
+            className="md:hidden h-8 w-8 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-base focus-visible:outline-none focus-visible:shadow-focus ml-auto"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </button>
         </div>
       </header>
