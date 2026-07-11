@@ -4,7 +4,7 @@ import { Menu, Plus, History, X, Search, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
-import { useAuth } from '../auth/AuthProvider';
+import { useAuth } from '../../auth/AuthProvider';
 import { useHealth } from '../../api/queries';
 
 export function TopNav() {

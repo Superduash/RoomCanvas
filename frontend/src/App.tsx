@@ -1,11 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { routes } from './router/routes';
+import { router } from './router/routes';
 import { AuthProvider } from './auth/AuthProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
-
-const router = createBrowserRouter(routes);
 
 const queryClient = new QueryClient({
   defaultOptions: {
