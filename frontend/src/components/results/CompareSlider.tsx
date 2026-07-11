@@ -40,6 +40,10 @@ export function CompareSlider({
     return 1 - Math.pow(1 - t, 3);
   }
 
+  function easeInOutQuad(t: number): number {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
   const updateDOM = useCallback((p: number) => {
     percentRef.current = p;
     
@@ -124,26 +128,42 @@ export function CompareSlider({
     }
 
     const START = 100;
+    const LEFT_EDGE = 0;
     const END = 50;
-    const DURATION_MS = 900;
+    const SWEEP_MS = 800; // Duration for right -> left
+    const RETURN_MS = 600; // Duration for left -> middle
+    const TOTAL_MS = SWEEP_MS + RETURN_MS;
+    
     const startTime = performance.now();
 
     updateDOM(START);
 
     function step(now: number) {
       const elapsed = now - startTime;
-      const t = Math.min(elapsed / DURATION_MS, 1);
-      const eased = easeOutCubic(t);
-      const current = START + (END - START) * eased;
-      updateDOM(current);
-      if (t < 1) {
+      
+      if (elapsed < SWEEP_MS) {
+        // Phase 1: Sweep from right (100) to left (0)
+        const t = elapsed / SWEEP_MS;
+        const eased = easeInOutQuad(t);
+        const current = START + (LEFT_EDGE - START) * eased;
+        updateDOM(current);
+        rafId.current = requestAnimationFrame(step);
+      } else if (elapsed < TOTAL_MS) {
+        // Phase 2: Return from left (0) to middle (50)
+        const t = (elapsed - SWEEP_MS) / RETURN_MS;
+        const eased = easeOutCubic(t); // using easeOut so it nicely settles in the middle
+        const current = LEFT_EDGE + (END - LEFT_EDGE) * eased;
+        updateDOM(current);
         rafId.current = requestAnimationFrame(step);
       } else {
+        // Done
+        updateDOM(END);
         setPercent(END);
         setIsRevealing(false);
         rafId.current = null;
       }
     }
+    
     rafId.current = requestAnimationFrame(step);
   }, [updateDOM]);
 
