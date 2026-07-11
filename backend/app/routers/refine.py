@@ -11,6 +11,8 @@ from app.services.refinement_service import RefinementService
 from app.schemas.generation import RefineRequest, RefineResponse
 from app.cache import invalidate_history_cache, invalidate_generation_cache
 from app.middleware.rate_limit import RateLimiter
+from app.auth.dependencies import get_current_user
+from app.database.models import User
 
 router = APIRouter(prefix="/refine", tags=["Refinement"])
 
@@ -55,12 +57,13 @@ async def refine_design(
     request: RefineRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     repository = GenerationRepository(db)
     service = RefinementService(repository)
     
     # 1. Prepare child row
-    result = service.prepare_refinement(request.generation_id, request.instruction)
+    result = service.prepare_refinement(request.generation_id, request.instruction, user_id=current_user.id)
     
     # 2. Invalidate parent and list caches
     invalidate_generation_cache(request.generation_id)

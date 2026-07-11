@@ -22,6 +22,7 @@ class AnalysisService:
         mime_type: str,
         style_id: str,
         original_image_path: str,
+        user_id: int | None = None
     ) -> AnalyzeResponse:
         t0 = time.perf_counter()
         analysis_dict = None
@@ -70,6 +71,7 @@ class AnalysisService:
             "model_version": getattr(self.provider, 'model_version', "latest"),
             "status": status,
             "processing_time_sec": round(time.perf_counter() - t0, 2),
+            "user_id": user_id,
         }
         if error_msg:
             generation_data["error"] = error_msg

@@ -11,6 +11,8 @@ from app.services.generation_service import GenerationService
 from app.schemas.generation import GenerateRequest, GenerateResponse
 from app.cache import invalidate_history_cache
 from app.middleware.rate_limit import RateLimiter
+from app.auth.dependencies import get_current_user
+from app.database.models import User
 
 router = APIRouter(prefix="/generate", tags=["Generation"])
 
@@ -55,12 +57,13 @@ async def generate_design(
     request: GenerateRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     repository = GenerationRepository(db)
     service = GenerationService(repository)
     
     # 1. Prepare row to pending state
-    result = service.prepare_generation(request.analysis_id, force_new=request.force_new, customization=request.customization)
+    result = service.prepare_generation(request.analysis_id, force_new=request.force_new, customization=request.customization, user_id=current_user.id)
     
     # 2. Invalidate cache so UI sees status change
     invalidate_history_cache()

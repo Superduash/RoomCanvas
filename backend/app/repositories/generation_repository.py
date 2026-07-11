@@ -20,10 +20,13 @@ _GENERATION_LOAD_OPTIONS = (
 
 
 class GenerationRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, user_id: int | None = None):
         self.db = db
+        self.user_id = user_id
 
     def create_generation(self, data: dict) -> Generation:
+        if self.user_id is not None and "user_id" not in data:
+            data["user_id"] = self.user_id
         generation = Generation(**data)
         self.db.add(generation)
         try:
@@ -51,26 +54,25 @@ class GenerationRepository:
         query = (
             select(Generation)
             .where(Generation.id == generation_id)
-            .options(*_GENERATION_LOAD_OPTIONS)
         )
+        if self.user_id is not None:
+            query = query.where(Generation.user_id == self.user_id)
+        query = query.options(*_GENERATION_LOAD_OPTIONS)
         return self.db.execute(query).scalar_one_or_none()
 
     def list_all(self, limit: int = 50) -> list[Generation]:
-        query = (
-            select(Generation)
-            .order_by(desc(Generation.created_at))
-            .limit(limit)
-            .options(*_GENERATION_LOAD_OPTIONS)
-        )
+        query = select(Generation).order_by(desc(Generation.created_at))
+        if self.user_id is not None:
+            query = query.where(Generation.user_id == self.user_id)
+        query = query.limit(limit).options(*_GENERATION_LOAD_OPTIONS)
         return list(self.db.execute(query).scalars().all())
 
     def list_projects(self, limit: int = 50) -> list[dict]:
         # Get all root generations
-        query = (
-            select(Generation)
-            .where(Generation.parent_generation_id.is_(None))
-            .options(*_GENERATION_LOAD_OPTIONS)
-        )
+        query = select(Generation).where(Generation.parent_generation_id.is_(None))
+        if self.user_id is not None:
+            query = query.where(Generation.user_id == self.user_id)
+        query = query.options(*_GENERATION_LOAD_OPTIONS)
         roots = list(self.db.execute(query).scalars().all())
         
         projects = []
@@ -171,12 +173,10 @@ class GenerationRepository:
         return generation
 
     def get_children(self, parent_id: int) -> list[Generation]:
-        query = (
-            select(Generation)
-            .where(Generation.parent_generation_id == parent_id)
-            .order_by(Generation.created_at)
-            .options(*_GENERATION_LOAD_OPTIONS)
-        )
+        query = select(Generation).where(Generation.parent_generation_id == parent_id)
+        if self.user_id is not None:
+            query = query.where(Generation.user_id == self.user_id)
+        query = query.order_by(Generation.created_at).options(*_GENERATION_LOAD_OPTIONS)
         return list(self.db.execute(query).scalars().all())
 
     def delete(self, generation_id: int) -> bool:

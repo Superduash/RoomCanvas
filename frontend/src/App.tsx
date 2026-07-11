@@ -1,8 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { router } from './router/routes';
+import { routes } from './router/routes';
+import { AuthProvider } from './auth/AuthProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
+const router = createBrowserRouter(routes);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,9 +21,11 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
         <Toaster
-          position="top-right"
+          position="bottom-center"
           toastOptions={{
             duration: 5000,
             style: {

@@ -14,14 +14,16 @@ from app.cache import (
     get_cached_history, set_cached_history, invalidate_history_cache,
     get_cached_generation, set_cached_generation, invalidate_generation_cache,
 )
+from app.auth.dependencies import get_current_user
+from app.database.models import User
 import logging
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def get_repo(db: Session = Depends(get_db)) -> GenerationRepository:
-    return GenerationRepository(db)
+def get_repo(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> GenerationRepository:
+    return GenerationRepository(db, user_id=current_user.id)
 
 
 # ── GET /api/history ───────────────────────────────────────────────────────────
@@ -170,9 +172,15 @@ def delete_all_history(
     from app.database.models import Generation
     try:
         # 1. Delete all generations that have a parent (refinements)
-        repo.db.query(Generation).filter(Generation.parent_generation_id.isnot(None)).delete(synchronize_session=False)
+        repo.db.query(Generation).filter(
+            Generation.parent_generation_id.isnot(None),
+            Generation.user_id == repo.user_id
+        ).delete(synchronize_session=False)
         # 2. Delete all root generations
-        repo.db.query(Generation).filter(Generation.parent_generation_id.is_(None)).delete(synchronize_session=False)
+        repo.db.query(Generation).filter(
+            Generation.parent_generation_id.is_(None),
+            Generation.user_id == repo.user_id
+        ).delete(synchronize_session=False)
         repo.db.commit()
     except Exception as ex:
         repo.db.rollback()

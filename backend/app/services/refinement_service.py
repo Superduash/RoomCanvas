@@ -22,7 +22,7 @@ class RefinementService:
         self.repository = repository
         self.provider = get_generation_provider()  # singleton
 
-    def prepare_refinement(self, parent_id: int, instruction: str):
+    def prepare_refinement(self, parent_id: int, instruction: str, user_id: int | None = None):
         parent_gen = self.repository.get_by_id(parent_id)
         if not parent_gen:
             raise InferenceServiceError(f"Parent generation id={parent_id} not found", 404)
@@ -52,12 +52,13 @@ class RefinementService:
             "provider": "replicate",
             "provider_version": "replicate-python 1.0.0",
             "model_used": "black-forest-labs/flux-kontext-pro",
-            "model_version": "latest",
+            "model_version": getattr(self.provider, 'model_version', "latest"),
             "status": "pending",
             "processing_time_sec": 0.0,
             # Forward room_type_detected from parent so history shows it correctly
             "room_type_detected": parent_gen.room_type_detected,
             "room_confidence": parent_gen.room_confidence,
+            "user_id": user_id if user_id is not None else parent_gen.user_id,
         })
         return new_gen
 

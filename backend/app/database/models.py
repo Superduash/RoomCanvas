@@ -4,10 +4,30 @@ from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.session import Base
 
+class User(Base):
+    __tablename__ = "users"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    firebase_uid: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    last_login_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    generations: Mapped[list["Generation"]] = relationship(
+        "Generation",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        foreign_keys="[Generation.user_id]"
+    )
+
 class Generation(Base):
     __tablename__ = "generations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     original_image_path: Mapped[str] = mapped_column(String, nullable=False)
     room_type_detected: Mapped[str | None] = mapped_column(String, nullable=True)
     room_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -31,6 +51,12 @@ class Generation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     # Relationships
+    owner: Mapped[User | None] = relationship(
+        "User",
+        back_populates="generations",
+        foreign_keys=[user_id]
+    )
+
     # One Generation has many Variations (with cascading delete)
     variations: Mapped[list[Variation]] = relationship(
         "Variation",

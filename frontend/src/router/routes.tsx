@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { Skeleton } from '../components/primitives/Skeleton';
+import { RequireAuth } from '../auth/RequireAuth';
 
 // Route-level code splitting
 const LandingPage   = lazy(() => import('../pages/LandingPage').then(m => ({ default: m.LandingPage })));
@@ -38,7 +39,9 @@ export const router = createBrowserRouter([
         path: 'upload',
         element: (
           <Suspense fallback={<PageLoader />}>
-            <UploadPage />
+            <RequireAuth>
+              <UploadPage />
+            </RequireAuth>
           </Suspense>
         ),
       },
@@ -46,7 +49,9 @@ export const router = createBrowserRouter([
         path: 'analysis/:analysisId',
         element: (
           <Suspense fallback={<PageLoader />}>
-            <AnalysisPage />
+            <RequireAuth>
+              <AnalysisPage />
+            </RequireAuth>
           </Suspense>
         ),
       },
@@ -54,7 +59,9 @@ export const router = createBrowserRouter([
         path: 'results/:projectId',
         element: (
           <Suspense fallback={<PageLoader />}>
-            <ResultsPage />
+            <RequireAuth>
+              <ResultsPage />
+            </RequireAuth>
           </Suspense>
         ),
       },
@@ -62,7 +69,9 @@ export const router = createBrowserRouter([
         path: 'history',
         element: (
           <Suspense fallback={<PageLoader />}>
-            <HistoryPage />
+            <RequireAuth message="Sign in to view your design history and saved projects.">
+              <HistoryPage />
+            </RequireAuth>
           </Suspense>
         ),
       },

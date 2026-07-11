@@ -26,7 +26,7 @@ class GenerationService:
         self.repository = repository
         self.provider = get_generation_provider()  # singleton
 
-    def prepare_generation(self, analysis_id: int, force_new: bool = False, customization=None):
+    def prepare_generation(self, analysis_id: int, force_new: bool = False, customization=None, user_id: int = None):
         generation = self.repository.get_by_id(analysis_id)
         if not generation:
             raise InferenceServiceError(f"Analysis id={analysis_id} not found", 404)
@@ -52,6 +52,7 @@ class GenerationService:
                 "model_version": generation.model_version,
                 "status": "pending",
                 "processing_time_sec": 0.0,
+                "user_id": user_id if user_id is not None else generation.user_id,
             })
             return new_generation
 

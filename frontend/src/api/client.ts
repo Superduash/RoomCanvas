@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger';
+import { auth } from '../lib/firebase';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 const API_PREFIX = `${API_BASE}/api`;
@@ -31,10 +32,25 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
   return res.json() as Promise<T>;
 }
 
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const user = auth.currentUser;
+  if (!user) return {};
+  try {
+    const token = await user.getIdToken();
+    return { Authorization: `Bearer ${token}` };
+  } catch (err) {
+    logger.error('Failed to get auth token', err);
+    return {};
+  }
+}
+
 async function safeFetch<T>(method: string, path: string, options: RequestInit): Promise<T> {
   const start = performance.now();
   try {
-    const r = await fetch(`${API_PREFIX}${path}`, { ...options, method });
+    const authHeader = await getAuthHeader();
+    const headers = { ...options.headers, ...authHeader };
+    
+    const r = await fetch(`${API_PREFIX}${path}`, { ...options, method, headers });
     return await handleResponse<T>(r, method, path, start);
   } catch (err) {
     if (err instanceof ApiError) throw err;

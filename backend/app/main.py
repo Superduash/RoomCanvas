@@ -14,6 +14,7 @@ import app.logging_config as logging_config
 from app.config import settings
 from app.database.session import engine, Base
 from app.ai.providers.provider_registry import init_providers
+from app.auth.firebase_admin_init import init_firebase_admin
 from app.routers import health, analyze, generate, refine, history, styles, providers, config
 from app.utils.exceptions import InteriorAIError
 

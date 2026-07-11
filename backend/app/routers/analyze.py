@@ -7,6 +7,8 @@ from app.services.storage_service import StorageService
 from app.utils.image_utils import validate_image_file
 from app.schemas.generation import AnalyzeResponse
 from app.middleware.rate_limit import RateLimiter
+from app.auth.dependencies import get_current_user
+from app.database.models import User
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -53,7 +55,8 @@ router = APIRouter(prefix="/analyze", tags=["Analysis"])
 async def analyze_room(
     image: UploadFile = File(...),
     style: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Upload a room image and generate detailed interior design analysis recommendations.
@@ -75,7 +78,8 @@ async def analyze_room(
         image_bytes=image_bytes,
         mime_type=image.content_type or "image/jpeg",
         style_id=style,
-        original_image_path=original_image_path
+        original_image_path=original_image_path,
+        user_id=current_user.id
     )
     
     return response

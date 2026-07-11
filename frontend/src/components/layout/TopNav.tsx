@@ -4,12 +4,14 @@ import { Menu, Plus, History, X, Search, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
+import { useAuth } from '../auth/AuthProvider';
 import { useHealth } from '../../api/queries';
 
 export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { user, signIn, signOut } = useAuth();
   const { data: health } = useHealth();
 
   const hasProviderDown = health && (!health.providers.gemini || !health.providers.replicate);
@@ -99,6 +101,19 @@ export function TopNav() {
 
           {/* Right: Desktop actions */}
           <div className="hidden md:flex items-center justify-end gap-3 shrink-0">
+            {user ? (
+              <div className="flex items-center gap-2 mr-2">
+                <img 
+                  src={user.photoURL ?? ''} 
+                  alt="Profile" 
+                  className="h-8 w-8 rounded-full border border-border" 
+                  referrerPolicy="no-referrer" 
+                />
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>Sign Out</Button>
+              </div>
+            ) : (
+              <Button variant="secondary" size="sm" className="mr-2" onClick={() => signIn()}>Sign In</Button>
+            )}
             <Link to="/upload">
               <Button size="lg" variant="primary" icon={<Plus className="h-4 w-4" />}>
                 New Design
@@ -184,7 +199,16 @@ export function TopNav() {
               </nav>
 
               {/* CTA */}
-              <div className="p-4 border-t border-border">
+              <div className="p-4 border-t border-border flex flex-col gap-3">
+                {user ? (
+                  <Button size="md" variant="secondary" className="w-full" onClick={() => { setMobileOpen(false); signOut(); }}>
+                    Sign Out
+                  </Button>
+                ) : (
+                  <Button size="md" variant="secondary" className="w-full" onClick={() => { setMobileOpen(false); signIn(); }}>
+                    Sign In
+                  </Button>
+                )}
                 <Link to="/upload" onClick={() => setMobileOpen(false)} className="block">
                   <Button size="md" variant="primary" className="w-full" icon={<Plus className="h-4 w-4" />}>
                     Start New Design
