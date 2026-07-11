@@ -96,5 +96,6 @@ Backend.txt
 code_export.txt
 full_audit_out.txt
 
-# Keep README
+# Ignore all markdown files except README.md
+*.md
 !README.md
