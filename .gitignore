@@ -47,11 +47,15 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+
 backend/.env
 backend/.env.*
+backend/render.env
 !backend/.env.example
+
 frontend/.env
 frontend/.env.*
+frontend/vercel.env
 !frontend/.env.example
 
 # ── SQLite ────────────────────────────────────────────────────────────────────
