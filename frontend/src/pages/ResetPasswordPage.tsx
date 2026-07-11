@@ -6,7 +6,6 @@ import { PasswordField } from '../components/auth/PasswordField';
 import { Button } from '../components/primitives/Button';
 import { toast } from '../lib/toast';
 import { usePasswordStrength } from '../hooks/usePasswordStrength';
-import styles from './AuthForm.module.css';
 
 export function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -21,8 +20,10 @@ export function ResetPasswordPage() {
   if (!oobCode) {
     return (
       <AuthLayout panelTitle="Invalid link." panelSubtitle="This password reset link is invalid or missing.">
-        <h2 className={styles.title}>Invalid Reset Link</h2>
-        <p className={styles.subtitle}>This link appears to be broken or has already been used.</p>
+        <div className="flex flex-col mb-8">
+          <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Invalid Reset Link</h2>
+          <p className="text-[15px] text-text-secondary">This link appears to be broken or has already been used.</p>
+        </div>
         <Button variant="primary" className="w-full" onClick={() => navigate('/forgot-password')}>Request a new link</Button>
       </AuthLayout>
     );
@@ -53,14 +54,16 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout panelTitle="Choose a new password." panelSubtitle="Make sure it's at least 8 characters long and contains a mix of letters and numbers.">
-      <h2 className={styles.title}>Set new password</h2>
-      <p className={styles.subtitle}>Enter your new password below.</p>
+      <div className="flex flex-col mb-8">
+        <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Set new password</h2>
+        <p className="text-[15px] text-text-secondary">Enter your new password below.</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <PasswordField value={password} onChange={setPassword} showStrength id="new-password" />
         <PasswordField value={confirm} onChange={setConfirm} label="Confirm new password" id="confirm-password" />
 
-        <Button type="submit" size="lg" className="w-full" loading={submitting}>Save password</Button>
+        <Button type="submit" size="lg" className="w-full mt-2" loading={submitting}>Save password</Button>
       </form>
     </AuthLayout>
   );

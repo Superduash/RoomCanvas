@@ -3,11 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { SocialAuthButton } from '../components/auth/SocialAuthButton';
-import { PasswordField } from '../components/auth/PasswordField';
 import { Button } from '../components/primitives/Button';
 import { toast } from '../lib/toast';
+import { PasswordField } from '../components/auth/PasswordField';
 import { usePasswordStrength } from '../hooks/usePasswordStrength';
-import styles from './AuthForm.module.css';
 
 export function SignUpPage() {
   const navigate = useNavigate();
@@ -64,42 +63,72 @@ export function SignUpPage() {
 
   return (
     <AuthLayout
-      panelTitle="Design smarter, not from scratch."
-      panelSubtitle="Create a free account to save your redesigns, refine them anytime, and pick up where you left off."
+      panelTitle="Create your account."
+      panelSubtitle="Join RoomCanvas to start transforming your spaces instantly."
     >
-      <h2 className={styles.title}>Create your account</h2>
-      <p className={styles.subtitle}>
-        Already have one? <Link to="/signin" className={styles.link}>Sign in</Link>
-      </p>
+      <div className="flex flex-col mb-8">
+        <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Sign up</h2>
+        <p className="text-[15px] text-text-secondary">
+          Already have an account? <Link to="/signin" className="text-accent font-semibold hover:underline">Sign in</Link>
+        </p>
+      </div>
 
       <SocialAuthButton loading={googleLoading} onClick={handleGoogle} />
 
-      <div className={styles.divider}><span>or continue with email</span></div>
+      <div className="flex items-center gap-4 my-8">
+        <div className="flex-1 h-px bg-border"></div>
+        <span className="text-[13px] text-text-tertiary font-medium">or continue with email</span>
+        <div className="flex-1 h-px bg-border"></div>
+      </div>
 
-      <form onSubmit={handleSubmit} className={styles.form} noValidate>
-        <div className={styles.field}>
-          <label htmlFor="name" className={styles.label}>Full name</label>
-          <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={styles.input} required />
-          {errors.name && <p className={styles.error}>{errors.name}</p>}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="name" className="text-[13px] font-semibold text-text-primary">Full Name</label>
+          <input
+            id="name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            required
+            className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+          />
+          {errors.name && <p className="text-[13px] text-danger">{errors.name}</p>}
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="email" className={styles.label}>Email</label>
-          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={styles.input} required />
-          {errors.email && <p className={styles.error}>{errors.email}</p>}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="email" className="text-[13px] font-semibold text-text-primary">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+            className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+          />
+          {errors.email && <p className="text-[13px] text-danger">{errors.email}</p>}
         </div>
 
         <PasswordField value={password} onChange={setPassword} showStrength id="new-password" />
-        {errors.password && <p className={styles.error}>{errors.password}</p>}
+        {errors.password && <p className="text-[13px] text-danger">{errors.password}</p>}
 
         <PasswordField value={confirm} onChange={setConfirm} label="Confirm password" id="confirm-password" />
-        {errors.confirm && <p className={styles.error}>{errors.confirm}</p>}
+        {errors.confirm && <p className="text-[13px] text-danger">{errors.confirm}</p>}
 
-        <label className={styles.checkboxRow}>
-          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-          <span>I agree to the <Link to="/terms" className={styles.link}>Terms of Service</Link> and <Link to="/privacy" className={styles.link}>Privacy Policy</Link>.</span>
+        <label className="flex items-start gap-3 mt-2 mb-2 cursor-pointer select-none">
+          <input 
+            type="checkbox" 
+            checked={agreed} 
+            onChange={(e) => setAgreed(e.target.checked)} 
+            className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-accent focus:ring-offset-surface cursor-pointer shrink-0"
+          />
+          <span className="text-[14px] text-text-secondary leading-snug">
+            I agree to the <Link to="/terms" className="text-text-primary hover:underline">Terms of Service</Link> and{' '}
+            <Link to="/privacy" className="text-text-primary hover:underline">Privacy Policy</Link>
+          </span>
         </label>
-        {errors.agreed && <p className={styles.error}>{errors.agreed}</p>}
+        {errors.agreed && <p className="text-[13px] text-danger font-medium -mt-2">{errors.agreed}</p>}
 
         <Button type="submit" size="lg" className="w-full" loading={submitting}>Create account</Button>
       </form>
