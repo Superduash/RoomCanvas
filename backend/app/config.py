@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # ── API / Security ────────────────────────────────────────────────────────
     # Comma-separated list of allowed CORS origins, e.g. "http://localhost:3000,https://myapp.com"
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,https://roomcanvasai.vercel.app,https://roomcanvas.onrender.com"
     MAX_UPLOAD_SIZE_MB: int = 10
 
     # ── AI Pipeline ───────────────────────────────────────────────────────────

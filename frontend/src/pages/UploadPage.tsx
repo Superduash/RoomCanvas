@@ -11,6 +11,8 @@ import { useConfig, useStyles, useAnalyzeRoom } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
 import { toast } from '../lib/toast';
+import { useRequireAuthAction } from '../auth/useRequireAuthAction';
+import { useAuth } from '../auth/AuthProvider';
 
 export function UploadPage() {
   const navigate = useNavigate();
@@ -27,6 +29,20 @@ export function UploadPage() {
   const analyze = useAnalyzeRoom();
   const canSubmit = !!pendingFile && !!selectedStyleId;
   const selectedStyle = styles?.find((s) => s.id === selectedStyleId);
+  const requireAuth = useRequireAuthAction();
+  const { isAuthenticated } = useAuth();
+
+  // Resume pending action after sign in
+  useEffect(() => {
+    const handleResume = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'analyze') {
+        handleSubmit();
+      }
+    };
+    window.addEventListener('roomcanvas:resume-action', handleResume);
+    return () => window.removeEventListener('roomcanvas:resume-action', handleResume);
+  }, [pendingFile, selectedStyleId]);
 
   // Revoke object URL on unmount
   useEffect(() => {
@@ -58,6 +74,13 @@ export function UploadPage() {
     }
   };
 
+  const handleAnalyzeClick = () => {
+    requireAuth(
+      () => handleSubmit(),
+      { type: 'analyze', payload: { file: pendingFile, style: selectedStyleId } }
+    );
+  };
+
   const budgetVariant = (tag: string) => {
     const t = tag.toLowerCase();
     if (t.includes('budget')) return 'success';
@@ -76,6 +99,15 @@ export function UploadPage() {
           Upload a photo of your space and choose an aesthetic direction. Our AI will analyze the room and generate a complete redesign.
         </p>
       </div>
+
+      {!isAuthenticated && (
+        <div className="max-w-2xl mx-auto mb-10 bg-accent/10 border border-accent/20 rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <h3 className="text-sm font-semibold text-accent-dark">Continue as guest, save later</h3>
+            <p className="text-sm text-text-secondary">You can try the product and upload a photo before committing to an account.</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12 lg:gap-16 items-start">
         
@@ -199,7 +231,7 @@ export function UploadPage() {
               disabled={!canSubmit}
               loading={analyze.isPending}
               iconRight={!analyze.isPending ? <ArrowRight className="h-5 w-5" /> : undefined}
-              onClick={handleSubmit}
+              onClick={handleAnalyzeClick}
             >
               {analyze.isPending ? 'Analyzing Room...' : 'Start Redesign'}
             </Button>

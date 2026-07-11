@@ -77,9 +77,7 @@ export const router = createBrowserRouter([
         path: 'upload',
         element: (
           <Suspense fallback={<PageLoader />}>
-            <RequireAuth>
-              <UploadPage />
-            </RequireAuth>
+            <UploadPage />
           </Suspense>
         ),
       },
@@ -87,9 +85,7 @@ export const router = createBrowserRouter([
         path: 'analysis/:analysisId',
         element: (
           <Suspense fallback={<PageLoader />}>
-            <RequireAuth>
-              <AnalysisPage />
-            </RequireAuth>
+            <AnalysisPage />
           </Suspense>
         ),
       },

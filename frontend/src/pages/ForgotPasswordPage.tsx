@@ -11,6 +11,20 @@ export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  const startCooldown = () => {
+    setCooldown(60);
+    const interval = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,6 +33,7 @@ export function ForgotPasswordPage() {
     try {
       await sendReset(email);
       setDone(true);
+      startCooldown();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -35,15 +50,20 @@ export function ForgotPasswordPage() {
           </div>
           <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-3">Check your email</h2>
           <p className="text-[15px] text-text-secondary mb-8">We sent a password reset link to <strong className="text-text-primary font-semibold">{email}</strong>.</p>
-          <Button variant="outline" className="w-full mb-4" onClick={() => setDone(false)}>Try another email</Button>
-          <Link to="/signin" className="text-[14px] text-accent font-semibold hover:underline">Return to sign in</Link>
+          <div className="flex flex-col gap-3 w-full mb-4">
+            <Button variant="outline" className="w-full" onClick={handleSubmit} disabled={cooldown > 0 || submitting} loading={submitting}>
+              {cooldown > 0 ? `Resend email in ${cooldown}s` : 'Resend email'}
+            </Button>
+            <Button variant="ghost" className="w-full text-text-secondary" onClick={() => setDone(false)}>Try another email</Button>
+          </div>
+          <Link to="/signin" className="text-[14px] text-accent font-semibold hover:underline mt-2">Return to sign in</Link>
         </div>
       </AuthLayout>
     );
   }
 
   return (
-    <AuthLayout panelTitle="Reset your password." panelSubtitle="Enter the email associated with your account and we'll send you a link to reset your password.">
+    <AuthLayout panelTitle="Let's get you back in." panelSubtitle="Enter the email associated with your account and we'll send you a link to reset your password.">
       <div className="flex flex-col mb-8">
         <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Forgot password?</h2>
         <p className="text-[15px] text-text-secondary">No worries, we'll send you reset instructions.</p>

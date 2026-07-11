@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { SocialAuthButton } from '../components/auth/SocialAuthButton';
@@ -10,7 +10,10 @@ import { usePasswordStrength } from '../hooks/usePasswordStrength';
 
 export function SignUpPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signUpWithEmail, signInWithGoogle } = useAuth();
+  
+  const from = location.state?.from?.pathname || '/upload';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,7 +44,7 @@ export function SignUpPage() {
     try {
       await signUpWithEmail({ name, email, password, remember: true });
       toast.success('Welcome to RoomCanvas!');
-      navigate('/upload');
+      navigate(from, { replace: true });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -53,7 +56,7 @@ export function SignUpPage() {
     setGoogleLoading(true);
     try {
       const user = await signInWithGoogle(true);
-      if (user) { toast.success('Welcome to RoomCanvas!'); navigate('/upload'); }
+      if (user) { toast.success('Welcome to RoomCanvas!'); navigate(from, { replace: true }); }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -63,7 +66,7 @@ export function SignUpPage() {
 
   return (
     <AuthLayout
-      panelTitle="Create your account."
+      panelTitle="Design your first room in minutes."
       panelSubtitle="Join RoomCanvas to start transforming your spaces instantly."
     >
       <div className="flex flex-col mb-8">

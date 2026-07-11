@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, Plus, History, X, Search, Settings, Sun, Moon } from 'lucide-react';
+import { Link, NavLink } from 'react-router-dom';
+import { Menu, Plus, History, X, Settings, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
 import { useAuth } from '../../auth/AuthProvider';
 import { useHealth } from '../../api/queries';
 import { useTheme } from '../../hooks/useTheme';
+import { GlobalSearch } from './GlobalSearch';
+import { Skeleton } from '../primitives/Skeleton';
 
 export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const { user, profile, signOut, isLoading, syncError } = useAuth();
   const { data: health } = useHealth();
   const { theme, toggleTheme } = useTheme();
 
@@ -26,13 +27,6 @@ export function TopNav() {
         : 'text-text-secondary hover:text-text-primary'
     );
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/history?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-    }
-  };
 
   return (
     <>
@@ -44,6 +38,12 @@ export function TopNav() {
             : !health.providers.gemini
             ? 'Room analysis is temporarily unavailable.'
             : 'Image generation is temporarily unavailable.'}
+        </div>
+      )}
+      
+      {syncError && (
+        <div className="bg-warning-subtle border-b border-warning/20 px-4 py-2 text-center text-xs text-warning font-medium">
+          {syncError}
         </div>
       )}
 
@@ -83,27 +83,22 @@ export function TopNav() {
 
           {/* Center Search */}
           <div className="hidden lg:flex flex-1 justify-center px-6 xl:px-8 max-w-[480px]">
-            <form 
-              onSubmit={handleSearch}
-              className="relative w-full"
-            >
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary pointer-events-none" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search designs..."
-                className="w-full h-9 rounded-lg border border-border bg-surface-alt/60 pl-9 pr-3.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-border-strong focus:bg-surface focus:shadow-xs transition-all duration-base"
-                aria-label="Search library"
-              />
-            </form>
+            {user && <GlobalSearch />}
           </div>
 
           {/* Right: Desktop actions */}
           <div className="hidden md:flex items-center justify-end gap-2 shrink-0">
-            {user ? (
-              <div className="relative group">
-                <button className="flex items-center gap-2 focus-visible:outline-none focus-visible:shadow-focus rounded-lg px-2 py-1.5 hover:bg-surface-alt transition-colors duration-base">
+            {isLoading ? (
+              <div className="flex items-center gap-2 mr-2">
+                <Skeleton className="h-9 w-20 rounded-md" />
+                <Skeleton className="h-9 w-24 rounded-md" />
+              </div>
+            ) : user ? (
+              <div className="relative">
+                <button 
+                  onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
+                  className="flex items-center gap-2 focus-visible:outline-none focus-visible:shadow-focus rounded-lg px-2 py-1.5 hover:bg-surface-alt transition-colors duration-base"
+                >
                   <img 
                     src={profile?.photo_url || user.photoURL || 'https://www.gravatar.com/avatar/?d=mp'} 
                     alt="Profile" 
@@ -112,16 +107,40 @@ export function TopNav() {
                   />
                   <span className="text-sm font-medium text-text-primary max-w-[120px] truncate">{profile?.display_name || user.email?.split('@')[0]}</span>
                 </button>
-                <div className="absolute right-0 top-full mt-1.5 w-44 bg-surface border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-base z-50">
-                  <div className="p-1">
-                    <button 
-                      onClick={() => signOut()}
-                      className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt rounded-md transition-colors duration-base"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
+                <AnimatePresence>
+                  {avatarMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setAvatarMenuOpen(false)} />
+                      <motion.div 
+                        initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-1.5 w-48 bg-surface border border-border rounded-lg shadow-lg z-50 overflow-hidden"
+                      >
+                        <div className="p-1 flex flex-col">
+                          <Link to="/profile" onClick={() => setAvatarMenuOpen(false)} className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt rounded-md transition-colors duration-base">
+                            Profile
+                          </Link>
+                          <Link to="/settings" onClick={() => setAvatarMenuOpen(false)} className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt rounded-md transition-colors duration-base">
+                            Settings
+                          </Link>
+                          <button 
+                            onClick={() => { setAvatarMenuOpen(false); signOut(); }}
+                            className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt rounded-md transition-colors duration-base"
+                          >
+                            Sign Out
+                          </button>
+                        </div>
+                        <div className="border-t border-border px-4 py-2 bg-surface-alt/50">
+                          <p className="text-xs text-text-tertiary truncate" title={user.email || ''}>
+                            {user.email}
+                          </p>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -222,18 +241,11 @@ export function TopNav() {
                 <MobileNavLink to="/" label="Home" onClick={() => setMobileOpen(false)} />
                 <MobileNavLink to="/upload" label="New Design" icon={<Plus className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
                 <MobileNavLink to="/history" label="Library" icon={<History className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
-                <div className="mt-3 px-2">
-                  <form onSubmit={(e) => { handleSearch(e); setMobileOpen(false); }} className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary pointer-events-none" />
-                    <input
-                      type="search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search designs..."
-                      className="w-full h-9 rounded-lg border border-border bg-surface-alt/60 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-border-strong focus:bg-surface transition-all duration-base"
-                    />
-                  </form>
-                </div>
+                {user && (
+                  <div className="mt-3 px-2">
+                    <GlobalSearch isMobile onNavigate={() => setMobileOpen(false)} />
+                  </div>
+                )}
               </nav>
 
               {/* CTA */}
@@ -256,7 +268,13 @@ export function TopNav() {
                   </motion.div>
                   {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
                 </button>
-                {user ? (
+                
+                {isLoading ? (
+                  <div className="flex flex-col gap-2 p-1">
+                    <Skeleton className="h-10 w-full rounded-md" />
+                    <Skeleton className="h-10 w-full rounded-md" />
+                  </div>
+                ) : user ? (
                   <Button size="md" variant="secondary" className="w-full" onClick={() => { setMobileOpen(false); signOut(); }}>
                     Sign Out
                   </Button>
@@ -270,7 +288,7 @@ export function TopNav() {
                     </Link>
                   </div>
                 )}
-                <Link to="/upload" onClick={() => setMobileOpen(false)} className="block">
+                <Link to="/upload" onClick={() => setMobileOpen(false)} className="block mt-1">
                   <Button size="md" variant="primary" className="w-full" icon={<Plus className="h-4 w-4" />}>
                     Start New Design
                   </Button>

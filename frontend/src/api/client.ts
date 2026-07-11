@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger';
 import { firebaseAuth } from '../lib/firebase';
+import { useAuthModalStore } from '../auth/authModalStore';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 const API_PREFIX = `${API_BASE}/api`;
@@ -29,6 +30,11 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
     logger.warn(`API Error on ${method} ${path}: ${detail}`);
     if (res.status === 401) {
       firebaseAuth.signOut();
+      useAuthModalStore.getState().open();
+      detail = 'Your session expired \u2014 please sign in again.';
+    }
+    if (res.status === 429) {
+      detail = 'You\'ve hit the hourly limit \u2014 try again in a few minutes.';
     }
     throw new ApiError(detail, res.status);
   }

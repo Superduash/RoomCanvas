@@ -3,6 +3,7 @@ import { TopNav } from './TopNav';
 import { Footer } from './Footer';
 import { CommandPalette } from '../command/CommandPalette';
 import { ScrollToTop } from '../../router/ScrollToTop';
+import { AuthModal } from '../auth/AuthModal';
 
 export function AppShell() {
   return (
@@ -24,6 +25,7 @@ export function AppShell() {
 
       <Footer />
       <CommandPalette />
+      <AuthModal />
     </div>
   );
 }

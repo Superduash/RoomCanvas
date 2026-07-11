@@ -18,6 +18,7 @@ import {
   firebaseAuth, googleProvider, browserLocalPersistence, browserSessionPersistence,
 } from '../lib/firebase';
 import { api } from '../api/client';
+import { useAuthModalStore } from './authModalStore';
 
 export interface UserProfile {
   id: number;
@@ -38,6 +39,7 @@ interface AuthContextValue {
   sendReset: (email: string) => Promise<void>;
   confirmReset: (oobCode: string, newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
+  syncError: string | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -59,9 +61,13 @@ function friendlyError(err: any) {
     'auth/wrong-password': 'Incorrect email or password.',
     'auth/invalid-credential': 'Incorrect email or password.',
     'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
-    'auth/network-request-failed': 'Network error. Check your connection and try again.',
+    'auth/network-request-failed': 'Network unavailable. Check your connection and try again.',
     'auth/expired-action-code': 'This reset link has expired. Request a new one.',
     'auth/invalid-action-code': 'This reset link is invalid or has already been used.',
+    'auth/unauthorized-domain': 'This domain isn\u2019t authorized for sign-in yet. Please contact support.',
+    'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
+    'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method.',
+    'auth/user-disabled': 'This account has been disabled. Contact support if this seems wrong.',
   };
   return map[err?.code] || 'Something went wrong. Please try again.';
 }
@@ -69,13 +75,15 @@ function friendlyError(err: any) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const syncBackendUser = useCallback(async () => {
     try {
       const data = await api.post<UserProfile>('/auth/sync', {});
       setProfile(data);
-    } catch {
-      // Non-fatal
+      setSyncError(null);
+    } catch (err) {
+      setSyncError('Your account signed in, but we couldn\u2019t load your profile. Some features may be unavailable \u2014 try refreshing.');
     }
   }, []);
 
@@ -84,8 +92,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, (fbUser) => {
       setUser(fbUser);
-      if (fbUser) syncBackendUser();
-      else setProfile(null);
+      if (fbUser) {
+        syncBackendUser();
+        
+        // Handle pending auth action
+        const pending = useAuthModalStore.getState().consumePendingAction();
+        if (pending) {
+          useAuthModalStore.getState().close();
+          window.dispatchEvent(new CustomEvent('roomcanvas:resume-action', { detail: pending }));
+        }
+      } else {
+        setProfile(null);
+      }
     });
     return unsubscribe;
   }, [syncBackendUser]);
@@ -159,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sendReset,
     confirmReset,
     signOut,
+    syncError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -5,6 +5,7 @@ import { AuthLayout } from '../components/auth/AuthLayout';
 import { PasswordField } from '../components/auth/PasswordField';
 import { Button } from '../components/primitives/Button';
 import { toast } from '../lib/toast';
+import { CheckCircle2 } from 'lucide-react';
 import { usePasswordStrength } from '../hooks/usePasswordStrength';
 
 export function ResetPasswordPage() {
@@ -15,6 +16,7 @@ export function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
   const strength = usePasswordStrength(password);
 
   if (!oobCode) {
@@ -43,14 +45,29 @@ export function ResetPasswordPage() {
     setSubmitting(true);
     try {
       await confirmReset(oobCode, password);
-      toast.success('Password updated successfully! You can now sign in.');
-      navigate('/signin');
+      setDone(true);
+      setTimeout(() => navigate('/signin'), 3000);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (done) {
+    return (
+      <AuthLayout panelTitle="All set." panelSubtitle="Your password has been successfully updated.">
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-6">
+            <CheckCircle2 size={32} className="text-success" />
+          </div>
+          <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-3">Password Updated</h2>
+          <p className="text-[15px] text-text-secondary mb-8">You will be redirected to sign in shortly.</p>
+          <Button variant="primary" className="w-full" onClick={() => navigate('/signin')}>Continue to sign in</Button>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout panelTitle="Choose a new password." panelSubtitle="Make sure it's at least 8 characters long and contains a mix of letters and numbers.">
