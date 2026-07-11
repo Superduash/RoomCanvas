@@ -152,27 +152,25 @@ export function TopNav() {
               </div>
             )}
             
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="w-8 p-0 text-text-secondary" 
+            <button
               onClick={toggleTheme}
               title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-              icon={
-                <motion.div
-                  initial={false}
-                  animate={{ rotate: theme === 'dark' ? 180 : 0 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  {theme === 'light' ? (
-                    <Moon className="h-4 w-4" />
-                  ) : (
-                    <Sun className="h-4 w-4" />
-                  )}
-                </motion.div>
-              }
-            />
+              className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-base focus-visible:outline-none focus-visible:shadow-focus"
+            >
+              <motion.div
+                initial={false}
+                animate={{ rotate: theme === 'dark' ? 180 : 0 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="flex items-center justify-center"
+              >
+                {theme === 'light' ? (
+                  <Moon className="h-[18px] w-[18px]" />
+                ) : (
+                  <Sun className="h-[18px] w-[18px]" />
+                )}
+              </motion.div>
+            </button>
             
             <Link to="/upload">
               <Button size="sm" variant="primary" icon={<Plus className="h-3.5 w-3.5" />}>
