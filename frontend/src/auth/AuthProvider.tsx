@@ -46,8 +46,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const POPUP_FALLBACK_CODES = new Set([
   'auth/popup-blocked',
-  'auth/popup-closed-by-user',
-  'auth/cancelled-popup-request',
   'auth/web-storage-unsupported',
   'auth/operation-not-supported-in-this-environment',
 ]);
