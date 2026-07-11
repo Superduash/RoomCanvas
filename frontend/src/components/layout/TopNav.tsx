@@ -156,7 +156,7 @@ export function TopNav() {
               onClick={toggleTheme}
               title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-              className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-base focus-visible:outline-none focus-visible:shadow-focus"
+              className="h-8 w-8 flex items-center justify-center rounded-lg text-text-primary hover:bg-surface-alt transition-colors duration-base focus-visible:outline-none focus-visible:shadow-focus"
             >
               <motion.div
                 initial={false}
@@ -165,9 +165,9 @@ export function TopNav() {
                 className="flex items-center justify-center"
               >
                 {theme === 'light' ? (
-                  <Moon className="h-[18px] w-[18px]" />
+                  <Moon className="h-5 w-5" strokeWidth={2} />
                 ) : (
-                  <Sun className="h-[18px] w-[18px]" />
+                  <Sun className="h-5 w-5" strokeWidth={2} />
                 )}
               </motion.div>
             </button>
