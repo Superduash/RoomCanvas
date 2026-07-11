@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import type { CustomizationOptions } from '../api/types';
+
 interface UIState {
   // Upload flow (pre-submission, client-only)
   pendingFile: File | null;
@@ -16,6 +18,10 @@ interface UIState {
   // Refinement panel draft text (survives if user navigates away and back within session)
   refinementDraft: string;
   setRefinementDraft: (text: string) => void;
+
+  // Last applied customization options per project
+  lastCustomization: Record<number, CustomizationOptions>;
+  setLastCustomization: (projectId: number, options: CustomizationOptions) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -31,4 +37,8 @@ export const useUIStore = create<UIState>((set) => ({
 
   refinementDraft: '',
   setRefinementDraft: (text) => set({ refinementDraft: text }),
+
+  lastCustomization: {},
+  setLastCustomization: (projectId, options) =>
+    set((state) => ({ lastCustomization: { ...state.lastCustomization, [projectId]: options } })),
 }));

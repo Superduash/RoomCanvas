@@ -26,7 +26,7 @@ class GenerationService:
         self.repository = repository
         self.provider = get_generation_provider()  # singleton
 
-    def prepare_generation(self, analysis_id: int, force_new: bool = False):
+    def prepare_generation(self, analysis_id: int, force_new: bool = False, customization=None):
         generation = self.repository.get_by_id(analysis_id)
         if not generation:
             raise InferenceServiceError(f"Analysis id={analysis_id} not found", 404)
@@ -35,10 +35,14 @@ class GenerationService:
             logger.info(f"Generation id={analysis_id} already completed — returning cached result")
             return generation
 
+        effective_style = generation.style
+        if customization and getattr(customization, 'style_override', None):
+            effective_style = customization.style_override
+
         if generation.status == "completed" and force_new:
             new_generation = self.repository.create_generation({
                 "original_image_path": generation.original_image_path,
-                "style": generation.style,
+                "style": effective_style,
                 "redesign_prompt": generation.redesign_prompt,
                 "prompt_version": generation.prompt_version,
                 "analysis_json": generation.analysis_json,
@@ -83,7 +87,9 @@ class GenerationService:
                     analysis_data = json.loads(generation.analysis_json)
                 except Exception:
                     pass
-            final_prompt = build_generation_prompt(generation.redesign_prompt, analysis_data, customization, is_regenerate, generation.style)
+            
+            effective_style = customization.style_override if (customization and getattr(customization, 'style_override', None)) else generation.style
+            final_prompt = build_generation_prompt(generation.redesign_prompt, analysis_data, customization, is_regenerate, effective_style)
 
             # 3. Call Replicate
             logger.info(

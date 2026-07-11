@@ -60,7 +60,7 @@ async def generate_design(
     service = GenerationService(repository)
     
     # 1. Prepare row to pending state
-    result = service.prepare_generation(request.analysis_id, force_new=request.force_new)
+    result = service.prepare_generation(request.analysis_id, force_new=request.force_new, customization=request.customization)
     
     # 2. Invalidate cache so UI sees status change
     invalidate_history_cache()

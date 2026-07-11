@@ -53,6 +53,7 @@ class CustomizationOptions(BaseModel):
     room_width_ft: float | None = None
     room_length_ft: float | None = None
     avoid: list[str] = []
+    style_override: str | None = None
 
 class GenerateRequest(BaseModel):
     analysis_id: int

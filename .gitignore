@@ -43,14 +43,16 @@ nosetests.xml
 # ── Node / Frontend ───────────────────────────────────────────────────────────
 node_modules/
 frontend/dist/
-frontend/.env
-frontend/.env.local
-frontend/.env.production
-
 # ── Environment files ─────────────────────────────────────────────────────────
-backend/.env
 .env
-.env.local
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # ── SQLite ────────────────────────────────────────────────────────────────────
 *.db

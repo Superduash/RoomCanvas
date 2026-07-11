@@ -35,6 +35,7 @@ export function ResultsPage() {
   const requestedVersionId = versionParam ? parseInt(versionParam, 10) : null;
 
   const setActiveGenerationId = useUIStore((s) => s.setActiveGenerationId);
+  const lastCustomizationMap = useUIStore((s) => s.lastCustomization);
   const [viewMode, setViewMode] = useState<ViewMode>('compare');
   const [downloadDone, setDownloadDone] = useState(false);
 
@@ -149,6 +150,7 @@ export function ResultsPage() {
   const handleCustomize = async (options: import('../api/types').CustomizationOptions) => {
     try {
       const result = await generateDesign.mutateAsync({ analysisId: activeGeneration.id, forceNew: true, customization: options });
+      useUIStore.getState().setLastCustomization(project.id, options);
       toast.success('New customized version started.');
       setSearchParams({ v: result.id.toString() });
     } catch (err) {
@@ -298,6 +300,7 @@ export function ResultsPage() {
                   <div className="rounded-xl overflow-hidden">
                     <Suspense fallback={<CompareSliderSkeleton />}>
                       <CompareSlider
+                        key={generatedSrc}
                         beforeSrc={originalSrc}
                         afterSrc={generatedSrc}
                       />
@@ -408,6 +411,7 @@ export function ResultsPage() {
                   onCustomize={handleCustomize}
                   disabled={!isCompleted}
                   defaultDimensions={analysisData?.estimated_dimensions}
+                  initialOptions={lastCustomizationMap[project.id]}
                 />
               </Suspense>
             </div>

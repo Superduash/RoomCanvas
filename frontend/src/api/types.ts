@@ -86,6 +86,7 @@ export interface CustomizationOptions {
   room_width_ft?: number;
   room_length_ft?: number;
   avoid?: string[];
+  style_override?: string;
 }
 
 export interface AppConfig {

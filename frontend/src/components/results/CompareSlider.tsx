@@ -30,6 +30,16 @@ export function CompareSlider({
   const isDragging = useRef(false);
   const rafId = useRef<number | null>(null);
 
+  const [isRevealing, setIsRevealing] = useState(true);
+  const [afterLoaded, setAfterLoaded] = useState(false);
+  const prefersReducedMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+
+  function easeOutCubic(t: number): number {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
   const updateDOM = useCallback((p: number) => {
     percentRef.current = p;
     
@@ -105,15 +115,48 @@ export function CompareSlider({
     setPercent(newPercent);
   };
 
+  const runRevealAnimation = useCallback(() => {
+    if (prefersReducedMotion.current) {
+      updateDOM(50);
+      setPercent(50);
+      setIsRevealing(false);
+      return;
+    }
+
+    const START = 100;
+    const END = 50;
+    const DURATION_MS = 900;
+    const startTime = performance.now();
+
+    updateDOM(START);
+
+    function step(now: number) {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / DURATION_MS, 1);
+      const eased = easeOutCubic(t);
+      const current = START + (END - START) * eased;
+      updateDOM(current);
+      if (t < 1) {
+        rafId.current = requestAnimationFrame(step);
+      } else {
+        setPercent(END);
+        setIsRevealing(false);
+        rafId.current = null;
+      }
+    }
+    rafId.current = requestAnimationFrame(step);
+  }, [updateDOM]);
+
   useEffect(() => {
-    // Initial DOM set
-    updateDOM(50);
+    if (afterLoaded) {
+      runRevealAnimation();
+    }
     return () => {
       if (rafId.current !== null) {
         cancelAnimationFrame(rafId.current);
       }
     };
-  }, [updateDOM]);
+  }, [afterLoaded, runRevealAnimation]);
 
   return (
     <div
@@ -128,12 +171,12 @@ export function CompareSlider({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label="Image comparison slider"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onKeyDown={onKeyDown}
-      style={{ touchAction: 'none' }} // Extra guard against mobile scrolling
+      onPointerDown={isRevealing ? undefined : onPointerDown}
+      onPointerMove={isRevealing ? undefined : onPointerMove}
+      onPointerUp={isRevealing ? undefined : onPointerUp}
+      onPointerCancel={isRevealing ? undefined : onPointerUp}
+      onKeyDown={isRevealing ? undefined : onKeyDown}
+      style={{ touchAction: 'none', cursor: isRevealing ? 'default' : undefined }}
     >
       {/* After (redesigned) — full width base layer */}
       <img
@@ -144,6 +187,7 @@ export function CompareSlider({
         loading="eager"
         fetchPriority="high"
         decoding="async"
+        onLoad={() => setAfterLoaded(true)}
       />
 
       {/* Before (original) — clipped to left side */}
@@ -173,6 +217,7 @@ export function CompareSlider({
         <div 
           ref={handleRef}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white shadow-[0_4px_15px_rgba(0,0,0,0.2)] flex items-center justify-center border border-border/10 transition-transform duration-200 ease-out will-change-transform"
+          style={{ opacity: isRevealing ? 0 : 1, transition: 'opacity 300ms ease-out' }}
         >
           <ChevronsLeftRight className="h-5 w-5 sm:h-6 sm:w-6 text-text-secondary" />
         </div>
