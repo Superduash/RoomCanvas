@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     REPLICATE_API_TOKEN: str = ""
     UPSTASH_REDIS_URL: str = ""
     UPSTASH_REDIS_TOKEN: str = ""
-    FIREBASE_SERVICE_ACCOUNT_JSON: str = ""
+    FIREBASE_SERVICE_ACCOUNT_JSON: str | None = None
+    FIREBASE_CREDENTIALS_PATH: str | None = None
 
     # Timeouts
     GEMINI_TIMEOUT_SECONDS: int = 60

@@ -99,3 +99,7 @@ full_audit_out.txt
 # Ignore all markdown files except README.md
 *.md
 !README.md
+
+# Firebase service account and credentials
+backend/credentials/
+*.json
