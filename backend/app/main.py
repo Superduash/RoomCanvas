@@ -15,7 +15,7 @@ from app.config import settings
 from app.database.session import engine, Base
 from app.ai.providers.provider_registry import init_providers
 from app.auth.firebase_admin_init import init_firebase_admin
-from app.routers import health, analyze, generate, refine, history, styles, providers, config
+from app.routers import health, analyze, generate, refine, history, styles, providers, config, auth
 from app.utils.exceptions import InteriorAIError
 
 logger = logging_config.logger
@@ -38,8 +38,9 @@ async def lifespan(app: FastAPI):
     # Initialise provider singletons (once per process, not once per request)
     try:
         init_providers()
+        init_firebase_admin()
     except Exception as exc:
-        logger.critical(f"Failed to initialise AI providers: {exc}")
+        logger.critical(f"Failed to initialise providers or Firebase: {exc}")
         sys.exit(1)
 
     try:
@@ -147,6 +148,7 @@ app.include_router(analyze.router,  prefix="/api")
 app.include_router(generate.router, prefix="/api")
 app.include_router(refine.router,   prefix="/api")
 app.include_router(history.router,  prefix="/api")
+app.include_router(auth.router,     prefix="/api")
 
 
 # ── Global Exception Handlers ─────────────────────────────────────────────────

@@ -12,6 +12,12 @@ const ResultsPage   = lazy(() => import('../pages/ResultsPage').then(m => ({ def
 const HistoryPage   = lazy(() => import('../pages/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const NotFoundPage  = lazy(() => import('../pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
+// Auth pages
+const SignUpPage         = lazy(() => import('../pages/SignUpPage'));
+const SignInPage         = lazy(() => import('../pages/SignInPage'));
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
+const ResetPasswordPage  = lazy(() => import('../pages/ResetPasswordPage'));
+
 function PageLoader() {
   return (
     <div className="flex flex-col gap-3 mx-auto max-w-content px-5 py-16">
@@ -23,6 +29,38 @@ function PageLoader() {
 }
 
 export const router = createBrowserRouter([
+  {
+    path: '/signup',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <SignUpPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/signin',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <SignInPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/forgot-password',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <ForgotPasswordPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/reset-password',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <ResetPasswordPage />
+      </Suspense>
+    ),
+  },
   {
     path: '/',
     element: <AppShell />,
@@ -69,7 +107,7 @@ export const router = createBrowserRouter([
         path: 'history',
         element: (
           <Suspense fallback={<PageLoader />}>
-            <RequireAuth message="Sign in to view your design history and saved projects.">
+            <RequireAuth>
               <HistoryPage />
             </RequireAuth>
           </Suspense>

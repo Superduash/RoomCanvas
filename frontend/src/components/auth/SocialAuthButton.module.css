@@ -1,0 +1,10 @@
+/* SocialAuthButton.module.css */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+  width: 100%; min-height: var(--touch-target);
+  background: var(--surface-0); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  font-size: var(--text-base); font-weight: 600; color: var(--ink-1); cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+.btn:hover:not(:disabled) { background: var(--surface-1); border-color: var(--ink-3); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }

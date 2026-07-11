@@ -1,5 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, type User } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,18 +16,8 @@ const firebaseConfig = {
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);
-export const auth = getAuth(firebaseApp);
-const googleProvider = new GoogleAuthProvider();
+export const firebaseAuth = getAuth(firebaseApp);
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-export async function signInWithGoogle() {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
-}
-
-export async function signOutUser() {
-  await signOut(auth);
-}
-
-export function subscribeToAuthChanges(callback: (user: User | null) => void) {
-  return onAuthStateChanged(auth, callback);
-}
+export { browserLocalPersistence, browserSessionPersistence };

@@ -11,7 +11,7 @@ export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { user, signIn, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { data: health } = useHealth();
 
   const hasProviderDown = health && (!health.providers.gemini || !health.providers.replicate);
@@ -102,17 +102,36 @@ export function TopNav() {
           {/* Right: Desktop actions */}
           <div className="hidden md:flex items-center justify-end gap-3 shrink-0">
             {user ? (
-              <div className="flex items-center gap-2 mr-2">
-                <img 
-                  src={user.photoURL ?? ''} 
-                  alt="Profile" 
-                  className="h-8 w-8 rounded-full border border-border" 
-                  referrerPolicy="no-referrer" 
-                />
-                <Button variant="ghost" size="sm" onClick={() => signOut()}>Sign Out</Button>
+              <div className="relative group mr-2">
+                <button className="flex items-center gap-2 focus-visible:outline-none focus-visible:shadow-focus rounded-full p-1 hover:bg-surface-alt transition-colors">
+                  <img 
+                    src={profile?.photo_url || user.photoURL || 'https://www.gravatar.com/avatar/?d=mp'} 
+                    alt="Profile" 
+                    className="h-8 w-8 rounded-full border border-border" 
+                    referrerPolicy="no-referrer" 
+                  />
+                  <span className="text-sm font-medium text-text-primary pr-2">{profile?.display_name || user.email?.split('@')[0]}</span>
+                </button>
+                <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-fast z-50">
+                  <div className="p-1">
+                    <button 
+                      onClick={() => signOut()}
+                      className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt rounded-md transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
-              <Button variant="secondary" size="sm" className="mr-2" onClick={() => signIn()}>Sign In</Button>
+              <div className="flex items-center gap-2 mr-2">
+                <Link to="/signin">
+                  <Button variant="ghost" size="sm">Log in</Button>
+                </Link>
+                <Link to="/signup">
+                  <Button variant="secondary" size="sm">Sign up free</Button>
+                </Link>
+              </div>
             )}
             <Link to="/upload">
               <Button size="lg" variant="primary" icon={<Plus className="h-4 w-4" />}>
@@ -205,9 +224,14 @@ export function TopNav() {
                     Sign Out
                   </Button>
                 ) : (
-                  <Button size="md" variant="secondary" className="w-full" onClick={() => { setMobileOpen(false); signIn(); }}>
-                    Sign In
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Link to="/signin" onClick={() => setMobileOpen(false)} className="block">
+                      <Button size="md" variant="secondary" className="w-full">Log in</Button>
+                    </Link>
+                    <Link to="/signup" onClick={() => setMobileOpen(false)} className="block">
+                      <Button size="md" variant="primary" className="w-full">Sign up free</Button>
+                    </Link>
+                  </div>
                 )}
                 <Link to="/upload" onClick={() => setMobileOpen(false)} className="block">
                   <Button size="md" variant="primary" className="w-full" icon={<Plus className="h-4 w-4" />}>

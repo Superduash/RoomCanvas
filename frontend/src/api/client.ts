@@ -1,5 +1,5 @@
 import { logger } from '../lib/logger';
-import { auth } from '../lib/firebase';
+import { firebaseAuth } from '../lib/firebase';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 const API_PREFIX = `${API_BASE}/api`;
@@ -27,13 +27,16 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
     }
     // Only warn here; let the caller decide if it should be an Error toast.
     logger.warn(`API Error on ${method} ${path}: ${detail}`);
+    if (res.status === 401) {
+      firebaseAuth.signOut();
+    }
     throw new ApiError(detail, res.status);
   }
   return res.json() as Promise<T>;
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  const user = auth.currentUser;
+  const user = firebaseAuth.currentUser;
   if (!user) return {};
   try {
     const token = await user.getIdToken();
