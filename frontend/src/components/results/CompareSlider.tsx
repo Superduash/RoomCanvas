@@ -9,7 +9,6 @@ interface CompareSliderProps {
   beforeLabel?: string;
   afterLabel?: string;
   className?: string;
-  enableAutoplay?: boolean; // Enable continuous autoplay loop (for hero section)
 }
 
 export function CompareSlider({
@@ -18,7 +17,6 @@ export function CompareSlider({
   beforeLabel = 'Original',
   afterLabel = 'Redesigned',
   className,
-  enableAutoplay = false,
 }: CompareSliderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const beforeWrapperRef = useRef<HTMLDivElement>(null);
@@ -30,27 +28,22 @@ export function CompareSlider({
   const [percent, setPercent] = useState(50);
   const percentRef = useRef(50);
   const isDragging = useRef(false);
-  const isAutoplayPaused = useRef(false);
-  const autoplayTimeoutId = useRef<number | null>(null);
   const rafId = useRef<number | null>(null);
+  const hasPlayedReveal = useRef(false);
 
-  const [isRevealing, setIsRevealing] = useState(true);
+  const [isRevealing, setIsRevealing] = useState(false);
   const [afterLoaded, setAfterLoaded] = useState(false);
   const prefersReducedMotion = useRef(
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
   // Premium easing functions for smooth, cinematic motion
-  function easeInOutCubic(t: number): number {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  function easeInOutQuart(t: number): number {
+    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
   }
 
   function easeOutQuart(t: number): number {
     return 1 - Math.pow(1 - t, 4);
-  }
-
-  function easeInOutQuart(t: number): number {
-    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
   }
 
   const updateDOM = useCallback((p: number) => {
@@ -93,13 +86,13 @@ export function CompareSlider({
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     isDragging.current = true;
-    isAutoplayPaused.current = true; // Immediately stop autoplay when user drags
     
-    // Clear any scheduled autoplay resume
-    if (autoplayTimeoutId.current !== null) {
-      window.clearTimeout(autoplayTimeoutId.current);
-      autoplayTimeoutId.current = null;
+    // Stop any ongoing animation immediately when user interacts
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
     }
+    setIsRevealing(false);
     
     if (handleRef.current) {
       handleRef.current.style.transform = 'translate(-50%, -50%) scale(1.15)';
@@ -124,15 +117,6 @@ export function CompareSlider({
       handleRef.current.style.transform = 'translate(-50%, -50%) scale(1)';
       handleRef.current.style.boxShadow = '';
     }
-    
-    // Resume autoplay after 3 seconds of inactivity
-    if (autoplayTimeoutId.current !== null) {
-      window.clearTimeout(autoplayTimeoutId.current);
-    }
-    autoplayTimeoutId.current = window.setTimeout(() => {
-      isAutoplayPaused.current = false;
-      startAutoplay();
-    }, 3000);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -140,39 +124,46 @@ export function CompareSlider({
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
       newPercent = Math.max(0, newPercent - 2); // Smaller increments for finer control
-      isAutoplayPaused.current = true;
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
       newPercent = Math.min(100, newPercent + 2);
-      isAutoplayPaused.current = true;
     } else {
       return;
     }
+    
+    // Stop any ongoing animation
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+    setIsRevealing(false);
+    
     updateDOM(newPercent);
     setPercent(newPercent);
   };
 
-  // Premium reveal animation with cinematic timing
+  // Premium one-time reveal animation
   const runRevealAnimation = useCallback(() => {
     if (prefersReducedMotion.current) {
       updateDOM(50);
       setPercent(50);
       setIsRevealing(false);
+      hasPlayedReveal.current = true;
       return;
     }
 
-    // Cinematic reveal: slow, elegant transformation
-    const START = 100;         // Start fully showing "after" image
-    const LEFT_EDGE = 0;       // Sweep to fully show "before" image
-    const END = 50;            // Settle at centered comparison
+    setIsRevealing(true);
+
+    // One-time reveal: smooth wipe from right to left, then settle at center
+    const START = 0;           // Start with original image fully visible (left side = 0%)
+    const REVEAL_END = 100;    // Wipe all the way to show redesigned image
+    const FINAL = 50;          // Settle at center for comparison
     
-    // Slower, more deliberate timing for premium feel
-    const SWEEP_MS = 1800;     // Slow sweep from right to left
-    const PAUSE_AT_LEFT = 900; // Pause at left edge to appreciate "before"
-    const RETURN_MS = 1400;    // Smooth return to center
-    const PAUSE_AT_END = 600;  // Brief pause at center before enabling interaction
+    const WIPE_DURATION = 1200;    // Smooth wipe from left to right (1.2s)
+    const SETTLE_DURATION = 400;   // Quick settle to center (0.4s)
+    const PAUSE_AT_END = 200;      // Brief pause at full reveal before settling
     
-    const TOTAL_MS = SWEEP_MS + PAUSE_AT_LEFT + RETURN_MS + PAUSE_AT_END;
+    const TOTAL_MS = WIPE_DURATION + PAUSE_AT_END + SETTLE_DURATION;
     
     const startTime = performance.now();
     updateDOM(START);
@@ -180,33 +171,30 @@ export function CompareSlider({
     function step(now: number) {
       const elapsed = now - startTime;
       
-      if (elapsed < SWEEP_MS) {
-        // Phase 1: Elegant sweep from right (100) to left (0)
-        const t = elapsed / SWEEP_MS;
-        const eased = easeInOutQuart(t); // Smooth acceleration and deceleration
-        const current = START + (LEFT_EDGE - START) * eased;
+      if (elapsed < WIPE_DURATION) {
+        // Phase 1: Smooth wipe from left (0) to right (100) to reveal redesigned image
+        const t = elapsed / WIPE_DURATION;
+        const eased = easeInOutQuart(t);
+        const current = START + (REVEAL_END - START) * eased;
         updateDOM(current);
         rafId.current = requestAnimationFrame(step);
-      } else if (elapsed < SWEEP_MS + PAUSE_AT_LEFT) {
-        // Phase 2: Hold at left edge to let users appreciate the "before" state
-        updateDOM(LEFT_EDGE);
-        rafId.current = requestAnimationFrame(step);
-      } else if (elapsed < SWEEP_MS + PAUSE_AT_LEFT + RETURN_MS) {
-        // Phase 3: Graceful return from left (0) to center (50)
-        const t = (elapsed - SWEEP_MS - PAUSE_AT_LEFT) / RETURN_MS;
-        const eased = easeOutQuart(t); // Decelerate smoothly into final position
-        const current = LEFT_EDGE + (END - LEFT_EDGE) * eased;
-        updateDOM(current);
+      } else if (elapsed < WIPE_DURATION + PAUSE_AT_END) {
+        // Phase 2: Brief pause at full reveal
+        updateDOM(REVEAL_END);
         rafId.current = requestAnimationFrame(step);
       } else if (elapsed < TOTAL_MS) {
-        // Phase 4: Brief pause at center position
-        updateDOM(END);
+        // Phase 3: Settle back to center (50/50)
+        const t = (elapsed - WIPE_DURATION - PAUSE_AT_END) / SETTLE_DURATION;
+        const eased = easeOutQuart(t);
+        const current = REVEAL_END + (FINAL - REVEAL_END) * eased;
+        updateDOM(current);
         rafId.current = requestAnimationFrame(step);
       } else {
-        // Complete: settle at center and enable interaction
-        updateDOM(END);
-        setPercent(END);
+        // Complete: settle at center permanently
+        updateDOM(FINAL);
+        setPercent(FINAL);
         setIsRevealing(false);
+        hasPlayedReveal.current = true;
         rafId.current = null;
       }
     }
@@ -214,100 +202,36 @@ export function CompareSlider({
     rafId.current = requestAnimationFrame(step);
   }, [updateDOM]);
 
-  // Continuous autoplay loop for hero section
-  const startAutoplay = useCallback(() => {
-    if (prefersReducedMotion.current || isAutoplayPaused.current || isDragging.current) {
-      return;
-    }
-
-    // Smooth, continuous back-and-forth motion
-    const CYCLE_MS = 6000;     // Full cycle duration (left -> right -> left)
-    const PAUSE_AT_EDGES = 800; // Pause at each edge to appreciate both states
-    
-    const MOVE_TO_LEFT = CYCLE_MS * 0.35;
-    const PAUSE_LEFT = MOVE_TO_LEFT + PAUSE_AT_EDGES;
-    const MOVE_TO_RIGHT = PAUSE_LEFT + CYCLE_MS * 0.35;
-    const PAUSE_RIGHT = MOVE_TO_RIGHT + PAUSE_AT_EDGES;
-    
-    const startTime = performance.now();
-    const initialPercent = percentRef.current;
-
-    function autoplayStep(now: number) {
-      if (isAutoplayPaused.current || isDragging.current) {
-        rafId.current = null;
-        return;
-      }
-
-      const elapsed = (now - startTime) % CYCLE_MS;
-      
-      if (elapsed < MOVE_TO_LEFT) {
-        // Move from current position to left edge (0)
-        const t = elapsed / MOVE_TO_LEFT;
-        const eased = easeInOutCubic(t);
-        const current = initialPercent + (0 - initialPercent) * eased;
-        updateDOM(current);
-      } else if (elapsed < PAUSE_LEFT) {
-        // Pause at left edge
-        updateDOM(0);
-      } else if (elapsed < MOVE_TO_RIGHT) {
-        // Move from left (0) to right edge (100)
-        const t = (elapsed - PAUSE_LEFT) / (MOVE_TO_RIGHT - PAUSE_LEFT);
-        const eased = easeInOutCubic(t);
-        const current = 0 + (100 - 0) * eased;
-        updateDOM(current);
-      } else if (elapsed < PAUSE_RIGHT) {
-        // Pause at right edge
-        updateDOM(100);
-      } else {
-        // Move from right (100) back to left (0)
-        const t = (elapsed - PAUSE_RIGHT) / (CYCLE_MS - PAUSE_RIGHT);
-        const eased = easeInOutCubic(t);
-        const current = 100 + (0 - 100) * eased;
-        updateDOM(current);
-      }
-      
-      rafId.current = requestAnimationFrame(autoplayStep);
-    }
-    
-    rafId.current = requestAnimationFrame(autoplayStep);
-  }, [updateDOM]);
-
+  // Trigger reveal animation when image loads or when a new image is set
   useEffect(() => {
-    if (afterLoaded && !prefersReducedMotion.current) {
-      runRevealAnimation();
-    } else if (afterLoaded && prefersReducedMotion.current) {
-      // For reduced motion, just set to center immediately
-      updateDOM(50);
-      setPercent(50);
-      setIsRevealing(false);
+    if (afterLoaded) {
+      // Reset the reveal flag when a new image loads
+      hasPlayedReveal.current = false;
+      
+      if (!prefersReducedMotion.current) {
+        runRevealAnimation();
+      } else {
+        // For reduced motion, just set to center immediately
+        updateDOM(50);
+        setPercent(50);
+        setIsRevealing(false);
+        hasPlayedReveal.current = true;
+      }
     }
     
     return () => {
       if (rafId.current !== null) {
         cancelAnimationFrame(rafId.current);
-      }
-      if (autoplayTimeoutId.current !== null) {
-        window.clearTimeout(autoplayTimeoutId.current);
+        rafId.current = null;
       }
     };
   }, [afterLoaded, runRevealAnimation, updateDOM]);
 
-  // Start autoplay loop after reveal animation completes (only if enabled)
+  // Reset afterLoaded when the image source changes (new generation)
   useEffect(() => {
-    if (!isRevealing && !prefersReducedMotion.current && enableAutoplay) {
-      // Small delay before starting continuous autoplay
-      const startDelay = setTimeout(() => {
-        startAutoplay();
-      }, 1500);
-      
-      return () => {
-        clearTimeout(startDelay);
-        if (rafId.current !== null) {
-          cancelAnimationFrame(rafId.current);
-        }
-      };
-    }
-  }, [isRevealing, startAutoplay, enableAutoplay]);
+    setAfterLoaded(false);
+    hasPlayedReveal.current = false;
+  }, [afterSrc]);
 
   return (
     <div

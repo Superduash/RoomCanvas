@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, Plus, History, X, Search, Settings } from 'lucide-react';
+import { Menu, Plus, History, X, Search, Settings, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
 import { useAuth } from '../../auth/AuthProvider';
 import { useHealth } from '../../api/queries';
+import { useTheme } from '../../hooks/useTheme';
 
 export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -13,6 +14,7 @@ export function TopNav() {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   const { data: health } = useHealth();
+  const { theme, toggleTheme } = useTheme();
 
   const hasProviderDown = health && (!health.providers.gemini || !health.providers.replicate);
 
@@ -132,6 +134,26 @@ export function TopNav() {
               </div>
             )}
             <div className="w-px h-6 bg-border mx-1" aria-hidden="true" />
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="text-text-secondary" 
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              <motion.div
+                initial={false}
+                animate={{ rotate: theme === 'dark' ? 180 : 0 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {theme === 'light' ? (
+                  <Moon className="h-[18px] w-[18px]" />
+                ) : (
+                  <Sun className="h-[18px] w-[18px]" />
+                )}
+              </motion.div>
+            </Button>
             <Link to="/upload">
               <Button size="md" variant="primary" icon={<Plus className="h-4 w-4" />}>
                 New Design
@@ -159,7 +181,7 @@ export function TopNav() {
         {mobileOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -216,6 +238,24 @@ export function TopNav() {
 
               {/* CTA */}
               <div className="p-3 border-t border-border flex flex-col gap-2">
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-base text-text-secondary hover:bg-surface-alt hover:text-text-primary"
+                >
+                  <motion.div
+                    initial={false}
+                    animate={{ rotate: theme === 'dark' ? 180 : 0 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex-shrink-0"
+                  >
+                    {theme === 'light' ? (
+                      <Moon className="h-[18px] w-[18px]" />
+                    ) : (
+                      <Sun className="h-[18px] w-[18px]" />
+                    )}
+                  </motion.div>
+                  {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                </button>
                 {user ? (
                   <Button size="md" variant="secondary" className="w-full" onClick={() => { setMobileOpen(false); signOut(); }}>
                     Sign Out

@@ -25,6 +25,8 @@
     color: var(--color-text-primary);
     line-height: var(--leading-normal);
     min-height: 100vh;
+    transition: background-color var(--duration-base) var(--ease-out),
+                color var(--duration-base) var(--ease-out);
   }
 
   ::selection {
@@ -82,6 +84,11 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border-width: 0;
+  }
+
+  /* Dark mode image adjustments - subtle brightness reduction */
+  [data-theme="dark"] img:not([data-no-dark-adjust]) {
+    filter: brightness(0.92) contrast(1.02);
   }
 }
 

@@ -390,7 +390,6 @@ function HeroVisual() {
         afterSrc="/redesignedroom.png"
         beforeLabel="Original"
         afterLabel="Redesigned"
-        enableAutoplay={true}
       />
     </div>
   );

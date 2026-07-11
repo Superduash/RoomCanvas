@@ -1,5 +1,5 @@
 :root {
-  /* ── Color: warm architectural neutrals ── */
+  /* ── Color: warm architectural neutrals (Light Mode) ── */
   --color-bg:              #FAF7F2;
   --color-surface:         #FFFFFF;
   --color-surface-alt:     #F4EFE8;
@@ -103,6 +103,50 @@
   --content-max-width: 1280px;
   --nav-height: 72px;
   --page-gutter: clamp(16px, 5vw, 48px);
+}
+
+/* ── Dark Mode Theme — Premium handcrafted colors inspired by Linear, Vercel, Arc ── */
+[data-theme="dark"] {
+  /* ── Backgrounds: Deep, rich, never pure black ── */
+  --color-bg:              #0A0A0B;
+  --color-surface:         #18181B;
+  --color-surface-alt:     #202024;
+  --color-surface-raised:  #27272A;
+  
+  /* ── Borders: Subtle, refined separation ── */
+  --color-border:          #2D2D31;
+  --color-border-strong:   #3F3F46;
+  
+  /* ── Text: High contrast, comfortable reading ── */
+  --color-text-primary:    #F5F5F6;
+  --color-text-secondary:  #A1A1AA;
+  --color-text-tertiary:   #71717A;
+  --color-text-inverse:    #18181B;
+  
+  /* ── Accent: Warmer, more vibrant in dark mode ── */
+  --color-accent:          #E5906D;
+  --color-accent-hover:    #F4A17A;
+  --color-accent-subtle:   #2D2119;
+  --color-accent-text-on:  #0A0A0B;
+  
+  /* ── Semantic: Adjusted for dark backgrounds ── */
+  --color-success:         #6EE7B7;
+  --color-success-subtle:  #1A2E25;
+  --color-warning:         #FCD34D;
+  --color-warning-subtle:  #2E2614;
+  --color-danger:          #F87171;
+  --color-danger-subtle:   #2E1A1A;
+  --color-info:            #7DD3FC;
+  --color-info-subtle:     #1A2830;
+  
+  /* ── Shadows: Deeper, more dramatic ── */
+  --shadow-xs:    0 1px 2px rgba(0,0,0,0.24);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-md:    0 4px 12px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);
+  --shadow-lg:    0 12px 32px rgba(0,0,0,0.40), 0 4px 8px rgba(0,0,0,0.28);
+  --shadow-xl:    0 24px 64px rgba(0,0,0,0.48), 0 8px 16px rgba(0,0,0,0.32);
+  --shadow-focus: 0 0 0 3px rgba(229,144,109,0.32);
+  --shadow-focus-danger: 0 0 0 3px rgba(248,113,113,0.28);
 }
 
 /* Reduced motion respect */
