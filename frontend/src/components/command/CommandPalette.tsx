@@ -3,6 +3,7 @@ import { Command } from 'cmdk';
 import { useNavigate } from 'react-router-dom';
 import { Plus, History, Home, Search } from 'lucide-react';
 import { useHistory } from '../../api/queries';
+import { useAuth } from '../../auth/AuthProvider';
 import { resolveImageUrl } from '../../api/client';
 import { formatStyleName } from '../../utils/formatters';
 import './CommandPalette.css';
@@ -10,7 +11,8 @@ import './CommandPalette.css';
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { data: history } = useHistory(8);
+  const { user } = useAuth();
+  const { data: history } = useHistory(8, !!user);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

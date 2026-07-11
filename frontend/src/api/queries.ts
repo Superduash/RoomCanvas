@@ -77,11 +77,12 @@ export function useGeneration(id: number | null, opts?: { poll?: boolean }): Use
 }
 
 // ── History ──────────────────────────────────────────────────────────
-export function useHistory(limit = 50) {
+export function useHistory(limit = 50, enabled = true) {
   return useQuery({
     queryKey: ['history', limit],
     queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
     staleTime: 5000,
+    enabled,
   });
 }
 

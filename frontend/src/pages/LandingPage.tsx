@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/primitives/Button';
 import { CompareSlider, CompareSliderSkeleton } from '../components/results/CompareSlider';
+import { useAuth } from '../auth/AuthProvider';
 import { useHistory } from '../api/queries';
 import { resolveImageUrl } from '../api/client';
 import { formatStyleName } from '../utils/formatters';
@@ -76,7 +77,8 @@ const stagger = {
 };
 
 export function LandingPage() {
-  const { data: projects, isLoading: historyLoading } = useHistory(3);
+  const { user } = useAuth();
+  const { data: projects, isLoading: historyLoading } = useHistory(3, !!user);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const recentCompleted = projects?.filter((p) => p.latest_generation?.status === 'completed' && p.latest_generation?.variations.length > 0) ?? [];
@@ -254,7 +256,7 @@ export function LandingPage() {
       </section>
 
       {/* ── RECENT DESIGNS (from real history) ───────────────────── */}
-      {(historyLoading || recentCompleted.length > 0) && (
+      {(user && (historyLoading || recentCompleted.length > 0)) && (
         <section className="bg-surface border-y border-border py-20" aria-labelledby="examples-heading">
           <div className="mx-auto max-w-content px-6">
             <div className="text-center mb-10">
