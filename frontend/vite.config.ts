@@ -1,6 +1,5 @@
 import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { VitePWA } from 'vite-plugin-pwa';
 
 function roomCanvasBannerPlugin(): Plugin {
@@ -30,6 +29,9 @@ Running: http://localhost:${port}
 
 export default defineConfig({
   clearScreen: false,
+  resolve: {
+    tsconfigPaths: true,
+  },
   customLogger: {
     ...console,
     info: (msg) => {
@@ -37,11 +39,7 @@ export default defineConfig({
       if (msg.includes('VITE') || msg.includes('ready in') || msg.includes('Local:')) return;
       console.info(msg);
     },
-    warn: (warning, warn) => {
-      const msg = typeof warning === 'string' ? warning : warning.message;
-      if (msg?.includes('vite-tsconfig-paths')) return;
-      warn(warning);
-    },
+    warn: console.warn,
     warnOnce: console.warn,
     error: console.error,
     clearScreen: () => {},
@@ -50,7 +48,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    tsconfigPaths(),
     roomCanvasBannerPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
