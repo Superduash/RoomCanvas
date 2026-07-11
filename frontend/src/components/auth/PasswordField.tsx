@@ -20,7 +20,7 @@ export function PasswordField({ value, onChange, label = 'Password', showStrengt
           autoComplete={autoComplete}
           required
           minLength={8}
-          className="w-full px-3 py-2 pr-12 border border-border rounded-lg bg-surface text-[14px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+          className="w-full px-3 py-1.5 pr-12 border border-border rounded-lg bg-surface text-[14px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
           aria-describedby={showStrength ? `${id}-strength` : undefined}
         />
         <button
