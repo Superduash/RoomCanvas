@@ -84,7 +84,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               onClick={open}
               className="bg-surface/95 backdrop-blur-sm shadow-lg touch-manipulation active:scale-95"
             >
-              <ImagePlus className="h-4 w-4 mr-1.5" />
+              <ImagePlus className="h-4 w-4 mr-1.5" strokeWidth={2} />
               Replace
             </Button>
             {onRemove && (
@@ -96,14 +96,14 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
                 className="bg-surface/95 backdrop-blur-sm shadow-lg hover:bg-danger hover:text-white touch-manipulation active:scale-95"
                 aria-label="Remove image"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" strokeWidth={2} />
               </Button>
             )}
           </div>
         </div>
         {errorMessage && (
           <p className="text-sm text-danger flex items-center gap-2 p-3 rounded-lg bg-danger-subtle border border-danger/20" role="alert">
-            <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden="true" strokeWidth={2} />
             {errorMessage}
           </p>
         )}
@@ -129,19 +129,6 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
         <input {...getInputProps()} />
 
         <div className="flex flex-col items-center gap-3 sm:gap-4 text-center max-w-sm">
-          <div className={cn(
-            'flex items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full shadow-sm transition-all duration-200',
-            isDragActive 
-              ? 'bg-accent text-white scale-110' 
-              : 'bg-surface-alt text-text-secondary border border-border'
-          )}>
-            {isDragActive ? (
-              <ImagePlus className="h-6 w-6 sm:h-7 sm:w-7" />
-            ) : (
-              <ImageIcon className="h-6 w-6 sm:h-7 sm:w-7" />
-            )}
-          </div>
-          
           <div>
             <p className="text-sm sm:text-base font-semibold text-text-primary mb-1 sm:mb-1.5">
               {isDragActive ? 'Drop your photo here' : 'Add a room photo'}
@@ -162,17 +149,17 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               e.stopPropagation();
               open();
             }}
-            className="mt-1 sm:mt-2 shadow-md touch-manipulation active:scale-95 transition-transform h-11 sm:h-12 px-5 sm:px-6 text-sm sm:text-base"
+            className="mt-1 sm:mt-2 shadow-md touch-manipulation active:scale-95 transition-transform h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base flex items-center justify-center gap-2"
           >
-            <ImagePlus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            Add Photo
+            <ImagePlus className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />
+            <span>Add Photo</span>
           </Button>
         </div>
       </div>
 
       {errorMessage && (
         <p className="text-xs sm:text-sm text-danger flex items-center gap-2 p-2.5 sm:p-3 rounded-lg bg-danger-subtle border border-danger/20" role="alert">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden="true" strokeWidth={2} />
           {errorMessage}
         </p>
       )}

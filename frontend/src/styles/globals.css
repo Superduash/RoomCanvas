@@ -109,6 +109,11 @@
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
+  
+  /* Radial gradient utility */
+  .bg-gradient-radial {
+    background-image: radial-gradient(var(--tw-gradient-stops));
+  }
 }
 
 @media (min-width: 1024px) and (max-width: 1366px) {
