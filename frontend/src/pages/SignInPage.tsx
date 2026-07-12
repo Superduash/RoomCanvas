@@ -26,6 +26,7 @@ export function SignInPage() {
     setSubmitting(true);
     try {
       await signInWithEmail({ email, password, remember });
+      toast.success('Welcome back!');
       // AppShell will route to the correct page once backend sync finishes
     } catch (err: any) {
       toast.error(err.message);
@@ -38,6 +39,7 @@ export function SignInPage() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle(remember);
+      toast.success('Welcome back!');
       // AppShell will route to the correct page once backend sync finishes
     } catch (err: any) {
       toast.error(err.message);

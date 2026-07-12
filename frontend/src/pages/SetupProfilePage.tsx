@@ -194,6 +194,8 @@ export default function SetupProfilePage() {
       
       setProfile(updatedUser as any);
       
+      toast.success('Profile completed! Welcome to RoomCanvas.');
+      
       if (themePref === 'dark') document.documentElement.classList.add('dark');
       else if (themePref === 'light') document.documentElement.classList.remove('dark');
       

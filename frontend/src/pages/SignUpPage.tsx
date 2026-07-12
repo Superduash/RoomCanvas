@@ -42,6 +42,7 @@ export function SignUpPage() {
     setSubmitting(true);
     try {
       await signUpWithEmail({ name, email, password, remember: true });
+      toast.success('Account created! Welcome to RoomCanvas.');
       // AppShell will route to /setup for new users once backend sync finishes
     } catch (err: any) {
       if (err.message === 'An account with this email already exists.') {
@@ -58,6 +59,7 @@ export function SignUpPage() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle(true);
+      toast.success('Welcome to RoomCanvas!');
       // AppShell will route to /setup for new users, or /upload for returning users
     } catch (err: any) {
       toast.error(err.message);
