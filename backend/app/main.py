@@ -66,12 +66,13 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error(f"Failed to initialise database schema: {exc}", exc_info=True)
 
-    # Ensure required storage subdirectories exist
-    for directory in [settings.UPLOAD_DIR, settings.GENERATED_DIR]:
-        try:
-            Path(directory).mkdir(parents=True, exist_ok=True)
-        except Exception as exc:
-            logger.error(f"Failed to create directory {directory}: {exc}")
+    # Ensure required storage subdirectories exist (for local dev/testing only - production uses Supabase)
+    if settings.DEBUG:
+        for directory in [settings.UPLOAD_DIR, settings.GENERATED_DIR]:
+            try:
+                Path(directory).mkdir(parents=True, exist_ok=True)
+            except Exception as exc:
+                logger.error(f"Failed to create directory {directory}: {exc}")
 
     # Warm static caches so first requests are instant
     try:
@@ -82,11 +83,13 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to warm caches: {exc}")
 
     if not settings.DEBUG and "render.com" in settings.PUBLIC_BASE_URL:
-        logger.warning(
-            "Running on Render with local filesystem storage. "
-            "Files in storage/ will be LOST on redeploy or instance restart. "
-            "Migrate to Cloudflare R2, Backblaze B2, or AWS S3 before production traffic."
-        )
+        if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+            logger.error(
+                "Running on Render WITHOUT Supabase configured. "
+                "Files will be LOST on redeploy. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+            )
+        else:
+            logger.info("✓ Supabase Storage configured - files will persist across deploys")
 
     # Display clean startup banner
     from app.auth.firebase_admin_init import is_firebase_available
@@ -190,20 +193,8 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-class StaticCacheMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        if request.url.path.startswith("/static"):
-            response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=604800"
-        return response
-
-app.add_middleware(StaticCacheMiddleware)
-
-# ── Static file serving ───────────────────────────────────────────────────────
-# Mount the parent storage directory so /static/uploads/…, /static/generated/… all work.
-_storage_root = Path(settings.UPLOAD_DIR).parent.resolve()
-_storage_root.mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(_storage_root)), name="static")
+# Note: Static file serving removed - now using Supabase Storage for all images
+# Legacy /static routes removed as files are served directly from Supabase CDN
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(health.router,   prefix="/api")

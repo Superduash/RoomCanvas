@@ -99,10 +99,20 @@ export const api = {
   del: <T>(path: string): Promise<T> => safeFetch<T>('DELETE', path, {}),
 };
 
-// Image paths are relative POSIX paths from repo root
-// e.g. "storage/uploads/xyz.jpg" → http://localhost:8000/static/uploads/xyz.jpg
-export function resolveImageUrl(relativePath: string | null | undefined): string {
-  if (!relativePath) return '';
-  const cleaned = relativePath.replace(/^storage[\\/]/, '').replace(/\\/g, '/');
-  return `${API_BASE}/static/${cleaned}`;
+// Image paths are now Supabase Storage keys
+// e.g. "uploads/xyz.jpg" → https://PROJECT.supabase.co/storage/v1/object/public/roomcanvas/uploads/xyz.jpg
+export function resolveImageUrl(key: string | null | undefined): string {
+  if (!key) return '';
+  
+  // If it's already a full URL (backward compatibility), return as-is
+  if (key.startsWith('http://') || key.startsWith('https://')) {
+    return key;
+  }
+  
+  // Clean up any legacy "storage/" prefix
+  const cleaned = key.replace(/^storage[\\/]/, '').replace(/\\/g, '/');
+  
+  // Construct Supabase public URL
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://fiyobpuaxeihkvcklvai.supabase.co';
+  return `${supabaseUrl}/storage/v1/object/public/roomcanvas/${cleaned}`;
 }

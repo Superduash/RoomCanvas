@@ -1,84 +1,95 @@
 import os
 import uuid
+import io
+import asyncio
 import httpx
 import logging
 from pathlib import Path
 from fastapi import UploadFile
+from supabase import create_client, Client
 from app.config import settings
 from app.repositories.generation_repository import GenerationRepository
 
 logger = logging.getLogger(__name__)
 
+_supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+_BUCKET = settings.SUPABASE_BUCKET
+
+
 class StorageService:
     @staticmethod
-    def save_upload(upload_file: UploadFile, directory: str = settings.UPLOAD_DIR) -> str:
-        base_dir = Path(directory)
-        base_dir.mkdir(parents=True, exist_ok=True)
+    def _ext_for(filename: str | None, content_type: str | None) -> str:
+        ext = Path(filename or "").suffix.lower()
+        if ext in {".jpg", ".jpeg", ".png", ".webp"}:
+            return ext
+        content_type_map = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+        return content_type_map.get(content_type, ".jpg")
 
-        ext = Path(upload_file.filename or "").suffix.lower()
-        if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
-            content_type_map = {
-                "image/jpeg": ".jpg",
-                "image/png": ".png",
-                "image/webp": ".webp"
-            }
-            ext = content_type_map.get(upload_file.content_type, ".jpg")
+    @staticmethod
+    def _upload_bytes(key: str, data: bytes, content_type: str) -> str:
+        """Sync call — always run via asyncio.to_thread from async code, never awaited directly."""
+        _supabase.storage.from_(_BUCKET).upload(
+            path=key,
+            file=data,
+            file_options={"content-type": content_type, "upsert": "true"},
+        )
+        return key
 
-        new_filename = f"{uuid.uuid4()}{ext}"
-        dest_path = base_dir / new_filename
+    @staticmethod
+    async def save_upload(upload_file: UploadFile, prefix: str = "uploads") -> str:
+        ext = StorageService._ext_for(upload_file.filename, upload_file.content_type)
+        key = f"{prefix}/{uuid.uuid4()}{ext}"
 
         try:
             from app.utils.image_utils import resize_for_upload
             from PIL import Image
-            import io
-            
-            upload_file.file.seek(0)
-            img_bytes = upload_file.file.read()
+
+            await upload_file.seek(0)
+            img_bytes = await upload_file.read()
             img = Image.open(io.BytesIO(img_bytes))
-            
-            # Downscale for performance and storage
-            resized_bytes = resize_for_upload(img, max_dimension=1536) # using 1536 as a good trade-off
-            
-            with open(dest_path, "wb") as buffer:
-                buffer.write(resized_bytes)
-                
-            logger.info(f"Saved and downscaled upload file to {dest_path}")
+
+            resized_bytes = resize_for_upload(img, max_dimension=1536)
+            content_type = f"image/{ext.lstrip('.')}" if ext != ".jpg" else "image/jpeg"
+
+            await asyncio.to_thread(StorageService._upload_bytes, key, resized_bytes, content_type)
+            logger.info(f"Uploaded resized image to Supabase Storage: {key}")
         except Exception as e:
-            logger.error(f"Error saving upload file: {e}")
+            logger.error(f"Error uploading file to Supabase: {e}")
             raise RuntimeError(f"Could not save upload file: {e}")
 
-        return dest_path.as_posix()
+        return key  # store this key in the DB exactly where a local path used to go
 
     @staticmethod
-    async def download_and_save(image_url: str, save_dir: str = settings.GENERATED_DIR) -> str:
-        base_dir = Path(save_dir)
-        base_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"{uuid.uuid4().hex}_gen.png"
-        filepath = base_dir / filename
-
+    async def download_and_save(image_url: str, prefix: str = "generated") -> str:
+        key = f"{prefix}/{uuid.uuid4().hex}_gen.png"
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.get(str(image_url))
                 resp.raise_for_status()
-                with open(filepath, "wb") as f:
-                    f.write(resp.content)
-            logger.info(f"Downloaded generated image to {filepath}")
-            return filepath.as_posix()
+                content = resp.content
+
+            await asyncio.to_thread(StorageService._upload_bytes, key, content, "image/png")
+            logger.info(f"Downloaded and uploaded generated image to Supabase Storage: {key}")
+            return key
         except Exception as e:
-            logger.error(f"Failed to download image from {image_url}: {e}")
+            logger.error(f"Failed to download/upload image from {image_url}: {e}")
             raise RuntimeError(f"Could not save generated image: {e}")
 
+    @staticmethod
+    def resolve_public_url(key: str | None) -> str:
+        if not key:
+            return ""
+        return _supabase.storage.from_(_BUCKET).get_public_url(key)
 
     @staticmethod
     def delete_file_if_exists(file_path: str):
         if not file_path:
             return
         try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                logger.info(f"Deleted file {file_path}")
+            _supabase.storage.from_(_BUCKET).remove([file_path])
+            logger.info(f"Deleted file from Supabase Storage: {file_path}")
         except Exception as e:
-            logger.warning(f"Could not delete file {file_path}: {e}")
+            logger.warning(f"Could not delete file {file_path} from Supabase: {e}")
 
     @staticmethod
     def delete_generation_files(generation_id: int, repository: GenerationRepository):
@@ -89,15 +100,9 @@ class StorageService:
         files_to_delete = []
         if generation.original_image_path:
             files_to_delete.append(generation.original_image_path)
-        
-        for variation in generation.variations:
+        for variation in getattr(generation, "variations", []):
             if variation.image_path:
                 files_to_delete.append(variation.image_path)
-                
-        for file_path in files_to_delete:
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.info(f"Deleted file {file_path}")
-            except Exception as e:
-                logger.error(f"Failed to delete file {file_path}: {e}")
+
+        for path in files_to_delete:
+            StorageService.delete_file_if_exists(path)

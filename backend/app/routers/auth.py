@@ -145,11 +145,9 @@ async def get_user_stats(user: User = Depends(get_current_user), db: AsyncSessio
 
 @router.post("/avatar")
 async def upload_avatar(image: UploadFile = File(...), user: User = Depends(get_current_user)):
-    """Saves the uploaded avatar locally and returns its static URL path."""
-    import asyncio
-    from fastapi.concurrency import run_in_threadpool
+    """Saves the uploaded avatar to Supabase Storage and returns its public URL."""
     
-    original_path = await run_in_threadpool(StorageService.save_upload, image)
-    photo_url = f"/static/{original_path}"
+    key = await StorageService.save_upload(image, prefix="avatars")
+    photo_url = StorageService.resolve_public_url(key)
     
     return {"photo_url": photo_url}

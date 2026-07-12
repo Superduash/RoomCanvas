@@ -67,7 +67,7 @@ async def analyze_room(
     will still be generated to allow manual refinement rather than crashing the flow.
     """
     validate_image_file(image)
-    original_image_path = await run_in_threadpool(StorageService.save_upload, image)
+    original_image_path = await StorageService.save_upload(image)
     
     repository = GenerationRepository(db)
     service = AnalysisService(repository)
