@@ -48,24 +48,20 @@ async def check_health(request: Request) -> JSONResponse:
     except Exception:
         db_status = "unreachable"
 
-    # 2. Migrations
-    migrations_status = "pending" if getattr(request.app.state, "migrations_pending", False) else "up_to_date"
-
-    # 3. AI Providers
+    # 2. AI Providers
     gemini_ok, replicate_ok = await asyncio.gather(_probe_gemini(), _probe_replicate())
 
-    # 4. Firebase
+    # 3. Firebase
     firebase_status = "ready" if is_firebase_available() else "unconfigured"
 
-    # 5. App Status
+    # 4. App Status
     app_status = "ready"
-    if db_status == "unreachable" or migrations_status == "pending":
+    if db_status == "unreachable":
         app_status = "degraded"
 
     data = HealthResponse(
         application=app_status,
         database=db_status,
-        migrations=migrations_status,
         firebase=firebase_status,
         providers={"gemini": gemini_ok, "replicate": replicate_ok}
     )

@@ -140,20 +140,6 @@ export function useDeleteAllHistory() {
   });
 }
 
-export function useDeleteRefinement() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => api.del<{ deleted: boolean }>(`/history/refinement/${id}`),
-    onSuccess: (_data, id) => {
-      qc.removeQueries({ queryKey: ['generation', id] });
-      qc.invalidateQueries({ queryKey: ['history'], exact: false });
-    },
-    onError: (err) => {
-      const detail = err instanceof ApiError ? err.message : 'Unknown error';
-      logger.error(`[useDeleteRefinement] Failed: ${detail}`, err);
-    },
-  });
-}
 
 export function useRenameGeneration() {
   const qc = useQueryClient();

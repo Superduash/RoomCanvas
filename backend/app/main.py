@@ -58,32 +58,10 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"Unexpected error during Firebase Admin initialization: {exc}")
 
-    # Validate Database Migrations
-    app.state.migrations_pending = False
     try:
-        from alembic.config import Config
-        from alembic.script import ScriptDirectory
-        from alembic.runtime.migration import MigrationContext
-        
-        alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
-        if alembic_ini_path.exists():
-            alembic_cfg = Config(str(alembic_ini_path))
-            script = ScriptDirectory.from_config(alembic_cfg)
-            
-            with engine.connect() as conn:
-                context = MigrationContext.configure(conn)
-                current_rev = context.get_current_revision()
-                head_rev = script.get_current_head()
-                
-                if current_rev != head_rev:
-                    logger.critical(f"Database schema is outdated! Current: {current_rev}, Expected: {head_rev}")
-                    logger.critical("Run `alembic upgrade head` to apply pending migrations.")
-                    app.state.migrations_pending = True
-                else:
-                    logger.info("Database schema is up-to-date.")
+        Base.metadata.create_all(bind=engine)
     except Exception as exc:
-        logger.error(f"Failed to verify database migration status: {exc}")
-        app.state.migrations_pending = True
+        logger.error(f"Failed to initialise database schema: {exc}", exc_info=True)
 
     # Ensure required storage subdirectories exist
     for directory in [settings.UPLOAD_DIR, settings.GENERATED_DIR]:
@@ -183,18 +161,6 @@ async def access_log_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-
-    # Circuit breaker if migrations are pending (allow health checks)
-    if getattr(request.app.state, "migrations_pending", False) and request.url.path != "/api/health" and request.url.path.startswith("/api"):
-        return JSONResponse(
-            status_code=503,
-            content={
-                "code": "SERVICE_UNAVAILABLE",
-                "message": "The application is currently starting up or running migrations. Please try again later.",
-                "request_id": req_id,
-                "timestamp": time.time()
-            }
-        )
     
     return response
 
