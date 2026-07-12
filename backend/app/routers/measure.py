@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.measurement.schemas import MeasurementRequest, MeasurementResult
 from app.measurement.calibration import calculate_scale, cm_to_inches
@@ -8,7 +8,7 @@ from app.measurement.vanishing_point import correct_for_perspective
 router = APIRouter(tags=["Measurement"])
 
 @router.post("/measure", response_model=MeasurementResult)
-def measure_image(request: MeasurementRequest, db: Session = Depends(get_db)):
+def measure_image(request: MeasurementRequest, db: AsyncSession = Depends(get_db)):
     try:
         # Calculate scale based on the reference object
         scale_cm_per_px = calculate_scale(

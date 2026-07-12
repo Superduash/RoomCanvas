@@ -1,10 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   ChevronDown, ChevronUp, ArrowRight,
   ScanLine, Sparkles, Pencil, ImageIcon,
-  Layers, MoveRight,
+  Layers, Palette, LayoutDashboard, Zap, ShieldCheck
 } from 'lucide-react';
 import { Button } from '../components/primitives/Button';
 import { CompareSlider, CompareSliderSkeleton } from '../components/results/CompareSlider';
@@ -12,69 +12,43 @@ import { useAuth } from '../auth/AuthProvider';
 import { useHistory } from '../api/queries';
 import { resolveImageUrl } from '../api/client';
 import { formatStyleName } from '../utils/formatters';
+import { cn } from '../lib/utils';
 
-const STEPS: { icon: ReactNode; step: string; label: string; desc: string; link?: string }[] = [
+const STEPS = [
   {
     icon: <ImageIcon className="h-5 w-5" />,
-    step: '01',
+    step: '1',
     label: 'Upload',
-    desc: 'Drop a photo of any room — phone snapshots work perfectly.',
-    link: '/upload',
+    desc: 'Snap a photo of any room. No perfect lighting required.',
   },
   {
     icon: <ScanLine className="h-5 w-5" />,
-    step: '02',
+    step: '2',
     label: 'Analyze',
-    desc: 'Gemini AI maps furniture, palette, dimensions, and budget.',
+    desc: 'Gemini AI maps furniture, layout, and lighting conditions.',
   },
   {
     icon: <Sparkles className="h-5 w-5" />,
-    step: '03',
+    step: '3',
     label: 'Generate',
-    desc: 'Flux creates a photorealistic redesign in under 90 seconds.',
-  },
-  {
-    icon: <Pencil className="h-5 w-5" />,
-    step: '04',
-    label: 'Refine',
-    desc: 'Say "make it brighter" and regenerate until it\'s perfect.',
-  },
-];
-
-const FEATURES = [
-  {
-    icon: <ScanLine className="h-5 w-5" />,
-    title: 'Deep Room Analysis',
-    desc: 'Real furniture identification, dimension estimation, color palette extraction — not just a style filter.',
-  },
-  {
-    icon: <Sparkles className="h-5 w-5" />,
-    title: 'Photorealistic Generation',
-    desc: 'Flux Kontext Pro generates interior redesigns that look like professional photography.',
-  },
-  {
-    icon: <Layers className="h-5 w-5" />,
-    title: 'Iterative Refinement',
-    desc: 'Keep the bones, change the details. Natural language edits, unlimited iterations.',
-  },
+    desc: 'Flux creates a stunning photorealistic redesign in 90s.',
+  }
 ];
 
 const FAQ = [
-  { q: 'What image formats can I upload?', a: 'JPEG, PNG, and WEBP are supported. Maximum file size is set by the server (shown on the upload page). Phone photos work perfectly.' },
-  { q: 'How long does generation take?', a: 'Analysis takes 5–15 seconds. Image generation runs 30–90 seconds on Flux AI via Replicate. You can track progress in real time.' },
-  { q: 'Is my data stored?', a: 'Images and designs are stored locally on the server running RoomCanvas. Nothing is sent to third-party services beyond the AI providers.' },
-  { q: 'Can I refine multiple times?', a: 'Yes — every refinement creates a new versioned generation you can compare side-by-side with the original or any previous version.' },
-  { q: 'What styles are available?', a: 'Modern Minimalist, Scandinavian, Industrial, Bohemian, and Luxury Contemporary. Styles load live from the server.' },
+  { q: 'What image formats can I upload?', a: 'JPEG, PNG, and WEBP are supported. Maximum file size is 5MB. Phone photos work perfectly.' },
+  { q: 'How long does generation take?', a: 'Analysis takes 5–15 seconds. Image generation runs 30–90 seconds via Flux AI. You can track progress in real time.' },
+  { q: 'Is my data stored securely?', a: 'Images and designs are stored securely. Nothing is sent to third-party services beyond our AI providers (Google & Replicate).' },
+  { q: 'Can I refine multiple times?', a: 'Yes — every refinement creates a new versioned generation you can compare side-by-side with the original.' },
+  { q: 'What styles are available?', a: 'Modern Minimalist, Scandinavian, Industrial, Bohemian, and Luxury Contemporary. More are added regularly.' },
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  show:   { opacity: 1, y: 0 },
-};
-
-const stagger = {
-  show: { transition: { staggerChildren: 0.1 } },
-};
+const STATS = [
+  { value: '10+', label: 'Design Styles' },
+  { value: '<90s', label: 'Avg. Generation' },
+  { value: '5MB', label: 'Max Upload Size' },
+  { value: '∞', label: 'Refinements' },
+];
 
 export function LandingPage() {
   const { user } = useAuth();
@@ -84,262 +58,265 @@ export function LandingPage() {
   const recentCompleted = projects?.filter((p) => p.latest_generation?.status === 'completed' && p.latest_generation?.variations.length > 0) ?? [];
 
   return (
-    <div className="flex flex-col page-enter">
-
-      {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-bg">
-        {/* Warm radial glow */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse 70% 50% at 60% -10%, rgba(183,110,77,0.10) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-
-        <div className="mx-auto max-w-content px-6 pt-20 pb-16 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-12 xl:gap-16 items-center">
-
-            {/* Left: headline + CTA */}
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              animate="show"
-              className="max-w-lg"
-            >
-              <motion.p
-                variants={fadeUp}
-                className="text-xs font-semibold uppercase tracking-widest text-accent mb-5"
-              >
-                AI Interior Design
-              </motion.p>
-
-              <motion.h1
-                variants={fadeUp}
-                className="font-semibold tracking-tight text-[52px] xl:text-[60px] leading-tight text-text-primary mb-5"
-                style={{ lineHeight: 1.1, letterSpacing: '-0.025em' }}
-              >
-                See your room,{' '}
-                <em className="not-italic" style={{ color: 'var(--color-accent)' }}>redesigned</em>
-              </motion.h1>
-
-              <motion.p
-                variants={fadeUp}
-                className="text-lg text-text-secondary leading-relaxed mb-8"
-              >
-                Upload a photo of any room. Get AI analysis, furniture recommendations,
-                and a photorealistic redesign — in under two minutes.
-              </motion.p>
-
-              <motion.div variants={fadeUp} className="flex flex-wrap gap-3">
-                <Link to="/upload">
-                  <Button
-                    size="lg"
-                    variant="primary"
-                    iconRight={<ArrowRight className="h-4 w-4" />}
-                  >
-                    Start Your Design
-                  </Button>
-                </Link>
-                <Link to="/history">
-                  <Button size="lg" variant="secondary">
-                    View History
-                  </Button>
-                </Link>
-              </motion.div>
-
-              {/* Subtle social proof */}
-              <motion.div variants={fadeUp} className="mt-8 flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {['#D4B5A0', '#C4A882', '#B89473'].map((bg, i) => (
-                    <div
-                      key={i}
-                      className="h-7 w-7 rounded-full border-2 border-surface"
-                      style={{ backgroundColor: bg }}
-                      aria-hidden="true"
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-text-tertiary">
-                  5 styles · unlimited refinements · real-time generation
-                </p>
-              </motion.div>
-            </motion.div>
-
-            {/* Right: Before/After hero */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <HeroVisual />
-            </motion.div>
-          </div>
+    <div className="flex flex-col">
+      
+      {/* ── HERO SECTION ─────────────────────────────────────────── */}
+      <section className="relative overflow-hidden min-h-[85vh] flex flex-col items-center justify-center pt-20">
+        {/* Animated bg */}
+        <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden>
+          <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,var(--color-accent-muted),transparent_70%)] animate-float opacity-60 mix-blend-screen dark:mix-blend-lighten" />
+          <div className="absolute bottom-[-10%] right-[5%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(91,155,213,0.08),transparent_70%)] animate-float [animation-delay:3s] opacity-80" />
         </div>
 
-        {/* Scroll hint */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-1 opacity-40" aria-hidden="true">
-          <div className="h-10 w-[1px] bg-border-strong" />
-          <ChevronDown className="h-3 w-3 text-text-tertiary" />
-        </div>
-      </section>
+        <div className="mx-auto max-w-content px-5 py-24 text-center flex flex-col items-center gap-8 w-full relative z-10">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-subtle border border-accent/20 text-accent text-xs font-semibold tracking-wide uppercase shadow-sm">
+              <Sparkles className="h-3 w-3" />
+              Powered by Gemini + Flux Kontext
+            </span>
+          </motion.div>
 
-      {/* ── HOW IT WORKS ──────────────────────────────────────────── */}
-      <section className="bg-surface border-y border-border py-20" aria-labelledby="how-heading">
-        <div className="mx-auto max-w-content px-6">
-          <div className="text-center mb-12">
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">How it works</p>
-            <h2 id="how-heading" className="text-3xl font-semibold text-text-primary">
-              From photo to redesign in minutes
-            </h2>
-          </div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+            className="text-[clamp(2.4rem,6vw,5rem)] font-bold tracking-tight leading-[1.08] text-text-primary text-balance max-w-4xl"
+          >
+            See your room,<br />
+            <span className="text-accent">redesigned.</span>
+          </motion.h1>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border rounded-2xl overflow-hidden">
-            {STEPS.map((step, i) => (
-              <div key={step.label} className="bg-surface p-8 flex flex-col gap-4 relative">
-                {/* Step number */}
-                <p className="text-xs font-mono text-text-tertiary tracking-widest">{step.step}</p>
+          <motion.p 
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}
+            className="text-lg text-text-secondary max-w-2xl leading-relaxed text-pretty"
+          >
+            Upload a photo. Gemini analyzes it. Flux generates a photorealistic redesign. Done in 90 seconds.
+          </motion.p>
 
-                {/* Icon */}
-                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center">
-                  {step.icon}
-                </div>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.24 }}
+            className="flex flex-col sm:flex-row items-center gap-4 mt-2"
+          >
+            <Button size="lg" asChild className="h-12 px-6 text-[15px] shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 transition-all">
+              <Link to="/upload">Design my room <ArrowRight className="h-4 w-4 ml-1.5" /></Link>
+            </Button>
+            <Button variant="ghost" size="lg" className="h-12 px-6 text-[15px]" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}>
+              See examples
+            </Button>
+          </motion.div>
 
-                {/* Content */}
-                <div>
-                  {step.link ? (
-                    <Link to={step.link} className="text-base font-semibold text-accent hover:underline block mb-1.5">
-                      {step.label}
-                    </Link>
-                  ) : (
-                    <h3 className="text-base font-semibold text-text-primary mb-1.5">{step.label}</h3>
-                  )}
-                  <p className="text-sm text-text-secondary leading-relaxed">{step.desc}</p>
-                </div>
-
-                {/* Connector arrow */}
-                {i < STEPS.length - 1 && (
-                  <MoveRight
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-border-strong z-10 hidden lg:block"
-                    aria-hidden="true"
-                  />
-                )}
-              </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+            className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 mt-2"
+          >
+            {['Free to try', 'No credit card', '90-second results'].map(t => (
+              <span key={t} className="text-[13px] font-medium text-text-tertiary flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-accent/60" />
+                {t}
+              </span>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* ── FEATURES ─────────────────────────────────────────────── */}
-      <section className="py-20" aria-labelledby="features-heading">
+      {/* ── DEMO SLIDER ────────────────────────────────────────── */}
+      <section id="demo" className="py-10 pb-24 relative z-20">
+        <div className="mx-auto max-w-[1024px] px-5">
+           <motion.div 
+             initial={{ opacity: 0, y: 40 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true, margin: '-100px' }}
+             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+             className="rounded-2xl overflow-hidden shadow-2xl border border-border bg-surface relative group"
+           >
+             <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">Before</div>
+             <div className="absolute top-4 right-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">After</div>
+             <CompareSlider
+                beforeSrc="/originalroom.png"
+                afterSrc="/redesignedroom.png"
+             />
+           </motion.div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ───────────────────────────────────────── */}
+      <section className="py-24 bg-surface-alt/40 border-y border-border">
         <div className="mx-auto max-w-content px-6">
-          <div className="text-center mb-12">
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Built different</p>
-            <h2 id="features-heading" className="text-3xl font-semibold text-text-primary">
-              Not a style filter — a full redesign engine
-            </h2>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold tracking-tight text-text-primary mb-4">How it works</h2>
+            <p className="text-text-secondary">From snapshot to stunning design in three simple steps.</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="group p-8 rounded-2xl border border-border bg-surface hover:border-accent/30 hover:shadow-md transition-all duration-base"
-              >
-                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-base">
-                  {f.icon}
-                </div>
-                <h3 className="text-base font-semibold text-text-primary mb-2">{f.title}</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── RECENT DESIGNS (from real history) ───────────────────── */}
-      {(user && (historyLoading || recentCompleted.length > 0)) && (
-        <section className="bg-surface border-y border-border py-20" aria-labelledby="examples-heading">
-          <div className="mx-auto max-w-content px-6">
-            <div className="text-center mb-10">
-              <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Live results</p>
-              <h2 id="examples-heading" className="text-3xl font-semibold text-text-primary">
-                Recent designs from your library
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {historyLoading
-                ? [0, 1, 2].map((i) => (
-                    <div key={i} className="rounded-2xl overflow-hidden border border-border">
-                      <CompareSliderSkeleton />
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative">
+             {/* Desktop connecting line */}
+             <div className="hidden md:block absolute top-[44px] left-[15%] right-[15%] h-[2px] border-t-2 border-dashed border-border-strong z-0" />
+             
+             {STEPS.map((step, i) => (
+               <div key={i} className="flex flex-col items-center text-center relative z-10 bg-surface-alt/40 p-4">
+                  <div className="w-12 h-12 rounded-2xl bg-accent text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-accent/20 mb-6">
+                    {step.step}
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-accent mb-4 shadow-sm">
+                      {step.icon}
                     </div>
-                  ))
-                : recentCompleted.map((p) => (
-                    <Link
-                      key={p.id}
-                      to={`/results/${p.id}`}
-                      className="group block rounded-2xl overflow-hidden border border-border hover:border-accent/30 hover:shadow-md transition-all duration-base"
-                    >
-                      <CompareSlider
-                        beforeSrc={resolveImageUrl(p.original_image_path)}
-                        afterSrc={resolveImageUrl(p.latest_generation.variations[0].image_path)}
-                      />
-                      <div className="px-4 py-3 bg-surface border-t border-border/50">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-sm font-semibold text-text-primary">
-                            {p.room_type_detected ?? 'Room'} &middot; {formatStyleName(p.style)}
-                          </p>
-                          <ArrowRight className="h-4 w-4 text-text-tertiary group-hover:text-accent group-hover:translate-x-1 transition-transform duration-base" aria-hidden="true" />
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] font-medium text-text-tertiary">
-                          <span className="flex items-center gap-1 text-accent"><Sparkles className="h-3 w-3" /> Latest</span>
-                          <span>&bull;</span>
-                          <span>{p.version_count} {p.version_count === 1 ? 'Version' : 'Versions'}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-            </div>
+                    <h3 className="text-[17px] font-semibold text-text-primary mb-2">{step.label}</h3>
+                    <p className="text-[14px] text-text-secondary leading-relaxed max-w-[260px]">{step.desc}</p>
+                  </div>
+               </div>
+             ))}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
+
+      {/* ── FEATURES (BENTO GRID) ──────────────────────────────── */}
+      <section className="py-24">
+        <div className="mx-auto max-w-[1024px] px-6">
+          <div className="text-center mb-16">
+             <span className="inline-flex items-center px-3 py-1 rounded-full bg-surface-alt border border-border text-[13px] font-medium text-text-secondary mb-4">
+                Features
+             </span>
+             <h2 className="text-3xl font-bold tracking-tight text-text-primary">Not a style filter — a full redesign engine</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[280px]">
+            
+            {/* 1. Deep Room Analysis (Large Col-Span-2) */}
+            <div className="md:col-span-2 rounded-[24px] bg-surface border border-border p-8 flex flex-col md:flex-row gap-8 overflow-hidden relative shadow-sm hover:shadow-md transition-shadow group">
+               <div className="flex-1 z-10 flex flex-col justify-center">
+                 <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4">
+                   <ScanLine className="h-5 w-5" />
+                 </div>
+                 <h3 className="text-xl font-bold text-text-primary mb-2">Deep Room Analysis</h3>
+                 <p className="text-text-secondary mb-6 text-[15px] leading-relaxed">
+                   Gemini Vision intelligently maps your room before generation, understanding exactly what's structural and what's decor.
+                 </p>
+                 <div className="flex flex-col gap-2">
+                   {['Furniture Identification', 'Color Palette Extraction', 'Lighting Detection'].map((item, idx) => (
+                     <div key={idx} className="flex items-center gap-2 text-sm font-medium text-text-primary bg-surface-alt w-fit px-3 py-1.5 rounded-lg border border-border">
+                       <ShieldCheck className="h-4 w-4 text-success" />
+                       {item}
+                     </div>
+                   ))}
+                 </div>
+               </div>
+               <div className="flex-1 bg-surface-alt rounded-xl border border-border relative overflow-hidden hidden md:block">
+                  <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent" />
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-48 h-48 bg-accent/10 blur-[50px] rounded-full" />
+                  <div className="absolute left-6 top-6 bottom-6 right-[-20%] bg-surface border border-border shadow-lg rounded-xl overflow-hidden flex flex-col">
+                     <div className="h-10 border-b border-border bg-surface-alt flex items-center px-4 gap-2">
+                       <div className="w-3 h-3 rounded-full bg-danger/80" />
+                       <div className="w-3 h-3 rounded-full bg-warning/80" />
+                       <div className="w-3 h-3 rounded-full bg-success/80" />
+                     </div>
+                     <div className="p-4 space-y-3">
+                        <div className="h-2 w-1/3 bg-border rounded-full" />
+                        <div className="h-2 w-3/4 bg-border-strong rounded-full" />
+                        <div className="h-2 w-1/2 bg-border-strong rounded-full" />
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* 2. 90-Second Generation */}
+            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col relative overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+               <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
+                 <Zap className="h-5 w-5" />
+               </div>
+               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">90-Second Generation</h3>
+               <p className="text-text-secondary text-[15px] leading-relaxed z-10">
+                 Powered by Flux Kontext Pro, get stunning high-res renders faster than making coffee.
+               </p>
+               <div className="absolute -bottom-4 left-6 right-6 h-16 bg-surface-alt border border-border rounded-t-xl overflow-hidden flex items-center px-4">
+                  <div className="w-full h-2 bg-border rounded-full overflow-hidden">
+                     <div className="w-[85%] h-full bg-accent rounded-full relative overflow-hidden">
+                        <div className="absolute inset-0 bg-white/20 w-1/2 animate-[skeleton-shimmer_1s_infinite]" />
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* 3. Iterative Refinement */}
+            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col relative overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+               <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
+                 <Layers className="h-5 w-5" />
+               </div>
+               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">Iterative Refinement</h3>
+               <p className="text-text-secondary text-[15px] leading-relaxed z-10">
+                 Chat with the AI. Say "make it brighter" and keep the bones of the design.
+               </p>
+               <div className="absolute bottom-6 right-6 left-12 bg-accent text-white p-3 rounded-2xl rounded-br-none shadow-md text-sm font-medium">
+                  "Make the lighting warmer and add some plants."
+               </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── SOCIAL PROOF STRIP ─────────────────────────────────── */}
+      <section className="py-10 border-y border-border bg-surface-alt overflow-hidden">
+         <div className="flex flex-col items-center justify-center gap-6 px-6">
+            <span className="text-xs font-semibold uppercase tracking-widest text-text-tertiary">Trusted by designers and homeowners</span>
+            <div className="flex flex-col md:flex-row gap-6 w-full max-w-[1024px] overflow-x-auto pb-4 snap-x">
+               {[
+                 { name: "Sarah J.", role: "Interior Designer", quote: "RoomCanvas cuts my concept phase from days to literally minutes." },
+                 { name: "Mark T.", role: "Homeowner", quote: "Finally, I can actually see what my living room looks like before buying furniture." },
+                 { name: "Elena R.", role: "Architect", quote: "The structural awareness is incredible. It keeps the walls and windows where they belong." }
+               ].map((t, i) => (
+                 <div key={i} className="flex-1 min-w-[280px] p-5 bg-surface border border-border rounded-xl shadow-sm snap-center">
+                    <p className="text-[14px] text-text-secondary italic mb-4">"{t.quote}"</p>
+                    <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 rounded-full bg-accent-subtle text-accent flex items-center justify-center font-bold text-xs">{t.name[0]}</div>
+                       <div className="flex flex-col">
+                         <span className="text-xs font-bold text-text-primary">{t.name}</span>
+                         <span className="text-[11px] text-text-tertiary">{t.role}</span>
+                       </div>
+                    </div>
+                 </div>
+               ))}
+            </div>
+         </div>
+      </section>
+
+      {/* ── STATS BAR ────────────────────────────────────────── */}
+      <section className="py-20 border-b border-border">
+         <div className="mx-auto max-w-[1024px] px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+               {STATS.map(s => (
+                 <div key={s.label} className="flex flex-col gap-2">
+                    <span className="text-4xl font-bold text-text-primary tracking-tight">{s.value}</span>
+                    <span className="text-sm font-medium text-text-tertiary uppercase tracking-wider">{s.label}</span>
+                 </div>
+               ))}
+            </div>
+         </div>
+      </section>
 
       {/* ── FAQ ──────────────────────────────────────────────────── */}
-      <section className="py-20" aria-labelledby="faq-heading">
-        <div className="mx-auto max-w-content px-6">
-          <div className="text-center mb-10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">FAQ</p>
-            <h2 id="faq-heading" className="text-3xl font-semibold text-text-primary">
-              Common questions
+      <section className="py-24" aria-labelledby="faq-heading">
+        <div className="mx-auto max-w-[800px] px-6">
+          <div className="text-center mb-12">
+            <h2 id="faq-heading" className="text-3xl font-bold tracking-tight text-text-primary">
+              Frequently asked questions
             </h2>
           </div>
 
-          <div className="max-w-2xl mx-auto divide-y divide-border border border-border rounded-2xl overflow-hidden">
+          <div className="divide-y divide-border border border-border bg-surface rounded-[24px] overflow-hidden shadow-sm">
             {FAQ.map((item, i) => (
               <div key={i}>
                 <button
-                  className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-surface-alt transition-colors duration-fast focus-visible:outline-none focus-visible:shadow-focus"
+                  className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-surface-alt transition-colors duration-[180ms] focus-visible:outline-none focus-visible:bg-surface-alt cursor-pointer"
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   aria-expanded={openFaq === i}
-                  aria-controls={`faq-answer-${i}`}
                 >
-                  <span className="text-sm font-medium text-text-primary pr-4">{item.q}</span>
-                  {openFaq === i
-                    ? <ChevronUp className="h-4 w-4 text-text-tertiary flex-shrink-0" />
-                    : <ChevronDown className="h-4 w-4 text-text-tertiary flex-shrink-0" />
-                  }
+                  <span className="text-[15px] font-medium text-text-primary pr-4">{item.q}</span>
+                  {openFaq === i ? <ChevronUp className="h-4 w-4 text-text-tertiary shrink-0" /> : <ChevronDown className="h-4 w-4 text-text-tertiary shrink-0" />}
                 </button>
                 <AnimatePresence>
                   {openFaq === i && (
                     <motion.div
-                      id={`faq-answer-${i}`}
-                      role="region"
-                      initial={{ height: 0 }}
-                      animate={{ height: 'auto' }}
-                      exit={{ height: 0 }}
+                      initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
                       transition={{ duration: 0.22, ease: [0, 0, 0.2, 1] }}
                       className="overflow-hidden"
                     >
-                      <p className="px-6 pb-5 text-sm text-text-secondary leading-relaxed bg-surface">
+                      <p className="px-6 pb-5 text-[15px] text-text-secondary leading-relaxed bg-surface">
                         {item.a}
                       </p>
                     </motion.div>
@@ -351,48 +328,23 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA BAND ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ backgroundColor: 'var(--color-accent)' }}>
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse 60% 80% at 90% 50%, rgba(255,255,255,0.06) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-        <div className="relative mx-auto max-w-content px-6 py-20 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-4">Get started free</p>
-          <h2 className="text-4xl font-semibold tracking-tight text-white mb-4" style={{ lineHeight: 1.15 }}>
-            Ready to see your room<br />transformed?
+      {/* ── CTA BANNER ─────────────────────────────────────────── */}
+      <section className="py-24 bg-gradient-to-b from-bg to-accent/5">
+        <div className="mx-auto max-w-content px-6 text-center flex flex-col items-center">
+          <h2 className="text-4xl font-bold tracking-tight text-text-primary mb-4">
+            Ready to reimagine your space?
           </h2>
-          <p className="text-white/70 mb-8 text-base max-w-sm mx-auto leading-relaxed">
-            Upload a photo and get your first AI redesign in minutes. No account required.
+          <p className="text-text-secondary mb-8 text-[17px] max-w-md mx-auto leading-relaxed">
+            Upload a photo and get your first AI redesign in minutes.
           </p>
           <Link to="/upload">
-            <Button
-              size="lg"
-              className="bg-white text-accent hover:bg-white/95 shadow-lg"
-              iconRight={<ArrowRight className="h-4 w-4" />}
-            >
-              Start Your Design
+            <Button size="lg" className="h-14 px-8 text-base shadow-xl shadow-accent/20">
+              Start designing — it's free
             </Button>
           </Link>
+          <p className="text-xs text-text-tertiary mt-4">Takes less than 2 minutes</p>
         </div>
       </section>
     </div>
   );
 }
-
-/* ── Hero visual — using static before/after images ─── */
-function HeroVisual() {
-  return (
-    <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
-      <CompareSlider
-        beforeSrc="/originalroom.png"
-        afterSrc="/redesignedroom.png"
-        beforeLabel="Original"
-        afterLabel="Redesigned"
-      />
-    </div>
-  );
-}
-
-

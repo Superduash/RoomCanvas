@@ -330,7 +330,7 @@ export function CompareSlider({
       <div className="absolute top-4 left-4 pointer-events-none z-20">
         <span
           ref={beforeLabelRef}
-          className="rounded-full bg-surface/95 backdrop-blur-md border border-border/60 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-text-primary shadow-sm will-change-auto"
+          className="rounded-full bg-black/75 backdrop-blur-md border border-white/10 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-white shadow-md will-change-auto"
           style={{
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)'
           }}
@@ -341,7 +341,7 @@ export function CompareSlider({
       <div className="absolute top-4 right-4 pointer-events-none z-20">
         <span
           ref={afterLabelRef}
-          className="rounded-full bg-surface/95 backdrop-blur-md border border-border/60 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-text-primary shadow-sm will-change-auto"
+          className="rounded-full bg-black/75 backdrop-blur-md border border-white/10 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-white shadow-md will-change-auto"
           style={{
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)'
           }}

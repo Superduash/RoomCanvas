@@ -7,6 +7,7 @@ export interface User {
   bio: string | null;
   theme_preference: string;
   email_notifications: boolean;
+  profile_completed: boolean;
   created_at: string;
 }
 
@@ -14,6 +15,9 @@ export interface UserUpdate {
   display_name?: string | null;
   username?: string | null;
   bio?: string | null;
+  photo_url?: string | null;
+  theme_preference?: string | null;
+  profile_completed?: boolean | null;
 }
 
 export interface SettingsUpdate {
@@ -73,6 +77,8 @@ export interface FurnitureItem {
   item: string;
   description: string;
   estimated_price_range: string;
+  dimensions?: string;
+  confidence?: 'High' | 'Medium' | 'Low';
 }
 
 export interface ColorSwatch {
@@ -91,6 +97,11 @@ export interface AnalyzeResponse {
   estimated_budget_range: string;
   style_explanation: string;
   redesign_prompt: string;
+  design_rationale?: {
+    overview: string;
+    observations: string[];
+    watch_out: string;
+  };
 }
 
 export interface StyleOption {

@@ -1,92 +1,52 @@
-"""
-session.py — SQLAlchemy engine and session configuration.
-Tuned for SQLite with WAL mode and connection pooling.
-
-Two engines are exposed:
-- `engine` / `SessionLocal`           — request-scoped (StaticPool for SQLite)
-- `bg_engine` / `BackgroundSessionLocal` — background-task-scoped (NullPool)
-
-Background tasks MUST use BackgroundSessionLocal so they open a fresh
-connection rather than sharing the StaticPool connection that the active
-request session holds, which would otherwise deadlock.
-"""
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+import time
+import logging
 from app.config import settings
 
-connect_args = {}
-engine_kwargs: dict = {}
-bg_engine_kwargs: dict = {}
+logger = logging.getLogger("app.database")
 
-if settings.DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
-    # Use StaticPool for SQLite to reuse one connection for request sessions
-    from sqlalchemy.pool import StaticPool, NullPool
-    engine_kwargs["poolclass"] = StaticPool
-    engine_kwargs["connect_args"] = connect_args
-    # Background tasks use NullPool — new connection per session, no sharing
-    bg_engine_kwargs["poolclass"] = NullPool
-    bg_engine_kwargs["connect_args"] = connect_args
-else:
-    # For production Postgres: pool tuning
-    engine_kwargs["pool_size"] = 5
-    engine_kwargs["max_overflow"] = 10
-    engine_kwargs["pool_pre_ping"] = True
-    engine_kwargs["connect_args"] = connect_args
-    bg_engine_kwargs["pool_size"] = 2
-    bg_engine_kwargs["max_overflow"] = 5
-    bg_engine_kwargs["pool_pre_ping"] = True
-    bg_engine_kwargs["connect_args"] = connect_args
+@event.listens_for(Engine, "before_cursor_execute")
+def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    conn.info.setdefault("query_start_time", []).append(time.time())
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    echo=False,
-    **engine_kwargs,
+@event.listens_for(Engine, "after_cursor_execute")
+def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    start_time = conn.info["query_start_time"].pop(-1)
+    total_time = (time.time() - start_time) * 1000
+    if total_time > 500:
+        logger.warning(f"Slow query ({total_time:.2f}ms): {statement}")
+
+class Base(DeclarativeBase):
+    pass
+
+def _make_async_url(url: str) -> str:
+    if url.startswith("sqlite:///"):
+        return url.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+# Set up the engine
+engine = create_async_engine(
+    _make_async_url(settings.DATABASE_URL),
+    echo=settings.DEBUG,
+    pool_pre_ping=True,
+    # SQLite-specific: no pool size needed for local dev, but asyncpg for prod needs it
+    **({} if "sqlite" in settings.DATABASE_URL else {
+        "pool_size": 5,
+        "max_overflow": 10,
+        "pool_timeout": 30,
+    }),
 )
 
-bg_engine = create_engine(
-    settings.DATABASE_URL,
-    echo=False,
-    **bg_engine_kwargs,
-)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
-# ── SQLite performance tuning (apply to both engines) ─────────────────────────
-def _apply_sqlite_pragmas(eng):
-    @event.listens_for(eng, "connect")
-    def _set_pragmas(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.execute("PRAGMA cache_size=-32000")
-        cursor.execute("PRAGMA temp_store=MEMORY")
-        cursor.close()
-
-if settings.DATABASE_URL.startswith("sqlite"):
-    _apply_sqlite_pragmas(engine)
-    _apply_sqlite_pragmas(bg_engine)
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
-
-# Session factory for background tasks — NullPool, no connection sharing
-BackgroundSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=bg_engine,
-)
-
-Base = declarative_base()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from fastapi.concurrency import run_in_threadpool
 from app.database.session import get_db
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.generation_repository import GenerationRepository
 from app.services.analysis_service import AnalysisService
 from app.services.storage_service import StorageService
@@ -57,7 +57,7 @@ router = APIRouter(prefix="/analyze", tags=["Analysis"])
 async def analyze_room(
     image: UploadFile = File(...),
     style: str = Form(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """

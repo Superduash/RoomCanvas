@@ -4,8 +4,7 @@ Edits an existing generation with a new instruction via Replicate.
 Invalidates history and parent generation cache after success.
 """
 from fastapi import APIRouter, Depends, BackgroundTasks
-from fastapi.concurrency import run_in_threadpool
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.repositories.generation_repository import GenerationRepository
 from app.services.refinement_service import RefinementService
@@ -58,22 +57,22 @@ router = APIRouter(prefix="/refine", tags=["Refinement"])
 async def refine_design(
     request: RefineRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     repository = GenerationRepository(db)
     service = RefinementService(repository)
     
     # 1. Prepare child row
-    result = await run_in_threadpool(
-        service.prepare_refinement,
+    result = await service.prepare_refinement(
         request.generation_id,
         request.instruction,
         user_id=current_user.id
     )
     
     # 2. Invalidate parent and list caches
-    await run_in_threadpool(invalidate_generation_cache, request.generation_id, current_user.id)
+    import asyncio
+    asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, request.generation_id, current_user.id))
     
     # 3. Schedule Replicate task
     background_tasks.add_task(

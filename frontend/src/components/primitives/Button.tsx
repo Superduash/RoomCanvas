@@ -1,31 +1,34 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { Slot } from '@radix-ui/react-slot';
 import { cn } from '../../lib/utils';
+import { Tooltip } from './Tooltip';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline';
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'icon-sm' | 'icon' | 'icon-lg';
 
-interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
   icon?: React.ReactNode;
   iconRight?: React.ReactNode;
+  asChild?: boolean;
 }
 
 const variantClasses: Record<Variant, string> = {
   primary: [
     'bg-accent text-white shadow-xs',
-    'hover:bg-accent-hover hover:shadow-sm',
-    'active:bg-accent-hover active:shadow-xs active:scale-[0.98]',
-    'disabled:opacity-50 disabled:hover:bg-accent disabled:hover:shadow-xs disabled:active:scale-100',
+    'hover:bg-accent-hover hover:shadow-md hover:-translate-y-[1px]',
+    'active:bg-accent-hover active:shadow-xs active:translate-y-0 active:scale-[0.98]',
+    'disabled:opacity-50 disabled:hover:bg-accent disabled:hover:shadow-xs disabled:hover:translate-y-0 disabled:active:scale-100',
   ].join(' '),
   secondary: [
-    'bg-surface text-text-primary border border-border shadow-xs',
-    'hover:border-border-strong hover:bg-surface-alt',
-    'active:bg-surface-alt active:border-border-strong active:scale-[0.98]',
-    'disabled:opacity-50 disabled:hover:bg-surface disabled:hover:border-border',
+    'bg-surface-raised text-text-primary border border-border-strong shadow-xs',
+    'hover:border-text-tertiary/40 hover:bg-surface-raised hover:shadow-sm hover:-translate-y-[1px]',
+    'active:bg-surface-alt active:border-border-strong active:translate-y-0 active:scale-[0.98]',
+    'disabled:opacity-50 disabled:hover:bg-surface-raised disabled:hover:border-border-strong disabled:hover:translate-y-0',
   ].join(' '),
   ghost: [
     'bg-transparent text-text-secondary',
@@ -51,34 +54,45 @@ const sizeClasses: Record<Size, string> = {
   xs:      'h-7 px-2.5 text-xs gap-1.5 rounded-md',
   sm:      'h-8 px-3 text-xs gap-1.5 rounded-lg',
   md:      'h-9 px-4 text-sm gap-2 rounded-lg',
-  lg:      'h-10 px-5 text-sm gap-2 rounded-lg',
+  lg:      'h-12 px-7 text-[15px] font-semibold gap-2 rounded-xl',
   'icon-sm':'h-7 w-7 p-0 rounded-md flex-shrink-0',
   icon:    'h-9 w-9 p-0 rounded-lg flex-shrink-0',
   'icon-lg':'h-10 w-10 p-0 rounded-lg flex-shrink-0',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps & HTMLMotionProps<'button'>>(
-  ({ variant = 'primary', size = 'md', loading, icon, iconRight, disabled, className, children, ...props }, ref) => {
+  ({ variant = 'primary', size = 'md', loading, icon, iconRight, asChild, disabled, className, children, title, ...props }, ref) => {
     const isDisabled = disabled || loading;
     const isIcon = size === 'icon' || size === 'icon-sm' || size === 'icon-lg';
 
-    return (
+    const classes = cn(
+      'inline-flex items-center justify-center font-medium',
+      'transition-all duration-base ease-out cursor-pointer select-none',
+      'focus-visible:outline-none focus-visible:shadow-focus',
+      'disabled:cursor-not-allowed',
+      variantClasses[variant],
+      sizeClasses[size],
+      className,
+    );
+
+    if (asChild) {
+      return (
+        <Slot ref={ref} className={classes} aria-disabled={isDisabled} {...(props as any)}>
+          {children}
+        </Slot>
+      );
+    }
+
+    const buttonElement = (
       <motion.button
         ref={ref}
         type="button"
         whileTap={isDisabled ? undefined : { scale: 0.98 }}
-        transition={{ duration: 0.08, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.12, ease: [0.22, 1, 0.36, 1] }}
         aria-disabled={isDisabled}
         disabled={isDisabled}
-        className={cn(
-          'inline-flex items-center justify-center font-medium',
-          'transition-all duration-base cursor-pointer select-none',
-          'focus-visible:outline-none focus-visible:shadow-focus',
-          'disabled:cursor-not-allowed',
-          variantClasses[variant],
-          sizeClasses[size],
-          className,
-        )}
+        className={classes}
+        title={!isIcon ? title : undefined}
         {...props}
       >
         {loading ? (
@@ -92,6 +106,16 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps & HTMLMotionProp
         )}
       </motion.button>
     );
+
+    if (isIcon && title) {
+      return (
+        <Tooltip content={title}>
+          {buttonElement}
+        </Tooltip>
+      );
+    }
+
+    return buttonElement;
   }
 );
 Button.displayName = 'Button';

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, func
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.session import Base
 
@@ -16,7 +16,8 @@ class User(Base):
     bio: Mapped[str | None] = mapped_column(String, nullable=True)
     theme_preference: Mapped[str] = mapped_column(String, default="system", nullable=False)
     email_notifications: Mapped[bool] = mapped_column(Integer, default=1, nullable=False) # SQLite uses Integer for boolean
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    profile_completed: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
     last_login_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
@@ -29,6 +30,10 @@ class User(Base):
 
 class Generation(Base):
     __tablename__ = "generations"
+
+    __table_args__ = (
+        Index('ix_generations_user_status', 'user_id', 'status', 'created_at'),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Clock, LayoutTemplate, Sparkles } from 'lucide-react';
+import { Search, X, Clock, FileText, Image as ImageIcon, Palette } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useHistory, useStyles } from '../../api/queries';
 import { cn } from '../../lib/utils';
@@ -38,9 +38,9 @@ function Highlight({ text, query }: { text: string; query: string }) {
     <span className="truncate">
       {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <strong key={i} className="font-semibold text-text-primary">
+          <mark key={i} className="bg-transparent text-accent font-semibold">
             {part}
-          </strong>
+          </mark>
         ) : (
           <span key={i}>{part}</span>
         )
@@ -107,6 +107,19 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Cmd+K shortcut
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        inputRef.current?.focus();
+        setIsOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
   // Reset active index when results change
@@ -309,7 +322,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
             isOpen && !isMobile && "shadow-xs border-border-strong bg-surface"
           )}
         />
-        {query && (
+        {query ? (
           <button
             onClick={() => {
               setQuery('');
@@ -320,11 +333,19 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
           >
             <X className="h-3.5 w-3.5" />
           </button>
+        ) : (
+          !isMobile && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-surface text-[10px] font-medium text-text-tertiary">
+                <span className="text-[11px]">⌘</span>K
+              </kbd>
+            </div>
+          )
         )}
       </div>
 
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && (query.trim().length > 0 || recentSearches.length > 0 || (stylesData && stylesData.length > 0)) && (
           <>
             {isMobile && (
               <motion.div
@@ -372,7 +393,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
                                 className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-surface-alt transition-colors group"
                               >
                                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-surface-alt group-hover:bg-surface text-text-secondary">
-                                  <Sparkles className="h-4 w-4" />
+                                  <Palette className="h-4 w-4" />
                                 </div>
                                 <span className="text-sm text-text-secondary group-hover:text-text-primary">{s.id}</span>
                               </li>
@@ -427,7 +448,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
                             {item.type === 'popular_style' && (
                               <div className="flex items-center gap-2">
                                 <div className={cn("flex items-center justify-center rounded-md bg-surface-alt text-text-secondary group-hover:bg-surface", isMobile ? "h-10 w-10" : "h-8 w-8")}>
-                                  <Sparkles className="h-4 w-4" />
+                                  <Palette className="h-4 w-4" />
                                 </div>
                                 <span className="text-sm text-text-secondary group-hover:text-text-primary">{item.styleId}</span>
                               </div>
@@ -453,7 +474,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
                             {item.type === 'style' && (
                               <>
                                 <div className={cn("flex items-center justify-center rounded-md bg-surface-alt text-text-secondary shrink-0", isMobile ? "h-10 w-10" : "h-8 w-8")}>
-                                  <Sparkles className="h-4 w-4" />
+                                  <Palette className="h-4 w-4" />
                                 </div>
                                 <span className="text-sm text-text-primary flex-1 truncate">
                                   <Highlight text={item.styleId} query={debouncedQuery} />
@@ -463,7 +484,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
                             {item.type === 'page' && (
                               <>
                                 <div className={cn("flex items-center justify-center rounded-md bg-surface-alt text-text-secondary shrink-0", isMobile ? "h-10 w-10" : "h-8 w-8")}>
-                                  <LayoutTemplate className="h-4 w-4" />
+                                  <FileText className="h-4 w-4" />
                                 </div>
                                 <span className="text-sm text-text-primary flex-1 truncate">
                                   <Highlight text={item.label} query={debouncedQuery} />

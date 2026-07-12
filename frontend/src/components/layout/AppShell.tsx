@@ -1,13 +1,41 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { TopNav } from './TopNav';
 import { Footer } from './Footer';
 import { CommandPalette } from '../command/CommandPalette';
+import { ShortcutSheet } from '../command/ShortcutSheet';
 import { ScrollToTop } from '../../router/ScrollToTop';
 import { AuthModal } from '../auth/AuthModal';
+import { VerificationBanner } from '../auth/VerificationBanner';
+
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      setProgress(scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0);
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update(); // init
+    return () => window.removeEventListener('scroll', update);
+  }, []);
+  return progress;
+}
 
 export function AppShell() {
+  const location = useLocation();
+  const scrollProgress = useScrollProgress();
+
   return (
     <div className="min-h-screen flex flex-col bg-bg">
+      {/* Scroll Progress Indicator */}
+      <div 
+        className="fixed top-0 left-0 h-[2px] bg-accent z-[100] transition-all duration-75 ease-out origin-left"
+        style={{ width: `${scrollProgress * 100}%` }}
+        aria-hidden="true"
+      />
+
       {/* Skip to main content */}
       <a
         href="#main-content"
@@ -18,13 +46,26 @@ export function AppShell() {
 
       <ScrollToTop />
       <TopNav />
+      <VerificationBanner />
 
-      <main id="main-content" className="flex-1 flex flex-col" tabIndex={-1}>
-        <Outlet />
+      <main id="main-content" className="flex-1 flex flex-col relative" tabIndex={-1}>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="flex-1 flex flex-col w-full"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <Footer />
       <CommandPalette />
+      <ShortcutSheet />
       <AuthModal />
     </div>
   );

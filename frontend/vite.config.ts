@@ -75,20 +75,25 @@ export default defineConfig({
     })
   ],
   build: {
-    target: 'es2020',
+    target: ['es2022', 'chrome100', 'firefox100', 'safari15'],
     sourcemap: false,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        // Vite 8 + Rolldown requires manualChunks to be a function, not an object
         manualChunks: (id: string) => {
-          if (id.includes('framer-motion')) return 'motion';
-          if (id.includes('@tanstack/react-query')) return 'query';
+          if (id.includes('framer-motion')) return 'vendor-motion';
+          if (id.includes('@tanstack/react-query')) return 'vendor-query';
+          if (id.includes('firebase/')) return 'vendor-firebase';
+          if (id.includes('@radix-ui/')) return 'vendor-radix';
+          if (id.includes('lucide-react')) return 'vendor-icons';
+          if (id.includes('react-dropzone') || id.includes('react-image-crop')) return 'vendor-forms';
           if (
             id.includes('react-dom') ||
             id.includes('react-router-dom') ||
             (id.includes('node_modules/react/') && !id.includes('react-dom'))
-          )
-            return 'vendor';
+          ) {
+            return 'vendor-react';
+          }
         },
       },
     },

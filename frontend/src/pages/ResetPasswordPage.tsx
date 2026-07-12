@@ -23,10 +23,10 @@ export function ResetPasswordPage() {
     return (
       <AuthLayout panelTitle="Invalid link." panelSubtitle="This password reset link is invalid or missing.">
         <div className="flex flex-col mb-8">
-          <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Invalid Reset Link</h2>
-          <p className="text-[15px] text-text-secondary">This link appears to be broken or has already been used.</p>
+          <h2 className="text-2xl font-semibold text-text-primary tracking-tight mb-2">Invalid Reset Link</h2>
+          <p className="text-[14px] text-text-secondary leading-relaxed">This link appears to be broken or has already been used.</p>
         </div>
-        <Button variant="primary" className="w-full" onClick={() => navigate('/forgot-password')}>Request a new link</Button>
+        <Button variant="primary" size="lg" className="w-full h-11 text-[15px]" onClick={() => navigate('/forgot-password')}>Request a new link</Button>
       </AuthLayout>
     );
   }
@@ -61,9 +61,9 @@ export function ResetPasswordPage() {
           <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-6">
             <CheckCircle2 size={32} className="text-success" />
           </div>
-          <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-3">Password Updated</h2>
-          <p className="text-[15px] text-text-secondary mb-8">You will be redirected to sign in shortly.</p>
-          <Button variant="primary" className="w-full" onClick={() => navigate('/signin')}>Continue to sign in</Button>
+          <h2 className="text-2xl font-semibold text-text-primary tracking-tight mb-3">Password Updated</h2>
+          <p className="text-[14px] text-text-secondary mb-8">You will be redirected to sign in shortly.</p>
+          <Button variant="primary" size="lg" className="w-full h-11 text-[15px]" onClick={() => navigate('/signin')}>Continue to sign in</Button>
         </div>
       </AuthLayout>
     );
@@ -71,16 +71,28 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout panelTitle="Choose a new password." panelSubtitle="Make sure it's at least 8 characters long and contains a mix of letters and numbers.">
-      <div className="flex flex-col mb-6">
-        <h2 className="text-3xl font-semibold text-text-primary tracking-tight mb-2">Set new password</h2>
-        <p className="text-[15px] text-text-secondary">Enter your new password below.</p>
+      <div className="flex flex-col mb-8">
+        <h2 className="text-2xl font-semibold text-text-primary tracking-tight mb-2">Set new password</h2>
+        <p className="text-[14px] text-text-secondary leading-relaxed">Enter your new password below.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <PasswordField value={password} onChange={setPassword} showStrength id="new-password" />
-        <PasswordField value={confirm} onChange={setConfirm} label="Confirm new password" id="confirm-password" />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 relative">
+        <PasswordField 
+          id="new-password" 
+          value={password} 
+          onChange={setPassword} 
+          showStrength 
+          placeholder="Create a new secure password" 
+        />
+        <PasswordField 
+          id="confirm-password" 
+          label="Confirm new password" 
+          value={confirm} 
+          onChange={setConfirm} 
+          placeholder="Re-enter your password" 
+        />
 
-        <Button type="submit" size="md" className="w-full mt-1" loading={submitting}>Save password</Button>
+        <Button type="submit" size="lg" className="w-full h-11 text-[15px] mt-2" loading={submitting}>Save password</Button>
       </form>
     </AuthLayout>
   );

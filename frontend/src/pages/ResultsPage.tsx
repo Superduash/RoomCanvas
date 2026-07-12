@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Download, Check, RefreshCw, Share2, ChevronLeft, AlertTriangle, Layers, Clock, Sparkles
+  Download, Check, RefreshCw, Share2, ChevronLeft, AlertTriangle, Layers, Clock, Sparkles,
+  SplitSquareHorizontal, Image as ImageIcon, ArrowLeftRight, Plus
 } from 'lucide-react';
 import React, { Suspense } from 'react';
 import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
@@ -11,7 +12,7 @@ const CompareSlider = React.lazy(() => import('../components/results/CompareSlid
 const RefinementPanel = React.lazy(() => import('../components/refine/RefinementPanel').then(m => ({ default: m.RefinementPanel })));
 const CustomizationPanel = React.lazy(() => import('../components/refine/CustomizationPanel').then(m => ({ default: m.CustomizationPanel })));
 import {
-  FurnitureList, DimensionCard, PaletteSwatches, BudgetCard, TextBlock
+  FurnitureList, DimensionCard, PaletteSwatches, BudgetCard, TextBlock, DesignRationale
 } from '../components/results/RecommendationPanel';
 import { MeasurementOverlay } from '../components/measurement/MeasurementOverlay';
 import { Button } from '../components/primitives/Button';
@@ -287,18 +288,36 @@ export function ResultsPage() {
             {/* View mode toggle */}
             {isCompleted && (
               <div className="flex rounded-lg border border-border bg-surface p-1 shadow-xs w-fit" role="group" aria-label="View mode">
-                {(['compare', 'side-by-side', 'generated'] as ViewMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setViewMode(mode)}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-all duration-fast rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                      viewMode === mode ? 'bg-surface-alt text-text-primary shadow-sm border border-border/50' : 'text-text-secondary hover:text-text-primary hover:bg-black/[0.02] border border-transparent'
-                    }`}
-                    aria-pressed={viewMode === mode}
-                  >
-                    {mode === 'compare' ? 'Compare' : mode === 'side-by-side' ? 'Side by side' : 'Final Only'}
-                  </button>
-                ))}
+                <button
+                  onClick={() => setViewMode('compare')}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold transition-all duration-fast rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    viewMode === 'compare' ? 'bg-surface-alt text-text-primary shadow-sm border border-border/50' : 'text-text-secondary hover:text-text-primary hover:bg-black/[0.02] border border-transparent'
+                  }`}
+                  aria-pressed={viewMode === 'compare'}
+                >
+                  <SplitSquareHorizontal className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Compare</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('side-by-side')}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold transition-all duration-fast rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    viewMode === 'side-by-side' ? 'bg-surface-alt text-text-primary shadow-sm border border-border/50' : 'text-text-secondary hover:text-text-primary hover:bg-black/[0.02] border border-transparent'
+                  }`}
+                  aria-pressed={viewMode === 'side-by-side'}
+                >
+                  <ArrowLeftRight className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Side by Side</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('generated')}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold transition-all duration-fast rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    viewMode === 'generated' ? 'bg-surface-alt text-text-primary shadow-sm border border-border/50' : 'text-text-secondary hover:text-text-primary hover:bg-black/[0.02] border border-transparent'
+                  }`}
+                  aria-pressed={viewMode === 'generated'}
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Final Only</span>
+                </button>
               </div>
             )}
           </div>
@@ -440,10 +459,19 @@ export function ResultsPage() {
                 <h2 className="text-lg font-semibold text-text-primary">AI Analysis</h2>
               </div>
               <div className="space-y-6">
+                {analysisData.design_rationale && (
+                  <DesignRationale
+                    overview={analysisData.design_rationale.overview}
+                    observations={analysisData.design_rationale.observations}
+                    watchOut={analysisData.design_rationale.watch_out}
+                  />
+                )}
+                
                 <DimensionCard
                   width={analysisData.estimated_dimensions.width_ft}
                   length={analysisData.estimated_dimensions.length_ft}
                   confidence={analysisData.estimated_dimensions.confidence}
+                  onMeasureClick={() => setShowMeasurement(true)}
                 />
                 <BudgetCard range={analysisData.estimated_budget_range} />
                 <PaletteSwatches swatches={analysisData.color_palette} />
@@ -455,7 +483,7 @@ export function ResultsPage() {
                 {analysisData.layout_notes && (
                   <TextBlock label="Spatial Layout" content={analysisData.layout_notes} />
                 )}
-                {analysisData.style_explanation && (
+                {!analysisData.design_rationale && analysisData.style_explanation && (
                   <blockquote className="border-l-2 border-accent pl-4 text-sm text-text-secondary italic leading-relaxed py-1">
                     {analysisData.style_explanation}
                   </blockquote>

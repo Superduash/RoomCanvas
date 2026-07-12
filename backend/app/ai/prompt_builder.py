@@ -93,7 +93,12 @@ def build_customization_clause(c) -> str:
         parts.append(f"Use {c.lighting_preference.lower()} lighting throughout.")
     return " ".join(parts)
 
-COMPOSITION_LOCK = "Keep the exact same camera angle, framing, and perspective as the original photo. Do not reposition, resize, or reflect the room."
+COMPOSITION_LOCK = """CRITICAL COMPOSITION RULES:
+1. Keep the EXACT same camera angle, framing, and perspective as the original photo.
+2. Do NOT reposition, resize, reflect, or rotate the room layout.
+3. Preserve all structural elements: walls, windows, doors, ceiling, floor, and their positions.
+4. CHANGE only: furniture style, materials, colors, decorations, lighting fixtures, and soft furnishings.
+5. Use the verb "change" - not "transform" or "redesign" - to signal precise targeted edits."""
 
 def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = None, customization=None, is_regenerate=False, style_id=None) -> str:
     gemini_redesign_prompt = sanitize_prompt(gemini_redesign_prompt)

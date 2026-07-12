@@ -56,7 +56,7 @@ def is_backend(file_path):
     filename = Path(file_path).name
     if "backend" in parts:
         return True
-    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py'):
+    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py', 'render.yaml'):
         return True
     return False
 
@@ -65,7 +65,7 @@ def is_frontend(file_path):
     filename = Path(file_path).name
     if "frontend" in parts:
         return True
-    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py'):
+    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py', 'render.yaml'):
         return True
     return False
 

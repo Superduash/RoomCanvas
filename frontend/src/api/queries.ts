@@ -20,6 +20,15 @@ export function useStyles() {
   });
 }
 
+export function useUserStats(enabled = true) {
+  return useQuery({
+    queryKey: ['user_stats'],
+    queryFn: () => api.get<{ total_designs: number; favorite_style: string | null; member_since: string }>('/auth/me/stats'),
+    staleTime: 60000,
+    enabled,
+  });
+}
+
 export function useHealth() {
   return useQuery({
     queryKey: ['health'],
@@ -74,7 +83,8 @@ export function useHistory(limit = 50, enabled = true) {
   return useQuery({
     queryKey: ['history', limit],
     queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
-    staleTime: 5000,
+    staleTime: 30000,
+    gcTime: 5 * 60000,
     enabled,
   });
 }

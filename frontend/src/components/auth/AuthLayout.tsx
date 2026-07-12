@@ -21,37 +21,43 @@ function BackButton() {
       >
         <ArrowLeft size={20} className="text-text-primary" />
       </button>
-      <span className="text-[18px] font-semibold tracking-tight text-text-primary">RoomCanvas</span>
+      <span className="text-[18px] font-semibold tracking-tight text-text-primary mt-[1px]">RoomCanvas</span>
     </div>
   );
 }
 
 export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: React.ReactNode; panelTitle: string; panelSubtitle: string; }) {
   return (
-    <div className="min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-bg">
+    <div className="min-h-screen flex flex-col md:grid md:grid-cols-[40%_60%] lg:grid-cols-[50%_50%] xl:grid-cols-[55%_45%] bg-bg">
       {/* Left Info Panel (Hidden on Mobile) */}
-      <div className="hidden lg:flex flex-col justify-between p-6 xl:p-10 bg-surface-alt border-r border-border">
+      <div className="relative hidden md:flex flex-col justify-between p-8 lg:p-12 xl:p-16 bg-surface-alt border-r border-border overflow-hidden">
+        {/* Premium Background Effects */}
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_100%_100%_at_0%_0%,rgba(183,110,77,0.06)_0%,transparent_80%)]" aria-hidden="true" />
+        <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.02)] dark:shadow-[inset_0_0_100px_rgba(0,0,0,0.2)]" aria-hidden="true" />
+        
         {/* Brand */}
-        <BackButton />
+        <div className="relative z-10">
+          <BackButton />
+        </div>
 
         {/* Content */}
-        <div className="flex flex-col gap-5 max-w-[480px]">
-          <div className="flex flex-col gap-1.5">
-            <h1 className="text-2xl xl:text-3xl font-semibold text-text-primary leading-[1.15] tracking-tight">{panelTitle}</h1>
-            <p className="text-[15px] text-text-secondary leading-relaxed">{panelSubtitle}</p>
+        <div className="relative z-10 flex flex-col gap-8 max-w-[500px]">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-3xl xl:text-4xl font-semibold text-text-primary leading-[1.15] tracking-tight text-balance">{panelTitle}</h1>
+            <p className="text-[16px] text-text-secondary leading-relaxed text-pretty">{panelSubtitle}</p>
           </div>
 
-          <ul className="flex flex-col gap-3.5">
+          <ul className="flex flex-col gap-5">
             {VALUE_PROPS.map((p) => (
-              <li key={p.title} className="flex items-start gap-3">
-                <div className="shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center mt-0.5">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <li key={p.title} className="flex items-start gap-4">
+                <div className="shrink-0 w-8 h-8 rounded-full bg-surface shadow-xs border border-border text-accent flex items-center justify-center mt-0.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <div className="flex flex-col">
-                  <p className="font-semibold text-text-primary text-[14px]">{p.title}</p>
-                  <p className="text-[13px] text-text-secondary leading-snug">{p.desc}</p>
+                <div className="flex flex-col pt-1">
+                  <p className="font-semibold text-text-primary text-[15px] leading-tight mb-1">{p.title}</p>
+                  <p className="text-[14px] text-text-secondary leading-relaxed">{p.desc}</p>
                 </div>
               </li>
             ))}
@@ -59,12 +65,14 @@ export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: 
         </div>
 
         {/* Footer */}
-        <p className="text-[12px] text-text-tertiary font-medium">Powered by Gemini analysis and Flux Kontext rendering.</p>
+        <div className="relative z-10">
+          <p className="text-[13px] text-text-tertiary font-medium">Powered by Gemini analysis and Flux Kontext rendering.</p>
+        </div>
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex flex-1 items-center justify-center p-6 sm:p-8 lg:px-10 lg:py-2 xl:p-8">
-        <div className="w-full max-w-[380px]">
+      <div className="flex flex-1 items-center justify-center p-6 sm:p-10 lg:p-12 xl:p-16">
+        <div className="w-full max-w-[460px]">
           {children}
         </div>
       </div>

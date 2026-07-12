@@ -21,6 +21,8 @@ const SignUpPage         = lazy(() => import('../pages/SignUpPage'));
 const SignInPage         = lazy(() => import('../pages/SignInPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
 const ResetPasswordPage  = lazy(() => import('../pages/ResetPasswordPage'));
+const AuthActionPage     = lazy(() => import('../pages/AuthActionPage'));
+const SetupProfilePage   = lazy(() => import('../pages/SetupProfilePage'));
 
 function PageLoader() {
   return (
@@ -100,6 +102,26 @@ export const router = createBrowserRouter([
       <Suspense fallback={<PageLoader />}>
         <ResetPasswordPage />
       </Suspense>
+    ),
+  },
+  {
+    path: '/auth/action',
+    errorElement: <RouterErrorBoundary />,
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <AuthActionPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/setup',
+    errorElement: <RouterErrorBoundary />,
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<PageLoader />}>
+          <SetupProfilePage />
+        </Suspense>
+      </RequireAuth>
     ),
   },
   {

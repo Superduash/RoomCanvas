@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 
 import app.logging_config as logging_config
@@ -59,7 +60,8 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Unexpected error during Firebase Admin initialization: {exc}")
 
     try:
-        Base.metadata.create_all(bind=engine)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     except Exception as exc:
         logger.error(f"Failed to initialise database schema: {exc}", exc_info=True)
 
@@ -77,6 +79,13 @@ async def lifespan(app: FastAPI):
         get_cached_config(settings.MAX_UPLOAD_SIZE_MB)
     except Exception as exc:
         logger.error(f"Failed to warm caches: {exc}")
+
+    if not settings.DEBUG and "render.com" in settings.PUBLIC_BASE_URL:
+        logger.warning(
+            "Running on Render with local filesystem storage. "
+            "Files in storage/ will be LOST on redeploy or instance restart. "
+            "Migrate to Cloudflare R2, Backblaze B2, or AWS S3 before production traffic."
+        )
 
     # Display clean startup banner
     from app.auth.firebase_admin_init import is_firebase_available
@@ -162,6 +171,11 @@ async def access_log_middleware(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     
+    # Rate limit headers
+    if hasattr(request.state, "rate_limit_headers"):
+        for key, value in request.state.rate_limit_headers.items():
+            response.headers[key] = value
+            
     return response
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
@@ -174,6 +188,15 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+class StaticCacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/static"):
+            response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=604800"
+        return response
+
+app.add_middleware(StaticCacheMiddleware)
 
 # ── Static file serving ───────────────────────────────────────────────────────
 # Mount the parent storage directory so /static/uploads/…, /static/generated/… all work.

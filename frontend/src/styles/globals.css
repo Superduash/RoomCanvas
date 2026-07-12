@@ -11,11 +11,14 @@
   }
 
   html {
-    font-size: 16px;
+    font-size: 15px; /* Match --text-base token exactly */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
+    /* Fix iOS safe areas for devices with notch/home indicator */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   body {
@@ -27,6 +30,8 @@
     min-height: 100vh;
     transition: background-color var(--duration-base) var(--ease-out),
                 color var(--duration-base) var(--ease-out);
+    /* Prevent iOS rubber-band overscroll from showing body bg */
+    overscroll-behavior: none;
   }
 
   ::selection {
@@ -58,20 +63,28 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
 }
 
-/* ── Skeleton pulse ─────────────────────────────────────── */
-@layer utilities {
-  .skeleton-pulse {
-    background: linear-gradient(
-      90deg,
-      var(--color-border) 25%,
-      var(--color-surface-alt) 50%,
-      var(--color-border) 75%
-    );
-    background-size: 200% 100%;
-    animation: skeleton-shimmer 1.6s ease-in-out infinite;
-  }
+/* Fix Firefox backdrop-filter flicker */
+.backdrop-blur-app,
+[class*="backdrop-blur"] {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+}
 
-  /* Typography utilities */
+.max-w-content {
+  max-width: min(1280px, 100% - 2rem);
+}
+
+@media (min-width: 1024px) and (max-width: 1366px) {
+  html { font-size: 14.5px; }
+}
+@media (min-width: 1920px) {
+  html { font-size: 16px; }
+}
+
+/* ── Typography utilities ────────────────────────────────── */
+@layer utilities {
   .text-balance { text-wrap: balance; }
   .text-pretty  { text-wrap: pretty; }
 
@@ -92,49 +105,115 @@
   }
 }
 
+/* ── Animations ───────────────────────────────────────────── */
+/* Page transitions */
+@keyframes page-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes page-fade-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: page-fade-up var(--duration-page) var(--ease-out) both;
+}
+.page-enter-fast {
+  animation: page-fade-up var(--duration-slow) var(--ease-out) both;
+}
+
+/* Skeleton */
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    var(--color-surface-alt) 50%,
+    var(--color-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
 
-/* ── Page transition ─────────────────────────────────────── */
-@keyframes page-fade-up {
-  from { opacity: 0; transform: translateY(10px); }
+/* Glow pulse for AI generation */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-glow); }
+  50%       { box-shadow: 0 0 0 8px transparent; }
+}
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Float for hero elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Gradient shift for hero bg */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* Count up for stats */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.page-enter {
-  animation: page-fade-up var(--duration-slow) var(--ease-out) both;
+
+/* Typing cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
+/* Radix UI animation utilities */
+@layer utilities {
+  .animate-in  { animation-duration: var(--duration-base); animation-fill-mode: both; }
+  .animate-out { animation-duration: var(--duration-fast);  animation-fill-mode: both; }
+  .fade-in-0   { animation-name: fade-in;   }
+  .fade-out-0  { animation-name: fade-out;  }
+  .zoom-in-95  { animation-name: zoom-in;   }
+  .zoom-out-95 { animation-name: zoom-out;  }
+}
+@keyframes fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes zoom-in  { from { transform: scale(0.95); } to { transform: scale(1); } }
+@keyframes zoom-out { from { transform: scale(1);    } to { transform: scale(0.95); } }
+
+
 /* ── Select dropdown cross-browser fix ────────────────────── */
-/* Chrome/Windows doesn't inherit background for <option> in custom-styled selects */
 select option {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
 }
 
 /* ── Stacking context ─────────────────────────────────────── */
-/* Ensure card dropdowns stay above sibling cards but below dialogs/toasts */
 @layer utilities {
   .z-card { z-index: 10; }
-  .z-dropdown { z-index: 50; }
-  .z-modal { z-index: 100; }
-  .z-toast { z-index: 9999; }
+  .z-dropdown { z-index: 100; } /* updated from 50 to 100 per new scale */
+  .z-modal { z-index: 400; }    /* updated from 100 to 400 */
+  .z-toast { z-index: 500; }    /* updated from 9999 to 500 */
 }
 
 /* ── Focus visible ring ───────────────────────────────────── */
-/* Consistent focus ring across interactive elements */
 :focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
-/* Suppress outline for mouse users */
 :focus:not(:focus-visible) {
   outline: none;
 }
 
 /* ── Input / select base reset ────────────────────────────── */
-/* Remove Firefox default styling for invalid states */
 input:invalid, textarea:invalid, select:invalid {
   box-shadow: none;
 }

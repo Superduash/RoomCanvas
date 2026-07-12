@@ -6,7 +6,7 @@ ANALYSIS_RESPONSE_SCHEMA = {
     "type": "object",
     "required": ["room_type", "architecture", "furniture_placement", "furniture", "estimated_dimensions", "layout_notes",
                  "color_palette", "lighting_suggestions", "estimated_budget_range",
-                 "style_explanation", "redesign_prompt"],
+                 "style_explanation", "redesign_prompt", "design_rationale"],
     "properties": {
         "room_type": {"type": "string"},
         "architecture": {
@@ -29,7 +29,9 @@ ANALYSIS_RESPONSE_SCHEMA = {
                 "properties": {
                     "item": {"type": "string"},
                     "description": {"type": "string"},
-                    "estimated_price_range": {"type": "string"}
+                    "estimated_price_range": {"type": "string"},
+                    "dimensions": {"type": "string"},
+                    "confidence": {"type": "string", "enum": ["Low", "Medium", "High"]}
                 }
             }
         },
@@ -54,6 +56,18 @@ ANALYSIS_RESPONSE_SCHEMA = {
         "lighting_suggestions": {"type": "string"},
         "estimated_budget_range": {"type": "string"},
         "style_explanation": {"type": "string"},
-        "redesign_prompt": {"type": "string"}
+        "redesign_prompt": {"type": "string"},
+        "design_rationale": {
+            "type": "object",
+            "required": ["overview", "observations", "watch_out"],
+            "properties": {
+                "overview": {"type": "string"},
+                "observations": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "watch_out": {"type": "string"}
+            }
+        }
     }
 }

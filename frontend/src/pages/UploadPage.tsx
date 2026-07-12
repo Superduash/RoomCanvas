@@ -7,17 +7,45 @@ import { Dropzone } from '../components/upload/Dropzone';
 import { Card } from '../components/primitives/Card';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton } from '../components/primitives/Skeleton';
-import { useConfig, useStyles, useAnalyzeRoom } from '../api/queries';
+import { useConfig, useStyles, useAnalyzeRoom, useUserStats } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
 import { toast } from '../lib/toast';
 import { useRequireAuthAction } from '../auth/useRequireAuthAction';
 import { useAuth } from '../auth/AuthProvider';
 
+function Stat({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div className="flex flex-col items-end sm:items-start">
+      <span className="text-xl sm:text-2xl font-bold text-text-primary leading-tight">{value}</span>
+      <span className="text-xs text-text-tertiary uppercase tracking-wider font-semibold">{label}</span>
+    </div>
+  );
+}
+
+function WelcomeBanner({ profile, stats }: { profile: any; stats: any }) {
+  return (
+    <div className="rounded-2xl bg-surface border border-border p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+      <div>
+        <p className="text-sm text-text-tertiary font-medium">Welcome back,</p>
+        <p className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">{profile?.display_name || 'Designer'} 👋</p>
+      </div>
+      <div className="flex items-center gap-6 self-start sm:self-auto">
+        <Stat value={stats?.total_designs || 0} label="Designs" />
+        {stats?.favorite_style && (
+          <Stat value={titleCase(stats.favorite_style)} label="Fav Style" />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function UploadPage() {
   const navigate = useNavigate();
   const { data: config } = useConfig();
   const { data: styles, isLoading: stylesLoading } = useStyles();
+  const { isAuthenticated, user } = useAuth();
+  const { data: stats } = useUserStats(isAuthenticated);
 
   const pendingFile = useUIStore((s) => s.pendingFile);
   const pendingPreviewUrl = useUIStore((s) => s.pendingPreviewUrl);
@@ -30,7 +58,6 @@ export function UploadPage() {
   const canSubmit = !!pendingFile && !!selectedStyleId;
   const selectedStyle = styles?.find((s) => s.id === selectedStyleId);
   const requireAuth = useRequireAuthAction();
-  const { isAuthenticated } = useAuth();
 
   // Resume pending action after sign in
   useEffect(() => {
@@ -100,12 +127,16 @@ export function UploadPage() {
         </p>
       </div>
 
-      {!isAuthenticated && (
+      {!isAuthenticated ? (
         <div className="max-w-2xl mx-auto mb-10 bg-accent/10 border border-accent/20 rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
             <h3 className="text-sm font-semibold text-accent-dark">Continue as guest, save later</h3>
             <p className="text-sm text-text-secondary">You can try the product and upload a photo before committing to an account.</p>
           </div>
+        </div>
+      ) : (
+        <div className="max-w-2xl mx-auto mb-10">
+          <WelcomeBanner profile={user} stats={stats} />
         </div>
       )}
 

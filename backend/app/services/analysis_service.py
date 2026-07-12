@@ -93,7 +93,7 @@ class AnalysisService:
 
         analysis_id = 0
         try:
-            generation = await run_in_threadpool(self.repository.create_generation, generation_data)
+            generation = await self.repository.create_generation(generation_data)
             analysis_id = generation.id
             elapsed = round(time.perf_counter() - t0, 2)
             logger.info(f"Analysis complete — id={analysis_id} style={style_id} ({elapsed}s) status={status}")

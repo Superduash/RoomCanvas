@@ -1,25 +1,26 @@
 from fastapi import Header, HTTPException, Depends
 from firebase_admin import auth as firebase_auth
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.database.session import get_db
 from app.database.models import User
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from fastapi.concurrency import run_in_threadpool
 
-def _get_or_create_user(db: Session, firebase_uid: str, email: str, decoded: dict) -> tuple[User, bool]:
-    user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+async def _get_or_create_user(db: AsyncSession, firebase_uid: str, email: str, decoded: dict) -> tuple[User, bool]:
+    user = (await db.execute(select(User).where(User.firebase_uid == firebase_uid))).scalar_one_or_none()
     is_new = False
     
     if user is None:
         if email:
-            user = db.query(User).filter(User.email == email).first()
+            user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
             
         if user:
             user.firebase_uid = firebase_uid
             user.last_login_at = datetime.utcnow()
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
         else:
             user = User(
                 firebase_uid=firebase_uid,
@@ -29,23 +30,23 @@ def _get_or_create_user(db: Session, firebase_uid: str, email: str, decoded: dic
             )
             db.add(user)
             try:
-                db.commit()
-                db.refresh(user)
+                await db.commit()
+                await db.refresh(user)
                 is_new = True
             except IntegrityError:
-                db.rollback()
-                user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+                await db.rollback()
+                user = (await db.execute(select(User).where(User.firebase_uid == firebase_uid))).scalar_one_or_none()
                 if not user:
                     raise HTTPException(status_code=500, detail="Failed to create or retrieve user")
     else:
         user.last_login_at = datetime.utcnow()
-        db.commit()
+        await db.commit()
         
     return user, is_new
 
 async def get_current_user(
     authorization: str = Header(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     from app.auth.firebase_admin_init import is_firebase_available
     if not is_firebase_available():
@@ -70,7 +71,7 @@ async def get_current_user(
     firebase_uid = decoded["uid"]
     email = decoded.get("email", "")
     
-    user, is_new = await run_in_threadpool(_get_or_create_user, db, firebase_uid, email, decoded)
+    user, is_new = await _get_or_create_user(db, firebase_uid, email, decoded)
     user._is_new = is_new
     
     return user

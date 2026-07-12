@@ -7,7 +7,7 @@ export function SocialAuthButton({ loading, onClick, children = 'Continue with G
       onClick={onClick} 
       disabled={loading} 
       aria-busy={loading || undefined}
-      className="flex items-center justify-center gap-3 w-full h-11 bg-surface border border-border rounded-lg text-[15px] font-semibold text-text-primary hover:bg-surface-alt hover:border-border-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent shadow-sm"
+      className="flex items-center justify-center gap-3 w-full h-11 bg-surface-raised border border-border-strong rounded-xl text-[15px] font-semibold text-text-primary shadow-xs hover:border-text-tertiary/40 hover:bg-surface hover:shadow-sm hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.98] transition-all duration-base ease-out disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:bg-surface-raised focus-visible:outline-none focus-visible:shadow-focus cursor-pointer select-none"
     >
       {loading ? <Loader2 size={18} className="animate-spin text-text-secondary" /> : (
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">

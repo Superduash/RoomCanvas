@@ -11,8 +11,7 @@ services:
       - key: DEBUG
         value: "false"
       - key: ALLOWED_ORIGINS
-        # Update this to your deployed frontend URL after Vercel deployment
-        value: "https://your-vercel-frontend.vercel.app"
+        value: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://roomcanvasai.vercel.app,https://roomcanvas.onrender.com"
       - key: DATABASE_URL
         sync: false
       - key: UPSTASH_REDIS_URL

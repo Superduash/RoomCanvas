@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { SocialAuthButton } from '../components/auth/SocialAuthButton';
 import { Button } from '../components/primitives/Button';
+import { Input } from '../components/primitives/Input';
 import { toast } from '../lib/toast';
 import { PasswordField } from '../components/auth/PasswordField';
 import { usePasswordStrength } from '../hooks/usePasswordStrength';
@@ -74,71 +75,83 @@ export function SignUpPage() {
       panelTitle="Design your first room in minutes."
       panelSubtitle="Join RoomCanvas to start transforming your spaces instantly."
     >
-      <div className="flex flex-col mb-2">
-        <h2 className="text-xl font-semibold text-text-primary tracking-tight mb-0.5">Sign up</h2>
-        <p className="text-[13px] text-text-secondary">
+      <div className="flex flex-col mb-6">
+        <h2 className="text-2xl font-semibold text-text-primary tracking-tight mb-1.5">Sign up</h2>
+        <p className="text-[14px] text-text-secondary">
           Already have an account? <Link to="/signin" className="text-accent font-semibold hover:underline">Sign in</Link>
         </p>
       </div>
 
       <SocialAuthButton loading={googleLoading} onClick={handleGoogle} />
 
-      <div className="flex items-center gap-4 my-3">
-        <div className="flex-1 h-px bg-border"></div>
-        <span className="text-[12px] text-text-tertiary font-medium uppercase tracking-wider">or email</span>
-        <div className="flex-1 h-px bg-border"></div>
+      <div className="flex items-center gap-4 my-6">
+        <div className="flex-1 h-px bg-border-strong/50"></div>
+        <span className="text-[12px] text-text-tertiary font-semibold uppercase tracking-wider">or continue with email</span>
+        <div className="flex-1 h-px bg-border-strong/50"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="name" className="text-[13px] font-semibold text-text-primary">Full Name</label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="name"
-            required
-            className="w-full px-3 py-1.5 border border-border rounded-lg bg-surface text-[14px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
-          />
-          {errors.name && <p className="text-[12px] text-danger -mt-0.5">{errors.name}</p>}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 relative">
+        <Input
+          id="name"
+          label="Full Name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoComplete="name"
+          placeholder="John Doe"
+          error={errors.name}
+          required
+        />
+
+        <Input
+          id="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          placeholder="name@example.com"
+          error={errors.email}
+          required
+        />
+
+        <PasswordField 
+          id="new-password" 
+          value={password} 
+          onChange={setPassword} 
+          showStrength 
+          placeholder="Minimum 8 characters"
+          error={errors.password}
+        />
+
+        <PasswordField 
+          id="confirm-password" 
+          label="Confirm password" 
+          value={confirm} 
+          onChange={setConfirm} 
+          placeholder="Re-enter your password"
+          error={errors.confirm}
+        />
+
+        <div className="flex flex-col mb-4">
+          <label className="flex items-start gap-2.5 mt-1 cursor-pointer select-none group">
+            <input 
+              type="checkbox" 
+              checked={agreed} 
+              onChange={(e) => setAgreed(e.target.checked)} 
+              className="w-4 h-4 mt-[3px] rounded border-border text-accent focus:ring-2 focus:ring-accent/30 focus:ring-offset-0 cursor-pointer shrink-0 transition-colors"
+            />
+            <span className="text-[14px] text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors">
+              I agree to the <Link to="/terms" className="text-text-primary font-medium hover:underline">Terms of Service</Link> and{' '}
+              <Link to="/privacy" className="text-text-primary font-medium hover:underline">Privacy Policy</Link>
+            </span>
+          </label>
+          <div className="min-h-[20px] mt-1 pl-6.5">
+            {errors.agreed && <p className="text-[13px] text-danger leading-tight font-medium" role="alert">{errors.agreed}</p>}
+          </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="email" className="text-[13px] font-semibold text-text-primary">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-            className="w-full px-3 py-1.5 border border-border rounded-lg bg-surface text-[14px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
-          />
-          {errors.email && <p className="text-[12px] text-danger -mt-0.5">{errors.email}</p>}
-        </div>
-
-        <PasswordField value={password} onChange={setPassword} showStrength id="new-password" />
-        {errors.password && <p className="text-[12px] text-danger -mt-1">{errors.password}</p>}
-
-        <PasswordField value={confirm} onChange={setConfirm} label="Confirm password" id="confirm-password" />
-        {errors.confirm && <p className="text-[12px] text-danger -mt-1">{errors.confirm}</p>}
-
-        <label className="flex items-start gap-2 mt-0.5 mb-0.5 cursor-pointer select-none">
-          <input 
-            type="checkbox" 
-            checked={agreed} 
-            onChange={(e) => setAgreed(e.target.checked)} 
-            className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-accent focus:ring-offset-surface cursor-pointer shrink-0"
-          />
-          <span className="text-[13px] text-text-secondary leading-snug">
-            I agree to the <Link to="/terms" className="text-text-primary hover:underline">Terms of Service</Link> and{' '}
-            <Link to="/privacy" className="text-text-primary hover:underline">Privacy Policy</Link>
-          </span>
-        </label>
-        {errors.agreed && <p className="text-[12px] text-danger font-medium -mt-1">{errors.agreed}</p>}
-
-        <Button type="submit" size="md" className="w-full mt-1" loading={submitting}>Create account</Button>
+        <Button type="submit" size="lg" className="w-full h-11 text-[15px]" loading={submitting}>Create account</Button>
       </form>
     </AuthLayout>
   );

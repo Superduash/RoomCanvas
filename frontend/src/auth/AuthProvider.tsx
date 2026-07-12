@@ -8,9 +8,15 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   confirmPasswordReset,
-  verifyPasswordResetCode,
   updateProfile,
   setPersistence,
+  sendEmailVerification,
+  updatePassword,
+  verifyBeforeUpdateEmail,
+  deleteUser,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  EmailAuthProvider,
   type User,
 } from 'firebase/auth';
 import {
@@ -32,6 +38,11 @@ interface AuthContextValue {
   signInWithGoogle: (remember?: boolean) => Promise<User | null>;
   sendReset: (email: string) => Promise<void>;
   confirmReset: (oobCode: string, newPassword: string) => Promise<void>;
+  sendVerification: () => Promise<void>;
+  updateUserPassword: (password: string) => Promise<void>;
+  updateUserEmail: (email: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  reauthenticate: (password?: string) => Promise<void>;
   signOut: () => Promise<void>;
   syncError: string | null;
 }
@@ -54,14 +65,23 @@ function friendlyError(err: any) {
     'auth/invalid-credential': 'Incorrect email or password.',
     'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
     'auth/network-request-failed': 'Network unavailable. Check your connection and try again.',
-    'auth/expired-action-code': 'This reset link has expired. Request a new one.',
-    'auth/invalid-action-code': 'This reset link is invalid or has already been used.',
+    'auth/expired-action-code': 'This link has expired. Please request a new one.',
+    'auth/invalid-action-code': 'This link is invalid or has already been used.',
     'auth/unauthorized-domain': 'This domain isn\u2019t authorized for sign-in yet. Please contact support.',
     'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
     'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method.',
     'auth/user-disabled': 'This account has been disabled. Contact support if this seems wrong.',
+    'auth/requires-recent-login': 'For your security, please sign in again to complete this action.',
+    'auth/credential-already-in-use': 'This credential is already associated with a different account.',
   };
-  return map[err?.code] || 'Something went wrong. Please try again.';
+  
+  if (err?.code === 'auth/requires-recent-login') {
+    // We emit an event so a re-auth modal can be triggered globally if needed,
+    // though forms should catch this and show their own inline re-auth.
+    window.dispatchEvent(new CustomEvent('roomcanvas:reauth-required'));
+  }
+  
+  return map[err?.code] || err?.message || 'Something went wrong. Please try again.';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -135,6 +155,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await withPersistence(remember);
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       if (name) await updateProfile(cred.user, { displayName: name });
+      
+      try {
+        await sendEmailVerification(cred.user, {
+          url: `${window.location.origin}/auth/action`
+        });
+      } catch (e) {
+        console.error('Failed to send verification email on signup', e);
+      }
+      
       return cred.user;
     } catch (err: any) {
       throw new Error(friendlyError(err));
@@ -174,8 +203,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const confirmReset = useCallback(async (oobCode: string, newPassword: string) => {
     try {
-      await verifyPasswordResetCode(firebaseAuth, oobCode);
       await confirmPasswordReset(firebaseAuth, oobCode, newPassword);
+    } catch (err: any) {
+      throw new Error(friendlyError(err));
+    }
+  }, []);
+
+  const sendVerification = useCallback(async () => {
+    if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
+    try {
+      await sendEmailVerification(firebaseAuth.currentUser, {
+        url: `${window.location.origin}/auth/action`
+      });
+    } catch (err: any) {
+      throw new Error(friendlyError(err));
+    }
+  }, []);
+
+  const updateUserPassword = useCallback(async (password: string) => {
+    if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
+    try {
+      await updatePassword(firebaseAuth.currentUser, password);
+    } catch (err: any) {
+      throw new Error(friendlyError(err));
+    }
+  }, []);
+
+  const updateUserEmail = useCallback(async (email: string) => {
+    if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
+    try {
+      // Firebase v9+ recommended method
+      await verifyBeforeUpdateEmail(firebaseAuth.currentUser, email, {
+        url: `${window.location.origin}/auth/action`
+      });
+    } catch (err: any) {
+      throw new Error(friendlyError(err));
+    }
+  }, []);
+
+  const deleteAccount = useCallback(async () => {
+    if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
+    try {
+      await deleteUser(firebaseAuth.currentUser);
+      setProfile(null);
+      setUser(null);
+    } catch (err: any) {
+      throw new Error(friendlyError(err));
+    }
+  }, []);
+
+  const reauthenticate = useCallback(async (password?: string) => {
+    if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
+    try {
+      if (password) {
+        const cred = EmailAuthProvider.credential(firebaseAuth.currentUser.email!, password);
+        await reauthenticateWithCredential(firebaseAuth.currentUser, cred);
+      } else {
+        await reauthenticateWithPopup(firebaseAuth.currentUser, googleProvider);
+      }
     } catch (err: any) {
       throw new Error(friendlyError(err));
     }
@@ -194,6 +279,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     sendReset,
     confirmReset,
+    sendVerification,
+    updateUserPassword,
+    updateUserEmail,
+    deleteAccount,
+    reauthenticate,
     signOut,
     syncError,
   };
