@@ -11,6 +11,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { Skeleton } from '../primitives/Skeleton';
 import FocusTrap from 'focus-trap-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { toast } from '../../lib/toast';
 
 export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -142,7 +143,11 @@ export function TopNav() {
                           Settings
                         </Link>
                         <button 
-                          onClick={() => { setAvatarMenuOpen(false); signOut(); }}
+                          onClick={async () => { 
+                            setAvatarMenuOpen(false); 
+                            await signOut();
+                            toast.success('Signed out');
+                          }}
                           className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt rounded-md transition-colors duration-base"
                         >
                           Sign Out
@@ -301,7 +306,11 @@ export function TopNav() {
                       <Skeleton className="h-10 w-full rounded-md" />
                     </div>
                   ) : user ? (
-                    <Button size="md" variant="secondary" className="w-full touch-manipulation active:scale-[0.98]" onClick={() => { setMobileOpen(false); signOut(); }}>
+                    <Button size="md" variant="secondary" className="w-full touch-manipulation active:scale-[0.98]" onClick={async () => { 
+                      setMobileOpen(false); 
+                      await signOut();
+                      toast.success('Signed out');
+                    }}>
                       Sign Out
                     </Button>
                   ) : (

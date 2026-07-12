@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 import logging
 
 _log = logging.getLogger("app.auth")
-from fastapi import APIRouter, Depends, Response, UploadFile, File
+from fastapi import APIRouter, Depends, Response, UploadFile, File, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, ConfigDict
@@ -39,13 +39,19 @@ class SettingsUpdate(BaseModel):
     theme_preference: str | None = None
     email_notifications: bool | None = None
 
+class SyncRequest(BaseModel):
+    display_name: str | None = None
+
 @router.post("/sync", response_model=UserOut)
-async def sync_user(response: Response, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def sync_user(body: SyncRequest, response: Response, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     Called once right after sign-up/sign-in on the frontend. get_current_user already
     upserts the row; this endpoint's job is just to refresh last_login_at and
     return the canonical profile so the frontend can populate the header/account UI.
     """
+    if body.display_name and not user.display_name:
+        user.display_name = body.display_name
+    
     user.last_login_at = datetime.now(timezone.utc)
     try:
         await db.commit()
@@ -69,6 +75,8 @@ async def get_me(user: User = Depends(get_current_user)):
 @router.patch("/me", response_model=UserOut)
 async def update_profile(updates: UserUpdate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from fastapi import HTTPException
+    from sqlalchemy.exc import IntegrityError
+    
     if updates.display_name is not None:
         user.display_name = updates.display_name
     if updates.username is not None:
@@ -84,6 +92,9 @@ async def update_profile(updates: UserUpdate, user: User = Depends(get_current_u
     try:
         await db.commit()
         await db.refresh(user)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="That username is already taken. Please choose another.")
     except Exception as exc:
         await db.rollback()
         _log.error(f"Failed to update user profile: {exc}")
@@ -101,9 +112,32 @@ async def update_settings(updates: SettingsUpdate, user: User = Depends(get_curr
     return user
 
 @router.delete("/me", status_code=204)
-async def delete_account(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    await db.delete(user)
+async def delete_account(
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Collect every file this user owns BEFORE the cascade delete removes the rows
+    result = await db.execute(select(Generation).where(Generation.user_id == user.id))
+    generations = result.scalars().all()
+    files = [user.photo_url] if user.photo_url else []
+    for g in generations:
+        if g.original_image_path:
+            files.append(g.original_image_path)
+        for v in getattr(g, "variations", []):
+            if v.image_path:
+                files.append(v.image_path)
+
+    await db.delete(user)   # cascades Generations + Variations at the DB row level
     await db.commit()
+
+    # Clean up files in background
+    def _cleanup():
+        for f in files:
+            StorageService.delete_file_if_exists(f)
+    
+    background_tasks.add_task(_cleanup)
+
     return Response(status_code=204)
 
 @router.get("/check-username")

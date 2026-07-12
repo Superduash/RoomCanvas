@@ -38,14 +38,17 @@ export function SignInPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
-      await signInWithGoogle(remember);
-      toast.success('Welcome back!');
+      const result = await signInWithGoogle(remember);
+      // If result is null, we're in redirect flow - page will navigate away
+      if (result) {
+        toast.success('Welcome back!');
+      }
       // AppShell will route to the correct page once backend sync finishes
     } catch (err: any) {
       toast.error(err.message);
-    } finally {
       setGoogleLoading(false);
     }
+    // Don't setGoogleLoading(false) if redirect happened - page is navigating away
   };
 
   return (

@@ -33,15 +33,18 @@ export function AuthActionPage() {
       try {
         if (mode === 'verifyEmail') {
           await applyActionCode(firebaseAuth, oobCode);
+          await firebaseAuth.currentUser?.reload();   // Sync the local emailVerified flag
           setSuccessTitle('Email Verified');
           setSuccessMessage('Your email address has been successfully verified. You can now return to your original tab, or sign in here if you opened this link on a new device.');
         } else if (mode === 'recoverEmail') {
           await checkActionCode(firebaseAuth, oobCode);
           await applyActionCode(firebaseAuth, oobCode);
+          await firebaseAuth.currentUser?.reload();
           setSuccessTitle('Email Recovered');
           setSuccessMessage('Your account email has been reverted. We recommend changing your password immediately if you did not authorize this change.');
         } else if (mode === 'verifyAndChangeEmail') {
           await applyActionCode(firebaseAuth, oobCode);
+          await firebaseAuth.currentUser?.reload();
           setSuccessTitle('Email Updated');
           setSuccessMessage('Your email address has been successfully updated.');
         } else {

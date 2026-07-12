@@ -41,8 +41,9 @@ export function AppShell() {
   }
 
   // Authenticated users who haven't completed onboarding always go to /setup.
+  // Preserve the original "from" location so onboarding can redirect back to it.
   if (isAuthenticated && profile && !profile.profile_completed) {
-    return <Navigate to="/setup" replace />;
+    return <Navigate to="/setup" state={{ from: location.state?.from || location }} replace />;
   }
 
   return (

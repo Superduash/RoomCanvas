@@ -206,10 +206,21 @@ export default function SetupProfilePage() {
          colors: ['#B76E4D', '#F3E8E2', '#D4943E', '#FFFFFF'] 
       });
 
-      setTimeout(() => navigate(location.state?.from?.pathname || '/upload', { replace: true }), 1500);
+      setTimeout(() => {
+        const destination = location.state?.from?.pathname || '/';
+        navigate(destination, { replace: true });
+      }, 1500);
       
     } catch (err: any) {
-      toast.error(err.message || 'Failed to complete profile.');
+      if (err.status === 409) {
+        setUsernameStatus('taken');
+        setUsernameError('That username was just taken. Try another.');
+        toast.error('Username unavailable — please pick another.');
+        setDirection(-1);
+        setStep(3); // Go back to username step
+      } else {
+        toast.error(err.message || 'Failed to complete profile.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -398,7 +409,7 @@ export default function SetupProfilePage() {
                 </div>
 
                 <div className="mt-auto">
-                  <Button className="w-full" size="lg" onClick={handleNextStep} disabled={bio.length > 160}>
+                  <Button className="w-full" size="lg" onClick={handleNextStep} disabled={bio.length > 160 || usernameStatus === 'checking'}>
                     Continue <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>

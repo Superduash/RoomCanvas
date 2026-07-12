@@ -16,6 +16,10 @@ export function SecuritySection() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
   // Reauth modal state
   const [reauthOpen, setReauthOpen] = useState(false);
   const [reauthPassword, setReauthPassword] = useState('');
@@ -100,18 +104,18 @@ export function SecuritySection() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
-      return;
-    }
     setIsDeleting(true);
     try {
       await withReauth(async () => {
         await deleteAccount();
+        toast.success('Account deleted successfully');
       });
     } catch (err) {
       // Error handled in withReauth
     } finally {
       setIsDeleting(false);
+      setDeleteModalOpen(false);
+      setDeleteConfirmText('');
     }
   };
 
@@ -163,10 +167,53 @@ export function SecuritySection() {
           <AlertTriangle size={18} /> Danger Zone
         </h2>
         <p className="text-sm text-text-secondary mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-        <Button variant="destructive" onClick={handleDeleteAccount} loading={isDeleting}>
+        <Button variant="destructive" onClick={() => setDeleteModalOpen(true)}>
           Delete Account
         </Button>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-danger/30 p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
+                <AlertTriangle size={20} className="text-danger" />
+              </div>
+              <h3 className="text-xl font-semibold text-text-primary tracking-tight">Delete Account</h3>
+            </div>
+            <p className="text-sm text-text-secondary mb-4">
+              This action <strong>cannot be undone</strong>. This will permanently delete your account, all your designs, and remove all associated data from our servers.
+            </p>
+            <p className="text-sm text-text-secondary mb-4">
+              Please type <strong className="text-danger">DELETE</strong> to confirm.
+            </p>
+            <Input 
+              value={deleteConfirmText} 
+              onChange={(e) => setDeleteConfirmText(e.target.value)} 
+              placeholder="Type DELETE to confirm"
+              className="mb-6"
+            />
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => {
+                setDeleteModalOpen(false);
+                setDeleteConfirmText('');
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={handleDeleteAccount}
+                loading={isDeleting}
+                disabled={deleteConfirmText !== 'DELETE'}
+              >
+                Delete My Account
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reauthentication Modal */}
       {reauthOpen && (

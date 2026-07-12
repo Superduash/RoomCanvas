@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { api } from '../api/client';
 import { type User } from '../api/types';
+import { useUserStats } from '../api/queries';
 import { Button } from '../components/primitives/Button';
 import { Input } from '../components/primitives/Input';
 import { ImageCropModal } from '../components/profile-setup/ImageCropModal';
@@ -27,6 +28,7 @@ function InitialsAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md
 
 export function ProfilePage() {
   const { profile, setProfile } = useAuth();
+  const { data: stats } = useUserStats(!!profile);
   
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -44,20 +46,12 @@ export function ProfilePage() {
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [usernameError, setUsernameError] = useState('');
 
-  // Stats
-  const [stats, setStats] = useState<{ total_designs: number; favorite_style: string | null; member_since: string | null } | null>(null);
-
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || '');
       setUsername(profile.username || '');
       setBio(profile.bio || '');
       setAvatarPreview(profile.photo_url || null);
-      
-      // Fetch stats
-      api.get<any>('/auth/me/stats')
-         .then(res => setStats(res))
-         .catch(console.error);
     }
   }, [profile]);
 
@@ -92,7 +86,7 @@ export function ProfilePage() {
   }, [username, profile]);
 
   const handleSave = async () => {
-    if (usernameStatus === 'taken' || usernameStatus === 'invalid') {
+    if (usernameStatus === 'taken' || usernameStatus === 'invalid' || usernameStatus === 'checking') {
       toast.error('Please fix username errors before saving.');
       return;
     }
@@ -123,7 +117,13 @@ export function ProfilePage() {
       setAvatarBlob(null); // Reset blob
       toast.success('Profile updated successfully.');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update profile.');
+      if (err.status === 409) {
+        setUsernameStatus('taken');
+        setUsernameError('That username was just taken. Try another.');
+        toast.error('Username unavailable — please pick another.');
+      } else {
+        toast.error(err.message || 'Failed to update profile.');
+      }
     } finally {
       setLoading(false);
     }
@@ -272,7 +272,7 @@ export function ProfilePage() {
             </div>
 
             <div className="flex justify-end mt-2">
-               <Button onClick={handleSave} loading={loading} disabled={!hasChanges || bio.length > 280}>
+               <Button onClick={handleSave} loading={loading} disabled={!hasChanges || bio.length > 280 || usernameStatus === 'checking'}>
                  Save Changes
                </Button>
             </div>

@@ -58,14 +58,17 @@ export function SignUpPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
-      await signInWithGoogle(true);
-      toast.success('Welcome to RoomCanvas!');
+      const result = await signInWithGoogle(true);
+      // If result is null, we're in redirect flow - page will navigate away
+      if (result) {
+        toast.success('Welcome to RoomCanvas!');
+      }
       // AppShell will route to /setup for new users, or /upload for returning users
     } catch (err: any) {
       toast.error(err.message);
-    } finally {
       setGoogleLoading(false);
     }
+    // Don't setGoogleLoading(false) if redirect happened - page is navigating away
   };
 
   return (

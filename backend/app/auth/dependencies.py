@@ -55,6 +55,9 @@ async def _get_or_create_user(db: AsyncSession, firebase_uid: str, email: str, d
                 _log.error(f"Unexpected DB error creating user: {exc}")
                 raise HTTPException(status_code=500, detail="Database error creating user. Please try again.")
     else:
+        # Existing user — update email if changed and last login
+        if email and user.email != email:
+            user.email = email   # keep in sync with Firebase after email changes
         user.last_login_at = datetime.now(timezone.utc)
         try:
             await db.commit()

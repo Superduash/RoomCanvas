@@ -1,9 +1,11 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   getRedirectResult,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
@@ -116,6 +118,7 @@ function parseSyncError(err: any): string {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [profile, setProfile] = useState<ApiUser | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -137,7 +140,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Force refresh on first attempt to avoid race conditions right after sign-up
         await fbUser.getIdToken(attempts === 0);
-        const data = await api.post<ApiUser>('/auth/sync', {});
+        const data = await api.post<ApiUser>('/auth/sync', { 
+          display_name: fbUser.displayName ?? undefined 
+        });
         setProfile(data);
         setSyncError(null);
         setIsSyncing(false);
@@ -189,6 +194,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, [syncBackendUser]);
 
+  // Reload user on window focus to sync email verification status
+  useEffect(() => {
+    const onFocus = () => firebaseAuth.currentUser?.reload().then(() => {
+      setUser(firebaseAuth.currentUser);  // triggers VerificationBanner re-check
+    });
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   const withPersistence = async (remember: boolean) => {
     await setPersistence(firebaseAuth, remember ? browserLocalPersistence : browserSessionPersistence);
   };
@@ -235,6 +249,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Do NOT navigate here — AppShell handles routing once profile loads.
       return cred.user;
     } catch (err: any) {
+      // If popup is blocked or closed, fall back to redirect flow
+      if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-closed-by-user') {
+        await signInWithRedirect(firebaseAuth, googleProvider);
+        // User will be redirected away; result comes back via getRedirectResult on mount
+        return null;
+      }
+      
       if (POPUP_FALLBACK_CODES.has(err?.code)) {
         throw new Error('Popup blocked. Please allow popups for this site to sign in with Google.');
       }
@@ -292,6 +313,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deleteAccount = useCallback(async () => {
     if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
     try {
+      // 1. Delete backend data FIRST — needs a still-valid token
+      await api.del('/auth/me');
+      // 2. THEN delete the Firebase credential — invalidates the token
       await deleteUser(firebaseAuth.currentUser);
       setProfile(null);
       setUser(null);
@@ -314,7 +338,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signOut = useCallback(() => firebaseSignOut(firebaseAuth), []);
+  const signOut = useCallback(async () => {
+    await firebaseSignOut(firebaseAuth);
+    queryClient.clear();   // wipe every cached query — next sign-in starts clean
+  }, [queryClient]);
 
   // Derive the semantic auth state
   const isLoading = user === undefined;

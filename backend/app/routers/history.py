@@ -2,7 +2,7 @@
 history.py — History, generation fetch, variation select, delete.
 Caches read operations; invalidates on every mutation.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -182,6 +182,7 @@ import json
 )
 async def generation_status_sse(
     generation_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -189,6 +190,9 @@ async def generation_status_sse(
     
     async def event_generator():
         while True:
+            if await request.is_disconnected():
+                break
+                
             generation = await repo.get_by_id(generation_id)
             if not generation:
                 yield {"event": "error", "data": "Not found"}

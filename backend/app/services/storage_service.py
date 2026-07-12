@@ -91,18 +91,4 @@ class StorageService:
         except Exception as e:
             logger.warning(f"Could not delete file {file_path} from Supabase: {e}")
 
-    @staticmethod
-    def delete_generation_files(generation_id: int, repository: GenerationRepository):
-        generation = repository.get_by_id(generation_id)
-        if not generation:
-            return
 
-        files_to_delete = []
-        if generation.original_image_path:
-            files_to_delete.append(generation.original_image_path)
-        for variation in getattr(generation, "variations", []):
-            if variation.image_path:
-                files_to_delete.append(variation.image_path)
-
-        for path in files_to_delete:
-            StorageService.delete_file_if_exists(path)
