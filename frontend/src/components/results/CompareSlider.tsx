@@ -24,6 +24,7 @@ export function CompareSlider({
   const beforeLabelRef = useRef<HTMLSpanElement>(null);
   const afterLabelRef = useRef<HTMLSpanElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
+  const afterImgRef = useRef<HTMLImageElement>(null);
 
   const [percent, setPercent] = useState(50);
   const percentRef = useRef(50);
@@ -165,10 +166,11 @@ export function CompareSlider({
 
     const TOTAL_MS = WIPE_DURATION + PAUSE_AT_END + SETTLE_DURATION;
 
-    const startTime = performance.now();
+    let startTime: number | null = null;
     updateDOM(START);
 
     function step(now: number) {
+      if (startTime === null) startTime = now;
       const elapsed = now - startTime;
 
       if (elapsed < WIPE_DURATION) {
@@ -232,6 +234,11 @@ export function CompareSlider({
     setAfterLoaded(false);
     hasPlayedReveal.current = false;
     setIsRevealing(false);
+    
+    // Check if the image is already fully loaded from browser cache
+    if (afterImgRef.current?.complete) {
+      setAfterLoaded(true);
+    }
   }, [afterSrc]);
 
   return (
@@ -260,6 +267,7 @@ export function CompareSlider({
     >
       {/* After (redesigned) — full width base layer */}
       <img
+        ref={afterImgRef}
         src={afterSrc}
         alt={afterLabel}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
