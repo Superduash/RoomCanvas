@@ -1,80 +1,87 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-type Theme = 'light' | 'dark';
+export type ThemePreference = 'light' | 'dark' | 'system';
+export type ActiveTheme = 'light' | 'dark';
 
 interface ThemeContextType {
-  theme: Theme;
+  themePreference: ThemePreference;
+  activeTheme: ActiveTheme;
+  setTheme: (theme: ThemePreference) => void;
   toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-function getInitialTheme(): Theme {
-  // 1. Check localStorage
-  const stored = localStorage.getItem('roomcanvas-theme') as Theme | null;
-  if (stored === 'light' || stored === 'dark') {
-    return stored;
-  }
-
-  // 2. Check system preference
-  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
-  }
-
-  // 3. Default to light
-  return 'light';
+function getSystemTheme(): ActiveTheme {
+  if (typeof window === 'undefined') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function updateThemeAttribute(theme: Theme) {
+function getInitialPreference(): ThemePreference {
+  const stored = localStorage.getItem('roomcanvas-theme') as ThemePreference | null;
+  if (stored === 'light' || stored === 'dark' || stored === 'system') {
+    return stored;
+  }
+  return 'system';
+}
+
+function updateThemeAttribute(activeTheme: ActiveTheme) {
   const root = document.documentElement;
-  root.setAttribute('data-theme', theme);
+  root.setAttribute('data-theme', activeTheme);
   
-  // Update meta theme-color for browser chrome and PWA
+  if (activeTheme === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+  
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (metaThemeColor) {
-    metaThemeColor.setAttribute('content', theme === 'dark' ? '#0A0A0B' : '#FAF7F2');
+    metaThemeColor.setAttribute('content', activeTheme === 'dark' ? '#0A0A0B' : '#FAF7F2');
   }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>(getInitialPreference);
+  const [activeTheme, setActiveTheme] = useState<ActiveTheme>(
+    themePreference === 'system' ? getSystemTheme() : themePreference
+  );
+
+  const applyTheme = (pref: ThemePreference) => {
+    const computed = pref === 'system' ? getSystemTheme() : pref;
+    setActiveTheme(computed);
+    updateThemeAttribute(computed);
+  };
 
   useEffect(() => {
-    // Apply theme on mount
-    updateThemeAttribute(theme);
+    applyTheme(themePreference);
   }, []);
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('roomcanvas-theme', newTheme);
-    updateThemeAttribute(newTheme);
+  const setTheme = (pref: ThemePreference) => {
+    setThemePreferenceState(pref);
+    localStorage.setItem('roomcanvas-theme', pref);
+    applyTheme(pref);
   };
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    setTheme(activeTheme === 'light' ? 'dark' : 'light');
   };
 
-  // Listen to system theme changes
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
-    const handleChange = (e: MediaQueryListEvent) => {
-      // Only auto-switch if user hasn't manually set a preference
-      const stored = localStorage.getItem('roomcanvas-theme');
-      if (!stored) {
-        const newTheme = e.matches ? 'dark' : 'light';
-        setThemeState(newTheme);
-        updateThemeAttribute(newTheme);
+    const handleChange = () => {
+      if (themePreference === 'system') {
+        applyTheme('system');
       }
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  }, [themePreference]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ themePreference, activeTheme, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

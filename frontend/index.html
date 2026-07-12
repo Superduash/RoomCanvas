@@ -15,10 +15,26 @@
     <meta name="description" content="Upload a photo of your room and get an AI-generated redesign with real furniture, dimension, and budget recommendations." />
     
     <!-- Theme Colors -->
-    <meta name="theme-color" content="#B76E4D" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1F1F1F" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FAF7F2" />
     <meta name="msapplication-TileColor" content="#B76E4D" />
     <meta name="msapplication-TileImage" content="/branding/android-chrome-192x192.png" />
+    
+    <!-- Theme Anti-Flicker Script -->
+    <script>
+      (function() {
+        try {
+          var pref = localStorage.getItem('roomcanvas-theme');
+          var active = 'light';
+          if (pref === 'dark' || (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            active = 'dark';
+          }
+          document.documentElement.setAttribute('data-theme', active);
+          if (active === 'dark') document.documentElement.classList.add('dark');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', active === 'dark' ? '#0A0A0B' : '#FAF7F2');
+        } catch (e) {}
+      })();
+    </script>
     
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/branding/logo.svg" />

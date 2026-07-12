@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { useTheme } from '../hooks/useTheme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../components/primitives/Button';
 import { Input, Textarea } from '../components/primitives/Input';
@@ -31,7 +32,7 @@ export default function SetupProfilePage() {
   const [username, setUsername] = useState(profile?.username || '');
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
   const [bio, setBio] = useState(profile?.bio || '');
-  const [themePref, setThemePref] = useState<'system' | 'light' | 'dark'>((profile?.theme_preference as any) || 'system');
+  const { themePreference: themePref, setTheme: setThemePref } = useTheme();
   const [emailNotifications, setEmailNotifications] = useState(profile?.email_notifications ?? true);
   
   // Crop Modal State
@@ -46,24 +47,7 @@ export default function SetupProfilePage() {
   // Submit State
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Apply theme in real-time during onboarding
-  useEffect(() => {
-    if (step === 4) { // Only apply when on the preferences step
-      if (themePref === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else if (themePref === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        // System preference
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (prefersDark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
-    }
-  }, [themePref, step]);
+
 
   // Focus trap workaround for keyboard support
   useEffect(() => {
@@ -231,9 +215,6 @@ export default function SetupProfilePage() {
       setProfile(updatedUser as any);
       
       toast.success('Profile completed! Welcome to RoomCanvas.');
-      
-      if (themePref === 'dark') document.documentElement.classList.add('dark');
-      else if (themePref === 'light') document.documentElement.classList.remove('dark');
       
       confetti({ 
          particleCount: 80, 

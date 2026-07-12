@@ -30,7 +30,7 @@ export function TopNav() {
 
   const { user, profile, signOut, isLoading, syncError } = useAuth();
   const { data: health } = useHealth();
-  const { theme, toggleTheme } = useTheme();
+  const { activeTheme: theme, toggleTheme } = useTheme();
 
   const hasProviderDown = health && (!health.providers.gemini || !health.providers.replicate);
 
