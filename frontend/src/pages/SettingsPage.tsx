@@ -2,29 +2,19 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { api } from '../api/client';
 import { type User } from '../api/types';
-import { Button } from '../components/primitives/Button';
 import { Toggle } from '../components/primitives/Toggle';
 import { Select, SelectItem } from '../components/primitives/Select';
 import { SecuritySection } from '../components/settings/SecuritySection';
-import { Input } from '../components/primitives/Input';
 import { toast } from '../lib/toast';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
-import { getAuth, deleteUser as firebaseDeleteUser } from 'firebase/auth';
 
 export function SettingsPage() {
-  const { profile, setProfile, logout } = useAuth();
+  const { profile, setProfile } = useAuth();
   
   const [theme, setTheme] = useState('system');
   const [notifications, setNotifications] = useState(true);
   const [budget, setBudget] = useState('mid-range');
   const [lighting, setLighting] = useState('natural');
-  
-  const [loading, setLoading] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteInput, setDeleteInput] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -35,7 +25,6 @@ export function SettingsPage() {
   }, [profile]);
 
   const handleSave = async (updates: Partial<User>) => {
-    setLoading(true);
     try {
       const updatedUser = await api.patch<User>('/auth/me/settings', updates);
       setProfile(updatedUser);
@@ -57,8 +46,6 @@ export function SettingsPage() {
         setTheme(profile.theme_preference || 'system');
         setNotifications(profile.email_notifications);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -70,23 +57,6 @@ export function SettingsPage() {
   const updateNotifications = (val: boolean) => {
      setNotifications(val);
      handleSave({ email_notifications: val });
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteInput !== 'DELETE') return;
-    setIsDeleting(true);
-    try {
-      await api.delete('/auth/me'); // Delete backend data first
-      const auth = getAuth();
-      if (auth.currentUser) {
-         await firebaseDeleteUser(auth.currentUser); // Delete firebase user
-      }
-      toast.success('Account deleted.');
-      logout();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete account.');
-      setIsDeleting(false);
-    }
   };
 
   if (!profile) return null;

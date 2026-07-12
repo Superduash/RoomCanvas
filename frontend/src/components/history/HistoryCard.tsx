@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ImagePlus, MoreVertical, Edit2, Download, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -100,9 +100,8 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
   };
 
   // Quick preview timer
-  import { useEffect } from 'react';
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     if (isHovering && g.status === 'completed' && p.original_image_path) {
       timeout = setTimeout(() => setShowPreview(true), 600);
     } else {

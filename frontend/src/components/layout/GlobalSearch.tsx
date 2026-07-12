@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Clock, FileText, Image as ImageIcon, Palette } from 'lucide-react';
+import { Search, X, Clock, FileText, Palette } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useHistory, useStyles } from '../../api/queries';
 import { cn } from '../../lib/utils';

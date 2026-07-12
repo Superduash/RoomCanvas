@@ -3,7 +3,7 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Check, RefreshCw, Share2, ChevronLeft, AlertTriangle, Layers, Clock, Sparkles,
-  SplitSquareHorizontal, Image as ImageIcon, ArrowLeftRight, Plus
+  SplitSquareHorizontal, Image as ImageIcon, ArrowLeftRight
 } from 'lucide-react';
 import React, { Suspense } from 'react';
 import { AnalysisStepper } from '../components/analysis/AnalysisStepper';

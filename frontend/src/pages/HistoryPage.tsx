@@ -7,6 +7,7 @@ import { Button } from '../components/primitives/Button';
 import { Dialog } from '../components/primitives/Dialog';
 import { useDeleteAllHistory } from '../api/queries';
 import { toast } from '../lib/toast';
+import { cn } from '../lib/utils';
 import { useDebounce } from '../hooks/useDebounce';
 
 type SortOrder = 'newest' | 'oldest';

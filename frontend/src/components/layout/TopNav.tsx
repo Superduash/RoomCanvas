@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, Plus, History, X, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,7 +34,7 @@ export function TopNav() {
   const hasProviderDown = health && (!health.providers.gemini || !health.providers.replicate);
 
   const avatarMenuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(avatarMenuRef, () => setAvatarMenuOpen(false));
+  useClickOutside(avatarMenuRef as React.RefObject<HTMLElement>, () => setAvatarMenuOpen(false));
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(

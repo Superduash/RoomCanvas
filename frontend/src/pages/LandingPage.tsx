@@ -1,18 +1,14 @@
-import { useState, type ReactNode, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown, ChevronUp, ArrowRight,
-  ScanLine, Sparkles, Pencil, ImageIcon,
-  Layers, Palette, LayoutDashboard, Zap, ShieldCheck
+  ScanLine, Sparkles, ImageIcon,
+  Layers, Zap, ShieldCheck
 } from 'lucide-react';
 import { Button } from '../components/primitives/Button';
-import { CompareSlider, CompareSliderSkeleton } from '../components/results/CompareSlider';
-import { useAuth } from '../auth/AuthProvider';
-import { useHistory } from '../api/queries';
-import { resolveImageUrl } from '../api/client';
-import { formatStyleName } from '../utils/formatters';
-import { cn } from '../lib/utils';
+import { CompareSlider } from '../components/results/CompareSlider';
+
 
 const STEPS = [
   {
@@ -51,11 +47,7 @@ const STATS = [
 ];
 
 export function LandingPage() {
-  const { user } = useAuth();
-  const { data: projects, isLoading: historyLoading } = useHistory(3, !!user);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  const recentCompleted = projects?.filter((p) => p.latest_generation?.status === 'completed' && p.latest_generation?.variations.length > 0) ?? [];
 
   return (
     <div className="flex flex-col">
