@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown, ChevronUp, ArrowRight,
   ScanLine, Sparkles, ImageIcon,
-  Layers, Zap, ShieldCheck
+  Layers, Zap, ShieldCheck, User
 } from 'lucide-react';
 import { Button } from '../components/primitives/Button';
 import { CompareSlider } from '../components/results/CompareSlider';
@@ -20,7 +20,7 @@ const STEPS = [
   {
     icon: <ScanLine className="h-5 w-5" />,
     step: '2',
-    label: 'Analyze',
+    label: 'Understand',
     desc: "AI understands your room's layout, furniture and lighting.",
   },
   {
@@ -41,9 +41,9 @@ const FAQ = [
 
 const STATS = [
   { value: '10+', label: 'Design Styles' },
-  { value: 'AI', label: 'Realistic Redesigns' },
   { value: 'Private', label: 'Design History' },
-  { value: '∞', label: 'Unlimited Refinements' },
+  { value: 'Unlimited', label: 'Refinements' },
+  { value: 'AI', label: 'Room Understanding' },
 ];
 
 export function LandingPage() {
@@ -83,7 +83,7 @@ export function LandingPage() {
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}
               className="text-lg text-text-secondary max-w-xl leading-relaxed text-pretty mt-6"
             >
-              Upload a photo. AI understands your room and creates a photorealistic redesign.
+              Upload a photo of your room. AI preserves its layout while creating realistic interior redesigns. Preserves walls, windows, and room layout while redesigning furniture, décor, and lighting.
             </motion.p>
 
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.24 }}
@@ -100,7 +100,7 @@ export function LandingPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
               className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-8"
             >
-              {['✓ AI Room Analysis', '✓ Photorealistic Designs', '✓ Unlimited Refinements'].map(t => (
+              {['✓ Preserves Room Layout', '✓ Photorealistic Redesigns', '✓ Unlimited Refinements'].map(t => (
                 <span key={t} className="text-[13px] font-medium text-text-tertiary flex items-center">
                   {t}
                 </span>
@@ -162,7 +162,7 @@ export function LandingPage() {
              <span className="inline-flex items-center px-3 py-1 rounded-full bg-surface-alt border border-border text-[13px] font-medium text-text-secondary mb-4">
                 Features
              </span>
-             <h2 className="text-3xl font-bold tracking-tight text-text-primary">Not a style filter — a full redesign engine</h2>
+             <h2 className="text-3xl font-bold tracking-tight text-text-primary">More than a style filter</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[280px]">
@@ -214,7 +214,7 @@ export function LandingPage() {
                </div>
                <h3 className="text-xl font-bold text-text-primary mb-2 z-10">Fast Photorealistic Generation</h3>
                <p className="text-text-secondary text-[15px] leading-relaxed z-10">
-                 High-quality photorealistic rendering.
+                 Generate high-quality redesigns while preserving your room's structure and perspective.
                </p>
                <div className="mt-auto pt-6 z-10">
                   <div className="h-14 w-full bg-surface-alt border border-border rounded-xl flex items-center px-5 shadow-inner">
@@ -238,7 +238,7 @@ export function LandingPage() {
                </p>
                <div className="mt-auto pt-6 flex justify-end z-10">
                   <div className="bg-accent text-white px-4 py-3 rounded-2xl rounded-br-sm shadow-md text-[14px] font-medium w-fit max-w-[90%] relative">
-                     "Make the lighting warmer and add some plants."
+                     "Make it brighter, add indoor plants, and switch to a Japandi style."
                   </div>
                </div>
             </div>
@@ -260,7 +260,7 @@ export function LandingPage() {
                  <div key={i} className="flex-1 min-w-[280px] p-5 bg-surface border border-border rounded-xl shadow-sm snap-center">
                     <p className="text-[14px] text-text-secondary italic mb-4">"{t.quote}"</p>
                     <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-full bg-accent-subtle text-accent flex items-center justify-center font-bold text-xs">{t.name[0]}</div>
+                       <div className="w-8 h-8 rounded-full bg-accent-subtle text-accent flex items-center justify-center font-bold text-xs"><User className="h-4 w-4" /></div>
                        <div className="flex flex-col">
                          <span className="text-xs font-bold text-text-primary">{t.name}</span>
                          <span className="text-[11px] text-text-tertiary">{t.role}</span>
@@ -332,14 +332,13 @@ export function LandingPage() {
             Transform your room with AI.
           </h2>
           <p className="text-text-secondary mb-8 text-[17px] max-w-md mx-auto leading-relaxed">
-            Upload a photo and explore multiple design possibilities.
+            Upload a photo and redesign your room in minutes.
           </p>
           <Link to="/upload">
             <Button size="lg" className="h-14 px-8 text-base shadow-xl shadow-accent/20">
               Start designing — it's free
             </Button>
           </Link>
-          <p className="text-xs text-text-tertiary mt-4">Takes less than 2 minutes</p>
         </div>
       </section>
     </div>

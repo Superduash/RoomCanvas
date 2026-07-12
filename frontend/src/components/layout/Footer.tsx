@@ -67,7 +67,7 @@ export function Footer() {
         
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border">
-          <span className="text-sm text-text-tertiary">© {year} RoomCanvas. Built with modern AI.</span>
+          <span className="text-sm text-text-tertiary">© {year} RoomCanvas. AI-powered interior redesign.</span>
         </div>
       </div>
     </footer>
