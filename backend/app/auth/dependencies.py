@@ -47,9 +47,17 @@ async def get_current_user(
     authorization: str = Header(None),
     db: Session = Depends(get_db),
 ) -> User:
+    from app.auth.firebase_admin_init import is_firebase_available
+    if not is_firebase_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication service (Firebase) is currently unavailable or not configured on this server."
+        )
+
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
     token = authorization.removeprefix("Bearer ").strip()
+
     
     try:
         # verify_id_token can be a blocking network call, moving it to threadpool

@@ -22,7 +22,8 @@ def test_get_analysis_prompt():
 def test_build_generation_prompt():
     prompt = build_generation_prompt("Redesign room")
     assert "Redesign room" in prompt
-    assert "Keep the room's structural layout unchanged" in prompt
+    assert "preserving the room's walls, windows, doors" in prompt
+
 
 def test_build_refinement_prompt():
     prompt = build_refinement_prompt("Make sofa blue")

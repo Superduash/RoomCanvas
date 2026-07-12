@@ -43,43 +43,55 @@ async def lifespan(app: FastAPI):
     """
     # ── Startup ──────────────────────────────────────────────────────────────
     if not settings.GEMINI_API_KEY:
-        logger.critical("GEMINI_API_KEY is not set — set it in .env and restart.")
-        sys.exit(1)
+        logger.error("GEMINI_API_KEY is not set — Gemini Provider requests will fail.")
     if not settings.REPLICATE_API_TOKEN:
-        logger.critical("REPLICATE_API_TOKEN is not set — set it in .env and restart.")
-        sys.exit(1)
+        logger.error("REPLICATE_API_TOKEN is not set — Replicate Provider requests will fail.")
 
     # Initialise provider singletons (once per process, not once per request)
     try:
         init_providers()
+    except Exception as exc:
+        logger.error(f"Failed to initialise AI providers: {exc}")
+
+    try:
         init_firebase_admin()
     except Exception as exc:
-        logger.critical(f"Failed to initialise providers or Firebase: {exc}")
-        sys.exit(1)
+        logger.warning(f"Unexpected error during Firebase Admin initialization: {exc}")
 
     try:
         Base.metadata.create_all(bind=engine)
     except Exception as exc:
-        logger.critical(f"Failed to initialise database schema: {exc}", exc_info=True)
-        sys.exit(1)
+        logger.error(f"Failed to initialise database schema: {exc}", exc_info=True)
 
     # Ensure required storage subdirectories exist
     for directory in [settings.UPLOAD_DIR, settings.GENERATED_DIR]:
-        Path(directory).mkdir(parents=True, exist_ok=True)
+        try:
+            Path(directory).mkdir(parents=True, exist_ok=True)
+        except Exception as exc:
+            logger.error(f"Failed to create directory {directory}: {exc}")
 
     # Warm static caches so first requests are instant
-    from app.cache import get_cached_styles, get_cached_config
-    get_cached_styles()
-    get_cached_config(settings.MAX_UPLOAD_SIZE_MB)
+    try:
+        from app.cache import get_cached_styles, get_cached_config
+        get_cached_styles()
+        get_cached_config(settings.MAX_UPLOAD_SIZE_MB)
+    except Exception as exc:
+        logger.error(f"Failed to warm caches: {exc}")
 
     # Display clean startup banner
+    from app.auth.firebase_admin_init import is_firebase_available
+    firebase_status = "✓ Firebase Admin Ready" if is_firebase_available() else "⚠ Firebase Admin Not Configured (Auth Disabled)"
+    gemini_status = "✓ Gemini Provider Ready" if settings.GEMINI_API_KEY else "⚠ Gemini Provider Not Configured"
+    replicate_status = "✓ Replicate Provider Ready" if settings.REPLICATE_API_TOKEN else "⚠ Replicate Provider Not Configured"
+
     banner = f"""
 ══════════════════════════════════════════════
  RoomCanvas AI Backend
 ══════════════════════════════════════════════
 ✓ Database Connected
-✓ Gemini Provider Ready
-✓ Replicate Provider Ready
+{gemini_status}
+{replicate_status}
+{firebase_status}
 ✓ Storage Ready
 ✓ Cache Warmed
 ✓ API Ready
@@ -87,8 +99,21 @@ Running: http://127.0.0.1:{os.environ.get("PORT", 8000)}
 Mode: {"Development" if settings.DEBUG else "Production"}
 ══════════════════════════════════════════════
 """
-    # Print the banner cleanly without the loguru prefix timestamp
-    print(banner.strip(), flush=True)
+    # Print the banner safely, falling back to ASCII if the console encoding doesn't support Unicode
+    try:
+        print(banner.strip(), flush=True)
+    except UnicodeEncodeError:
+        ascii_banner = (
+            banner.replace("═", "=")
+            .replace("✓", "[x]")
+            .replace("⚠", "[!]")
+        )
+        try:
+            print(ascii_banner.strip(), flush=True)
+        except Exception:
+            pass
+
+
 
     ping_task = asyncio.create_task(_self_ping_loop())
 

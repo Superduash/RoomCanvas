@@ -1,7 +1,20 @@
 from app.repositories.generation_repository import GenerationRepository
 
 def test_history_endpoints_workflow(client, db):
-    repo = GenerationRepository(db)
+    from app.database.models import User
+    # Explicitly create and commit the mock user so it exists before we create records or call endpoints
+    user = User(
+        firebase_uid="mock-uid",
+        email="test@example.com",
+        display_name="Test User"
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    repo = GenerationRepository(db, user_id=user.id)
+
+
     
     # 1. Populate DB
     gen = repo.create_generation({

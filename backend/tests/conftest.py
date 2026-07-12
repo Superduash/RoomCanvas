@@ -48,10 +48,29 @@ def client(db):
             yield db
         finally:
             pass
+
+    from app.auth.dependencies import get_current_user
+    from app.database.models import User
+
+    def override_get_current_user():
+        user = db.query(User).filter(User.firebase_uid == "mock-uid").first()
+        if not user:
+            user = User(
+                firebase_uid="mock-uid",
+                email="test@example.com",
+                display_name="Test User"
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        return user
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
 
 # ── Mock Providers ─────────────────────────────────────────────────────────────
 class MockAnalysisProvider(AnalysisProvider):
@@ -71,11 +90,12 @@ class MockAnalysisProvider(AnalysisProvider):
         }
 
 class MockGenerationProvider(GenerationProvider):
-    async def generate(self, image_bytes: bytes, mime_type: str, prompt: str) -> str:
-        return "https://replicate.delivery/pbxt/example.png"
+    async def generate(self, image_bytes: bytes, mime_type: str, prompt: str, seed: int = None) -> tuple[str, int]:
+        return "https://replicate.delivery/pbxt/example.png", seed or 0
 
-    async def refine(self, image_bytes: bytes, mime_type: str, instruction: str) -> str:
-        return "https://replicate.delivery/pbxt/refined.png"
+    async def refine(self, image_bytes: bytes, mime_type: str, instruction: str, seed: int = None) -> tuple[str, int]:
+        return "https://replicate.delivery/pbxt/refined.png", seed or 0
+
 
 @pytest.fixture(autouse=True)
 def mock_ai_providers(monkeypatch):
@@ -87,7 +107,7 @@ def mock_ai_providers(monkeypatch):
     monkeypatch.setattr(app.main, "init_providers", lambda: None)
     
     # Stub download_and_save to create a mock local image file instead of downloading
-    def mock_download_and_save(url, save_dir="./storage/generated"):
+    async def mock_download_and_save(url, save_dir="./storage/generated"):
         import os
         from PIL import Image
         os.makedirs(save_dir, exist_ok=True)
@@ -97,6 +117,7 @@ def mock_ai_providers(monkeypatch):
         return path
         
     monkeypatch.setattr(StorageService, "download_and_save", mock_download_and_save)
+
     
     registry._analysis_provider = MockAnalysisProvider()
     registry._generation_provider = MockGenerationProvider()
