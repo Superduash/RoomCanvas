@@ -167,67 +167,136 @@ export function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[280px]">
             
-            {/* 1. Deep Room Analysis (Large Col-Span-2) */}
+            {/* 1. Deep Room Analysis (Large Col-Span-2) - Premium AI Visualization */}
             <motion.div 
                initial={{ opacity: 0, y: 8 }}
                whileInView={{ opacity: 1, y: 0 }}
                viewport={{ once: true, margin: '-50px' }}
                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-               className="md:col-span-2 rounded-[24px] bg-gradient-to-br from-surface to-surface-alt/50 border border-border p-6 md:p-10 flex flex-col md:flex-row gap-8 md:gap-12 items-center overflow-hidden relative shadow-sm hover:shadow-md transition-shadow group"
+               className="md:col-span-2 rounded-[24px] bg-gradient-to-br from-surface to-surface-alt/50 border border-border overflow-hidden relative shadow-sm hover:shadow-md transition-shadow group"
             >
-               {/* Left Column: Text & Chips (40%) */}
-               <div className="w-full md:w-[40%] z-10 flex flex-col justify-center">
-                 <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-5 shadow-sm">
-                   <ScanLine className="h-5 w-5" />
+               <div className="grid grid-cols-1 md:grid-cols-[38%_62%] gap-8 md:gap-10 p-8 md:p-10 items-center min-h-0">
+                 {/* Left Column: Text & Chips */}
+                 <div className="flex flex-col justify-center">
+                   <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-5 shadow-sm">
+                     <ScanLine className="h-5 w-5" />
+                   </div>
+                   <h3 className="text-[22px] font-bold text-text-primary mb-3 leading-snug">Understands Your Room</h3>
+                   <p className="text-text-secondary mb-8 text-[15px] leading-relaxed">
+                     Detects walls, windows, furniture, lighting and room structure before generating a redesign.
+                   </p>
+                   <div className="flex flex-wrap gap-2.5">
+                     {['Furniture Identification', 'Color Palette Extraction', 'Lighting Detection'].map((item, idx) => (
+                       <div key={idx} className="flex items-center gap-2 text-[13px] font-medium text-text-primary bg-surface border border-border shadow-sm px-3.5 py-2 rounded-xl hover:bg-surface-alt hover:border-border-strong transition-all duration-fast">
+                         <ShieldCheck className="h-4 w-4 text-accent" />
+                         {item}
+                       </div>
+                     ))}
+                   </div>
                  </div>
-                 <h3 className="text-[22px] font-bold text-text-primary mb-3 leading-snug">Understands Your Room</h3>
-                 <p className="text-text-secondary mb-8 text-[15px] leading-relaxed max-w-md">
-                   Detects walls, windows, furniture, lighting and room structure before generating a redesign.
-                 </p>
-                 <div className="flex flex-wrap gap-2.5">
-                   {['Furniture Identification', 'Color Palette Extraction', 'Lighting Detection'].map((item, idx) => (
-                     <div key={idx} className="flex items-center gap-2 text-[13px] font-medium text-text-primary bg-surface border border-border shadow-sm px-3.5 py-2 rounded-xl hover:bg-surface-alt hover:border-border-strong transition-all duration-fast">
-                       <ShieldCheck className="h-4 w-4 text-accent" />
-                       {item}
-                     </div>
-                   ))}
+                 
+                 {/* Right Column: AI Analysis Visual */}
+                 <div className="flex items-center justify-center">
+                    <div className="relative w-full rounded-xl overflow-hidden shadow-xl border border-border bg-black group-hover:shadow-2xl transition-shadow duration-500">
+                       {/* Base room image */}
+                       <img 
+                         src="/originalroom.png" 
+                         alt="AI Room Analysis" 
+                         className="w-full h-auto object-cover opacity-90 transition-transform duration-[800ms] ease-out group-hover:scale-[1.02]" 
+                       />
+                       
+                       {/* Gradient overlay */}
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+
+                       {/* SVG Detection Overlays */}
+                       <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                         <defs>
+                           {/* Glow filter for detection lines */}
+                           <filter id="glow">
+                             <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
+                             <feMerge>
+                               <feMergeNode in="coloredBlur"/>
+                               <feMergeNode in="SourceGraphic"/>
+                             </feMerge>
+                           </filter>
+                           
+                           {/* Animated gradient for scan line */}
+                           <linearGradient id="scanGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                             <stop offset="0%" stopColor="white" stopOpacity="0"/>
+                             <stop offset="50%" stopColor="white" stopOpacity="0.8"/>
+                             <stop offset="100%" stopColor="white" stopOpacity="0"/>
+                           </linearGradient>
+                         </defs>
+                         
+                         {/* Window Detection (left side) */}
+                         <rect x="5" y="8" width="22" height="68" fill="rgba(74, 222, 128, 0.08)" stroke="rgba(74, 222, 128, 0.6)" strokeWidth="0.3" rx="0.5" filter="url(#glow)">
+                           <animate attributeName="stroke-opacity" values="0.4;0.7;0.4" dur="3s" repeatCount="indefinite" />
+                         </rect>
+                         
+                         {/* Sofa Detection (right-bottom) */}
+                         <rect x="55" y="58" width="38" height="32" fill="rgba(91, 155, 213, 0.08)" stroke="rgba(91, 155, 213, 0.6)" strokeWidth="0.3" rx="0.5" filter="url(#glow)">
+                           <animate attributeName="stroke-opacity" values="0.4;0.7;0.4" dur="2.5s" repeatCount="indefinite" begin="0.3s" />
+                         </rect>
+                         
+                         {/* Table Detection (center-bottom) */}
+                         <rect x="35" y="70" width="18" height="18" fill="rgba(168, 85, 247, 0.08)" stroke="rgba(168, 85, 247, 0.6)" strokeWidth="0.3" rx="0.5" filter="url(#glow)">
+                           <animate attributeName="stroke-opacity" values="0.4;0.7;0.4" dur="2.8s" repeatCount="indefinite" begin="0.5s" />
+                         </rect>
+                         
+                         {/* Floor plane grid */}
+                         <path d="M 10 85 L 90 85 M 10 90 L 90 90 M 10 95 L 90 95" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="0.15" strokeDasharray="1,1" />
+                         
+                         {/* Room boundary outline */}
+                         <path d="M 2 2 L 98 2 L 98 98 L 2 98 Z" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="0.2" fill="none" strokeDasharray="2,2" />
+                         
+                         {/* Scan line animation */}
+                         <motion.rect 
+                           x="0" 
+                           y="0" 
+                           width="100" 
+                           height="0.8" 
+                           fill="url(#scanGradient)" 
+                           opacity="0.6"
+                           animate={{ y: [0, 100, 0] }}
+                           transition={{ duration: 6, ease: "linear", repeat: Infinity }}
+                         />
+                       </svg>
+
+                       {/* Detection Labels with fade-in animation */}
+                       <motion.div 
+                         initial={{ opacity: 0, y: -4 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         transition={{ delay: 0.5, duration: 0.4 }}
+                         className="absolute top-[8%] left-[6%] bg-[rgba(74,222,128,0.95)] backdrop-blur-sm text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded shadow-lg uppercase tracking-wider"
+                       >
+                         Window <span className="text-[8px] md:text-[9px] opacity-90 ml-1">99%</span>
+                       </motion.div>
+
+                       <motion.div 
+                         initial={{ opacity: 0, y: -4 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         transition={{ delay: 0.7, duration: 0.4 }}
+                         className="absolute top-[57%] left-[56%] bg-[rgba(91,155,213,0.95)] backdrop-blur-sm text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded shadow-lg uppercase tracking-wider"
+                       >
+                         Sofa <span className="text-[8px] md:text-[9px] opacity-90 ml-1">98%</span>
+                       </motion.div>
+
+                       <motion.div 
+                         initial={{ opacity: 0, y: -4 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         transition={{ delay: 0.9, duration: 0.4 }}
+                         className="absolute top-[69%] left-[36%] bg-[rgba(168,85,247,0.95)] backdrop-blur-sm text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded shadow-lg uppercase tracking-wider"
+                       >
+                         Table <span className="text-[8px] md:text-[9px] opacity-90 ml-1">97%</span>
+                       </motion.div>
+
+                       {/* Corner brackets for premium feel */}
+                       <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-white/40" />
+                       <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-white/40" />
+                       <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-white/40" />
+                       <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-white/40" />
+                    </div>
                  </div>
-               </div>
-               
-               {/* Right Column: Visual (60%) */}
-               <div className="w-full md:w-[60%] flex items-center justify-center relative">
-                  <div className="relative w-full aspect-[4/3] md:aspect-[16/10] rounded-xl overflow-hidden shadow-xl border border-border bg-black group-hover:shadow-2xl transition-shadow duration-500">
-                     <img src="/originalroom.png" alt="Room Analysis" className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-[800ms] ease-out group-hover:scale-[1.02]" />
-                     
-                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-
-                     {/* Bounding box: Sofa */}
-                     <div className="absolute bottom-[20%] right-[10%] w-[40%] h-[35%] border border-accent/60 bg-accent/10 rounded-sm shadow-[0_0_15px_rgba(91,155,213,0.15)] backdrop-blur-[1px]">
-                        <div className="absolute -top-[26px] left-[-1px] bg-accent/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Sofa</div>
-                        <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t-2 border-l-2 border-accent" />
-                        <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t-2 border-r-2 border-accent" />
-                        <div className="absolute bottom-0 left-0 w-1.5 h-1.5 border-b-2 border-l-2 border-accent" />
-                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b-2 border-r-2 border-accent" />
-                     </div>
-                     
-                     {/* Bounding box: Window */}
-                     <div className="absolute top-[10%] left-[5%] w-[25%] h-[65%] border border-success/60 bg-success/10 rounded-sm shadow-[0_0_15px_rgba(74,222,128,0.15)] backdrop-blur-[1px]">
-                        <div className="absolute -top-[26px] left-[-1px] bg-success/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Window</div>
-                        <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t-2 border-l-2 border-success" />
-                        <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t-2 border-r-2 border-success" />
-                        <div className="absolute bottom-0 left-0 w-1.5 h-1.5 border-b-2 border-l-2 border-success" />
-                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b-2 border-r-2 border-success" />
-                     </div>
-
-                     {/* Scanning line animation */}
-                     <motion.div 
-                        className="absolute left-0 right-0 h-[1.5px] bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] z-20 pointer-events-none"
-                        animate={{ top: ['0%', '100%', '0%'] }}
-                        transition={{ duration: 6, ease: "linear", repeat: Infinity }}
-                     >
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-12 bg-white/20 rounded-[100%] blur-[20px]" />
-                     </motion.div>
-                  </div>
                </div>
             </motion.div>
 
@@ -262,7 +331,7 @@ export function LandingPage() {
                </p>
                <div className="mt-auto pt-6 flex justify-end z-10">
                   <div className="bg-accent text-white px-4 py-3 rounded-2xl rounded-br-sm shadow-md text-[14px] font-medium w-fit max-w-[90%] relative">
-                     "Make it brighter, add indoor plants, and switch to a Japandi style."
+                     "Add a few indoor plants and make it feel warmer."
                   </div>
                </div>
             </div>

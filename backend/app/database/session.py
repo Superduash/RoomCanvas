@@ -23,10 +23,25 @@ class Base(DeclarativeBase):
     pass
 
 def _make_async_url(url: str) -> str:
+    """
+    Convert sync database URLs to async equivalents.
+    For PostgreSQL with asyncpg, strip sslmode from query params 
+    (asyncpg uses ssl=require instead, or handles it via connect_args).
+    """
     if url.startswith("sqlite:///"):
         return url.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
     if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Replace driver and strip sslmode query parameter if present
+        # asyncpg doesn't support sslmode in the URL
+        async_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if "?sslmode=" in async_url or "&sslmode=" in async_url:
+            # Remove sslmode parameter from URL
+            import re
+            async_url = re.sub(r'[?&]sslmode=[^&]*', '', async_url)
+            # Clean up any trailing ? or duplicate &&
+            async_url = re.sub(r'\?&', '?', async_url)
+            async_url = re.sub(r'\?$', '', async_url)
+        return async_url
     return url
 
 # Set up the engine
@@ -39,6 +54,8 @@ engine = create_async_engine(
         "pool_size": 5,
         "max_overflow": 10,
         "pool_timeout": 30,
+        # For PostgreSQL with asyncpg, SSL is enabled by default for remote connections
+        # No need to explicitly set connect_args for SSL
     }),
 )
 
