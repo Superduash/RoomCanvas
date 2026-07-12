@@ -48,6 +48,11 @@ async def lifespan(app: FastAPI):
         logger.error("GEMINI_API_KEY is not set — Gemini Provider requests will fail.")
     if not settings.REPLICATE_API_TOKEN:
         logger.error("REPLICATE_API_TOKEN is not set — Replicate Provider requests will fail.")
+    if not settings.SUPABASE_SERVICE_ROLE_KEY:
+        logger.error(
+            "SUPABASE_SERVICE_ROLE_KEY is not set — all image uploads (rooms + avatars) will fail with 403. "
+            "Set it in Render env vars using the 'service_role' key from Supabase → Project Settings → API."
+        )
 
     # Initialise provider singletons (once per process, not once per request)
     try:

@@ -6,7 +6,7 @@ import { Button } from '../components/primitives/Button';
 import { Input, Textarea } from '../components/primitives/Input';
 import { ImageCropModal } from '../components/profile-setup/ImageCropModal';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Check, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
+import { Upload, Check, Loader2, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { toast } from '../lib/toast';
 import { api } from '../api/client';
 import confetti from 'canvas-confetti';
@@ -176,6 +176,23 @@ export default function SetupProfilePage() {
     nextStep();
   };
 
+  const prevStep = () => {
+    if (step > 1) {
+      setDirection(-1);
+      setStep(prev => prev - 1);
+    }
+  };
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && step <= 4) {
+        if (window.confirm('Skip profile setup for now?')) handleSkip();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [step]);
+
   const handleSkip = async () => {
      try {
        setIsSubmitting(true);
@@ -272,6 +289,25 @@ export default function SetupProfilePage() {
       <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 h-screen max-h-screen relative bg-bg">
         <div className="w-full max-w-md flex flex-col relative h-[500px]">
           
+          <div className="flex items-center justify-between mb-6">
+            {step > 1 ? (
+              <button
+                onClick={prevStep}
+                className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+            ) : <span />}
+
+            <button
+              onClick={handleSkip}
+              disabled={isSubmitting}
+              className="text-sm text-text-tertiary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
+            >
+              Skip for now
+            </button>
+          </div>
+
           <AnimatePresence initial={false} custom={direction} mode="wait">
             
             {/* Step 1: Welcome */}
@@ -293,9 +329,6 @@ export default function SetupProfilePage() {
                 <div className="flex flex-col gap-3 mt-4">
                    <Button size="lg" onClick={handleNextStep} iconRight={<ArrowRight className="h-4 w-4" />}>
                      Set up my profile
-                   </Button>
-                   <Button size="lg" variant="ghost" onClick={handleSkip}>
-                     Skip for now
                    </Button>
                 </div>
               </motion.div>
@@ -527,9 +560,14 @@ export default function SetupProfilePage() {
           {step > 1 && (
             <div className="absolute -bottom-12 left-0 right-0 flex justify-center gap-2">
               {[2, 3, 4].map(s => (
-                <div 
+                <button 
                   key={s} 
-                  className={`h-2 rounded-full transition-all duration-300 ${s === step ? 'w-6 bg-accent' : s < step ? 'w-2 bg-accent/30' : 'w-2 bg-border-strong'}`} 
+                  onClick={() => {
+                    if (s < step) { setDirection(-1); setStep(s); }
+                  }}
+                  disabled={s >= step}
+                  aria-label={`Go to step ${s}`}
+                  className={`h-2 rounded-full transition-all duration-300 ${s === step ? 'w-6 bg-accent' : s < step ? 'w-2 bg-accent/30 hover:bg-accent/50 cursor-pointer' : 'w-2 bg-border-strong cursor-not-allowed'}`}
                 />
               ))}
             </div>

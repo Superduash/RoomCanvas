@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 _supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 _BUCKET = settings.SUPABASE_BUCKET
 
+def is_storage_configured() -> bool:
+    return bool(settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY)
+
 
 class StorageService:
     @staticmethod
