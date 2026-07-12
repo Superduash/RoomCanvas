@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { SocialAuthButton } from '../components/auth/SocialAuthButton';
@@ -11,7 +11,9 @@ import { usePasswordStrength } from '../hooks/usePasswordStrength';
 
 export function SignUpPage() {
   const navigate = useNavigate();
-  const { signUpWithEmail, signInWithGoogle } = useAuth();
+  const location = useLocation();
+  const { signUpWithEmail, signInWithGoogle, profile, isSyncing } = useAuth();
+  const from = location.state?.from?.pathname || '/upload';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -21,8 +23,18 @@ export function SignUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [awaitingSync, setAwaitingSync] = useState(false);
 
   const strength = usePasswordStrength(password);
+
+  // Navigate once profile loads after auth
+  useEffect(() => {
+    if (!awaitingSync || isSyncing || !profile) return;
+    navigate(profile.profile_completed ? from : '/setup', { 
+      state: { from: { pathname: from } }, 
+      replace: true 
+    });
+  }, [awaitingSync, isSyncing, profile, from, navigate]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -42,7 +54,7 @@ export function SignUpPage() {
     try {
       await signUpWithEmail({ name, email, password, remember: true });
       toast.success('Account created! Welcome to RoomCanvas.');
-      navigate('/upload', { replace: true });
+      setAwaitingSync(true);
     } catch (err: any) {
       if (err.message === 'An account with this email already exists.') {
         toast.error('Account already exists. Please sign in.');
@@ -61,7 +73,7 @@ export function SignUpPage() {
       // If result is null, we're in redirect flow - page will navigate away
       if (result) {
         toast.success('Welcome to RoomCanvas!');
-        navigate('/upload', { replace: true });
+        setAwaitingSync(true);
       }
     } catch (err: any) {
       toast.error(err.message);

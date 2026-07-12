@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AuthLayout } from '../components/auth/AuthLayout';
@@ -11,7 +11,7 @@ import { PasswordField } from '../components/auth/PasswordField';
 export function SignInPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const { signInWithEmail, signInWithGoogle, profile, isSyncing } = useAuth();
   const from = location.state?.from?.pathname || '/upload';
 
   const [email, setEmail] = useState(location.state?.email || '');
@@ -19,6 +19,16 @@ export function SignInPage() {
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [awaitingSync, setAwaitingSync] = useState(false);
+
+  // Navigate once profile loads after auth
+  useEffect(() => {
+    if (!awaitingSync || isSyncing || !profile) return;
+    navigate(profile.profile_completed ? from : '/setup', { 
+      state: { from: { pathname: from } }, 
+      replace: true 
+    });
+  }, [awaitingSync, isSyncing, profile, from, navigate]);
 
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -27,7 +37,7 @@ export function SignInPage() {
     try {
       await signInWithEmail({ email, password, remember });
       toast.success('Welcome back!');
-      navigate(from, { replace: true });
+      setAwaitingSync(true);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -42,7 +52,7 @@ export function SignInPage() {
       // If result is null, we're in redirect flow - page will navigate away
       if (result) {
         toast.success('Welcome back!');
-        navigate(from, { replace: true });
+        setAwaitingSync(true);
       }
     } catch (err: any) {
       toast.error(err.message);
