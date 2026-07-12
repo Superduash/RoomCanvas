@@ -115,14 +115,11 @@ export function LandingPage() {
              transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
              className="flex-1 w-full max-w-3xl lg:max-w-none"
           >
-             <div className="rounded-2xl overflow-hidden shadow-2xl border border-border bg-surface relative group aspect-[4/3] lg:aspect-[16/10]">
-               <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">Before</div>
-               <div className="absolute top-4 right-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">After</div>
-               <CompareSlider
-                  beforeSrc="/originalroom.png"
-                  afterSrc="/redesignedroom.png"
-               />
-             </div>
+             <CompareSlider
+                beforeSrc="/originalroom.png"
+                afterSrc="/redesignedroom.png"
+                className="rounded-2xl shadow-2xl border border-border"
+             />
           </motion.div>
 
         </div>
