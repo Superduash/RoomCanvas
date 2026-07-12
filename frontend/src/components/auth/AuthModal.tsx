@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useAuthModalStore } from '../../auth/authModalStore';
@@ -19,6 +20,16 @@ export function AuthModal() {
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (ev: React.FormEvent) => {
@@ -31,8 +42,8 @@ export function AuthModal() {
       } else {
         await signUpWithEmail({ name, email, password, remember });
       }
-      // On success, the AuthProvider's onAuthStateChanged will detect the user
-      // and close the modal/resume action automatically.
+      // On success, the AuthProvider will close the modal and resume action
+      close();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -44,6 +55,7 @@ export function AuthModal() {
     setLoading(true);
     try {
       await signInWithGoogle(remember);
+      close();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -51,112 +63,167 @@ export function AuthModal() {
     }
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div 
+          className="fixed inset-0 z-[9999]" 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            paddingTop: 'max(1rem, env(safe-area-inset-top))',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+            paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+            paddingRight: 'max(1rem, env(safe-area-inset-right))',
+          }}
+        >
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={close}
+            aria-hidden="true"
           />
+          
+          {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-surface border border-border shadow-2xl rounded-2xl p-6 md:p-8"
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="relative w-full bg-surface border border-border shadow-2xl rounded-2xl"
+            style={{
+              maxWidth: '28rem',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-modal-title"
           >
-            <button
-              onClick={close}
-              className="absolute top-4 right-4 p-2 text-text-tertiary hover:text-text-primary rounded-full hover:bg-surface-alt transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-text-primary tracking-tight mb-2">
-                {mode === 'signin' ? 'Sign in' : 'Create an account'}
-              </h2>
-              <p className="text-sm text-text-secondary">
-                {mode === 'signin' ? (
-                  <>
-                    Don't have an account?{' '}
-                    <button onClick={() => setMode('signup')} className="text-accent font-semibold hover:underline">
-                      Sign up
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{' '}
-                    <button onClick={() => setMode('signin')} className="text-accent font-semibold hover:underline">
-                      Sign in
-                    </button>
-                  </>
-                )}
-              </p>
+            <div className="sticky top-0 right-0 z-10 flex justify-end p-4 bg-gradient-to-b from-surface to-transparent pointer-events-none">
+              <button
+                onClick={close}
+                className="pointer-events-auto p-2 text-text-tertiary hover:text-text-primary rounded-full hover:bg-surface-alt/80 backdrop-blur-sm transition-colors touch-manipulation active:scale-95"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" strokeWidth={2} />
+              </button>
             </div>
 
-            <SocialAuthButton loading={loading} onClick={handleGoogle} />
-
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-border"></div>
-              <span className="text-[13px] text-text-tertiary font-medium">or continue with email</span>
-              <div className="flex-1 h-px bg-border"></div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {mode === 'signup' && (
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="name" className="text-[13px] font-semibold text-text-primary">Name</label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
-                  />
-                </div>
-              )}
-              
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="text-[13px] font-semibold text-text-primary">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
-                />
+            <div className="px-6 pb-8 -mt-12">
+              <div className="mb-6">
+                <h2 id="auth-modal-title" className="text-2xl font-semibold text-text-primary tracking-tight mb-2">
+                  {mode === 'signin' ? 'Sign in' : 'Create an account'}
+                </h2>
+                <p className="text-sm text-text-secondary">
+                  {mode === 'signin' ? (
+                    <>
+                      Don't have an account?{' '}
+                      <button onClick={() => setMode('signup')} className="text-accent font-semibold hover:underline touch-manipulation">
+                        Sign up
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Already have an account?{' '}
+                      <button onClick={() => setMode('signin')} className="text-accent font-semibold hover:underline touch-manipulation">
+                        Sign in
+                      </button>
+                    </>
+                  )}
+                </p>
               </div>
 
-              <PasswordField value={password} onChange={setPassword} />
-              
-              {mode === 'signin' && (
-                <div className="flex items-center justify-between mt-1 mb-2">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input 
-                      type="checkbox" 
-                      checked={remember} 
-                      onChange={(e) => setRemember(e.target.checked)} 
-                      className="w-4 h-4 rounded border-border text-accent focus:ring-accent focus:ring-offset-surface cursor-pointer"
-                    />
-                    <span className="text-[14px] text-text-secondary font-medium">Remember me</span>
-                  </label>
-                  <a href="/forgot-password" onClick={close} className="text-[14px] text-accent font-semibold hover:underline">Forgot password?</a>
-                </div>
-              )}
+              <SocialAuthButton loading={loading} onClick={handleGoogle} />
 
-              <Button type="submit" size="lg" className="w-full mt-2" loading={loading}>
-                {mode === 'signin' ? 'Sign in' : 'Create account'}
-              </Button>
-            </form>
+              <div className="flex items-center gap-4 my-6">
+                <div className="flex-1 h-px bg-border"></div>
+                <span className="text-[13px] text-text-tertiary font-medium">or email</span>
+                <div className="flex-1 h-px bg-border"></div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {mode === 'signup' && (
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="modal-name" className="text-[13px] font-semibold text-text-primary">Name</label>
+                    <input
+                      id="modal-name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+                      autoComplete="name"
+                    />
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="modal-email" className="text-[13px] font-semibold text-text-primary">Email</label>
+                  <input
+                    id="modal-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-surface text-[15px] text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all shadow-sm"
+                    autoComplete="email"
+                  />
+                </div>
+
+                <PasswordField 
+                  value={password} 
+                  onChange={setPassword} 
+                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                />
+                
+                {mode === 'signin' && (
+                  <div className="flex items-center justify-between mt-1 mb-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none touch-manipulation">
+                      <input 
+                        type="checkbox" 
+                        checked={remember} 
+                        onChange={(e) => setRemember(e.target.checked)} 
+                        className="w-4 h-4 rounded border-border text-accent focus:ring-accent focus:ring-offset-surface cursor-pointer"
+                      />
+                      <span className="text-[14px] text-text-secondary font-medium">Remember me</span>
+                    </label>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        close();
+                        window.location.href = '/forgot-password';
+                      }}
+                      className="text-[14px] text-accent font-semibold hover:underline touch-manipulation"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="w-full mt-2 touch-manipulation active:scale-[0.98]" 
+                  loading={loading}
+                  disabled={loading}
+                >
+                  {mode === 'signin' ? 'Sign in' : 'Create account'}
+                </Button>
+              </form>
+            </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );
+
+  return createPortal(modalContent, document.body);
 }

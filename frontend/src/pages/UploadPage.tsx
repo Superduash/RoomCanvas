@@ -127,14 +127,7 @@ export function UploadPage() {
         </p>
       </div>
 
-      {!isAuthenticated ? (
-        <div className="max-w-2xl mx-auto mb-8 sm:mb-10 bg-accent/10 border border-accent/20 rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div>
-            <h3 className="text-sm font-semibold text-accent-dark">Continue as guest, save later</h3>
-            <p className="text-sm text-text-secondary">You can try the product and upload a photo before committing to an account.</p>
-          </div>
-        </div>
-      ) : (
+      {isAuthenticated && (
         <div className="max-w-2xl mx-auto mb-8 sm:mb-10">
           <WelcomeBanner profile={user} stats={stats} />
         </div>

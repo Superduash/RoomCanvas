@@ -99,6 +99,9 @@ backend/storage/generated/
 *.swp
 *.swo
 
+# Kiro MCP configuration (user-specific)
+.kiro/settings/mcp.json
+
 # ── OS generated ──────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
