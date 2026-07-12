@@ -29,4 +29,4 @@ def test_analyze_room_validation_error(client):
     )
     
     assert response.status_code == 400
-    assert "Unsupported file format" in response.json()["detail"]
+    assert "Unsupported file format" in response.json()["message"]

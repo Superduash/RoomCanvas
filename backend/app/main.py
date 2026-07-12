@@ -58,10 +58,32 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"Unexpected error during Firebase Admin initialization: {exc}")
 
+    # Validate Database Migrations
+    app.state.migrations_pending = False
     try:
-        Base.metadata.create_all(bind=engine)
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+        from alembic.runtime.migration import MigrationContext
+        
+        alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
+        if alembic_ini_path.exists():
+            alembic_cfg = Config(str(alembic_ini_path))
+            script = ScriptDirectory.from_config(alembic_cfg)
+            
+            with engine.connect() as conn:
+                context = MigrationContext.configure(conn)
+                current_rev = context.get_current_revision()
+                head_rev = script.get_current_head()
+                
+                if current_rev != head_rev:
+                    logger.critical(f"Database schema is outdated! Current: {current_rev}, Expected: {head_rev}")
+                    logger.critical("Run `alembic upgrade head` to apply pending migrations.")
+                    app.state.migrations_pending = True
+                else:
+                    logger.info("Database schema is up-to-date.")
     except Exception as exc:
-        logger.error(f"Failed to initialise database schema: {exc}", exc_info=True)
+        logger.error(f"Failed to verify database migration status: {exc}")
+        app.state.migrations_pending = True
 
     # Ensure required storage subdirectories exist
     for directory in [settings.UPLOAD_DIR, settings.GENERATED_DIR]:
@@ -161,6 +183,18 @@ async def access_log_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    # Circuit breaker if migrations are pending (allow health checks)
+    if getattr(request.app.state, "migrations_pending", False) and request.url.path != "/api/health" and request.url.path.startswith("/api"):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "code": "SERVICE_UNAVAILABLE",
+                "message": "The application is currently starting up or running migrations. Please try again later.",
+                "request_id": req_id,
+                "timestamp": time.time()
+            }
+        )
     
     return response
 
@@ -202,19 +236,34 @@ def _inject_cors_headers(request: Request, response: JSONResponse) -> JSONRespon
         response.headers["Access-Control-Allow-Credentials"] = "true"
     return response
 
+def _format_error(code: str, message: str) -> dict:
+    from app.utils.request_id import get_request_id
+    from datetime import datetime, timezone
+    return {
+        "code": code,
+        "message": message,
+        "request_id": get_request_id(),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.exception_handler(InteriorAIError)
 def app_exception_handler(request: Request, exc: InteriorAIError) -> JSONResponse:
     logger.warning(f"Application error [HTTP {exc.status_code}]: {exc.message}")
-    return _inject_cors_headers(request, JSONResponse(status_code=exc.status_code, content={"detail": exc.message}))
+    content = _format_error(
+        code="APPLICATION_ERROR" if exc.status_code < 500 else "INTERNAL_SERVER_ERROR",
+        message=exc.message
+    )
+    return _inject_cors_headers(request, JSONResponse(status_code=exc.status_code, content=content))
 
 
 @app.exception_handler(Exception)
 def uncaught_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception(f"Uncaught exception on {request.method} {request.url.path}: {exc}")
-    return _inject_cors_headers(request, JSONResponse(
-        status_code=500,
-        content={"detail": "An unexpected server error occurred. Please try again."},
-    ))
+    content = _format_error(
+        code="INTERNAL_SERVER_ERROR",
+        message="An unexpected server error occurred. Please try again."
+    )
+    return _inject_cors_headers(request, JSONResponse(status_code=500, content=content))
 
 
 # ── Direct run entry-point ────────────────────────────────────────────────────
