@@ -126,6 +126,22 @@ backend/
 - Gemini API Key
 - Replicate API Token
 
+### Firebase Admin Setup
+
+#### Local Development
+1. Download Firebase Admin SDK JSON from your Firebase Console.
+2. Place it inside:
+   `backend/credentials/firebase-admin.json`
+3. Ensure the folder remains ignored by Git (already configured in `.gitignore`).
+
+#### Production (Render)
+1. Open Render Dashboard.
+2. Go to Environment Variables.
+3. Create:
+   `FIREBASE_SERVICE_ACCOUNT_JSON`
+4. Paste the ENTIRE Firebase Admin JSON file contents as the value.
+5. Remove any dependency on a physical credentials file in your Render build/start commands.
+
 ### Setup
 1. **Initialize and Activate Virtual Environment**:
    ```bash

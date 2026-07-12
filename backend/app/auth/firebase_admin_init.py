@@ -17,8 +17,8 @@ def init_firebase_admin():
             firebase_admin.initialize_app(cred)
             logger.info("Firebase Admin successfully initialized from FIREBASE_SERVICE_ACCOUNT_JSON env variable.")
             return
-        except Exception as e:
-            logger.warning(f"Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON or initialize Firebase: {e}")
+        except Exception:
+            logger.warning("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON or initialize Firebase.")
             return
 
     # 2. Try local file as fallback (for local development)
@@ -29,8 +29,8 @@ def init_firebase_admin():
             firebase_admin.initialize_app(cred)
             logger.info(f"Firebase Admin successfully initialized from local file: {local_cert_path}")
             return
-        except Exception as e:
-            logger.warning(f"Failed to initialize Firebase from local file ({local_cert_path}): {e}")
+        except Exception:
+            logger.warning(f"Failed to initialize Firebase from local file ({local_cert_path}).")
             return
         
     logger.warning("FIREBASE_SERVICE_ACCOUNT_JSON not set and local cert not found. Firebase Admin is not initialized. Authentication will be unavailable.")
