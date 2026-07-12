@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ImagePlus, X, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import { ImagePlus, X, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
 
