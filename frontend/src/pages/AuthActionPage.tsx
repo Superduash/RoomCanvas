@@ -34,7 +34,7 @@ export function AuthActionPage() {
         if (mode === 'verifyEmail') {
           await applyActionCode(firebaseAuth, oobCode);
           setSuccessTitle('Email Verified');
-          setSuccessMessage('Your email address has been successfully verified. You can now access all features.');
+          setSuccessMessage('Your email address has been successfully verified. You can now return to your original tab, or sign in here if you opened this link on a new device.');
         } else if (mode === 'recoverEmail') {
           await checkActionCode(firebaseAuth, oobCode);
           await applyActionCode(firebaseAuth, oobCode);

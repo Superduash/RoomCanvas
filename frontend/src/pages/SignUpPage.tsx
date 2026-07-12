@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { SocialAuthButton } from '../components/auth/SocialAuthButton';
@@ -10,11 +10,9 @@ import { PasswordField } from '../components/auth/PasswordField';
 import { usePasswordStrength } from '../hooks/usePasswordStrength';
 
 export function SignUpPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { signUpWithEmail, signInWithGoogle } = useAuth();
-  
-  const from = location.state?.from?.pathname || '/upload';
+  // We don't navigate manually — AppShell will redirect to the right place
+  // once the backend sync finishes and the auth state is resolved.
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,12 +42,10 @@ export function SignUpPage() {
     setSubmitting(true);
     try {
       await signUpWithEmail({ name, email, password, remember: true });
-      toast.success('Welcome to RoomCanvas!');
-      navigate(from, { replace: true });
+      // AppShell will route to /setup for new users once backend sync finishes
     } catch (err: any) {
       if (err.message === 'An account with this email already exists.') {
         toast.error('Account already exists. Please sign in.');
-        navigate('/signin', { state: { email, from } });
       } else {
         toast.error(err.message);
       }
@@ -61,8 +57,8 @@ export function SignUpPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
-      const user = await signInWithGoogle(true);
-      if (user) { toast.success('Welcome to RoomCanvas!'); navigate(from, { replace: true }); }
+      await signInWithGoogle(true);
+      // AppShell will route to /setup for new users, or /upload for returning users
     } catch (err: any) {
       toast.error(err.message);
     } finally {

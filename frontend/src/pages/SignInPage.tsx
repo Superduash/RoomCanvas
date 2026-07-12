@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { SocialAuthButton } from '../components/auth/SocialAuthButton';
@@ -9,11 +9,10 @@ import { toast } from '../lib/toast';
 import { PasswordField } from '../components/auth/PasswordField';
 
 export function SignInPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { signInWithEmail, signInWithGoogle } = useAuth();
-  
-  const from = location.state?.from?.pathname || '/upload';
+  // We don't navigate manually — AppShell will redirect to the right place
+  // once the backend sync finishes and the auth state is resolved.
 
   const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
@@ -27,7 +26,7 @@ export function SignInPage() {
     setSubmitting(true);
     try {
       await signInWithEmail({ email, password, remember });
-      navigate(from, { replace: true });
+      // AppShell will route to the correct page once backend sync finishes
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -38,8 +37,8 @@ export function SignInPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
-      const user = await signInWithGoogle(remember);
-      if (user) navigate(from, { replace: true });
+      await signInWithGoogle(remember);
+      // AppShell will route to the correct page once backend sync finishes
     } catch (err: any) {
       toast.error(err.message);
     } finally {

@@ -9,8 +9,10 @@ export function VerificationBanner() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  // Only show if logged in, email is NOT verified, and banner is not dismissed
-  if (!user || user.emailVerified || dismissed) {
+  // Only show if logged in, email is NOT verified, not dismissed,
+  // and the user is NOT a Google sign-in (Google accounts are inherently verified)
+  const isGoogleUser = user?.providerData?.some(p => p.providerId === 'google.com') ?? false;
+  if (!user || user.emailVerified || dismissed || isGoogleUser) {
     return null;
   }
 

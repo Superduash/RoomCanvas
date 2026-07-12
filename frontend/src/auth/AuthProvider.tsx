@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
 import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
@@ -27,12 +27,22 @@ import { useAuthModalStore } from './authModalStore';
 
 import { type User as ApiUser } from '../api/types';
 
+/** The six discrete states the application can be in. */
+export type AuthState =
+  | 'initializing'    // Firebase SDK not yet resolved
+  | 'guest'           // Not signed in
+  | 'syncing'         // Firebase OK, waiting for backend to confirm
+  | 'onboarding'      // Backend confirmed, profile_completed === false
+  | 'authenticated';  // Fully authenticated + onboarding complete
+
 interface AuthContextValue {
   user: User | null | undefined; // undefined = not resolved, null = signed out
   profile: ApiUser | null;
   setProfile: (profile: ApiUser) => void;
+  authState: AuthState;
   isAuthenticated: boolean;
-  isLoading: boolean;
+  isLoading: boolean;   // true while Firebase is initializing
+  isSyncing: boolean;   // true while backend sync is in flight
   signUpWithEmail: (args: any) => Promise<User>;
   signInWithEmail: (args: any) => Promise<User>;
   signInWithGoogle: (remember?: boolean) => Promise<User | null>;
@@ -74,66 +84,96 @@ function friendlyError(err: any) {
     'auth/requires-recent-login': 'For your security, please sign in again to complete this action.',
     'auth/credential-already-in-use': 'This credential is already associated with a different account.',
   };
-  
+
   if (err?.code === 'auth/requires-recent-login') {
-    // We emit an event so a re-auth modal can be triggered globally if needed,
-    // though forms should catch this and show their own inline re-auth.
     window.dispatchEvent(new CustomEvent('roomcanvas:reauth-required'));
   }
-  
+
   return map[err?.code] || err?.message || 'Something went wrong. Please try again.';
+}
+
+/** Parse backend error HTTP responses into user-friendly messages. */
+function parseSyncError(err: any): string {
+  const status = err?.status ?? err?.response?.status ?? 0;
+  const detail: string = err?.message ?? err?.response?.data?.detail ?? '';
+
+  if (status === 503) {
+    return 'Auth service not configured on server. Contact support.';
+  }
+  if (status === 401) {
+    if (detail.includes('expired')) return 'Session expired. Please sign in again.';
+    if (detail.includes('invalid')) return 'Invalid session token. Please sign in again.';
+    return `Backend rejected the session: ${detail || 'Unauthorized'}`;
+  }
+  if (status === 500) {
+    if (detail.includes('Database')) return 'Database error. Please try again.';
+    return `Server error: ${detail || 'Internal Server Error'}`;
+  }
+  if (status === 0) {
+    return 'Network error. Could not reach the server.';
+  }
+  return detail || 'Backend sync failed. Please try again.';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [profile, setProfile] = useState<ApiUser | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  // Guard against concurrent syncs for the same Firebase user
+  const syncingUidRef = useRef<string | null>(null);
 
   const syncBackendUser = useCallback(async (fbUser: User) => {
-    let attempts = 0;
+    // Avoid duplicate concurrent syncs for the same user
+    if (syncingUidRef.current === fbUser.uid) return;
+    syncingUidRef.current = fbUser.uid;
+    setIsSyncing(true);
+    setSyncError(null);
+
     const delays = [0, 800, 2000];
-    
-    // Attempt the sync with exponential backoff
+    let attempts = 0;
+
     while (attempts < 3) {
       try {
-        // Force refresh the token on the very first attempt to avoid race conditions on signup
-        if (attempts === 0) {
-          await fbUser.getIdToken(true);
-        }
-        
+        // Force refresh on first attempt to avoid race conditions right after sign-up
+        await fbUser.getIdToken(attempts === 0);
         const data = await api.post<ApiUser>('/auth/sync', {});
         setProfile(data);
         setSyncError(null);
-        return; // Success, exit loop
+        setIsSyncing(false);
+        syncingUidRef.current = null;
+        return; // Success
       } catch (err: any) {
         attempts++;
-        const isAuthError = err?.response?.status === 401 || err?.response?.status === 403;
-        
-        // If 401/403, force token refresh for the next attempt
+        const isAuthError = err?.status === 401 || err?.status === 403;
+
         if (isAuthError && attempts < 3) {
-          try { await fbUser.getIdToken(true); } catch (e) {}
+          try { await fbUser.getIdToken(true); } catch (_) { /* ignore */ }
         }
-        
+
         if (attempts >= 3) {
-          setSyncError('Your account signed in, but the backend rejected the session. Please check backend logs.');
-          break;
+          const msg = parseSyncError(err);
+          setSyncError(msg);
+          setIsSyncing(false);
+          syncingUidRef.current = null;
+          return;
         }
-        
-        // Wait before next attempt
+
         await new Promise(resolve => setTimeout(resolve, delays[attempts]));
       }
     }
   }, []);
 
   useEffect(() => {
+    // Handle any redirect-based auth result (noop for popup flow)
     getRedirectResult(firebaseAuth).catch(() => {});
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, (fbUser) => {
       setUser(fbUser);
       if (fbUser) {
         syncBackendUser(fbUser);
-        
-        // Handle pending auth action
+
+        // Resume any pending action (e.g. triggered from AuthModal)
         const pending = useAuthModalStore.getState().consumePendingAction();
         if (pending) {
           useAuthModalStore.getState().close();
@@ -141,6 +181,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setProfile(null);
+        setIsSyncing(false);
+        setSyncError(null);
+        syncingUidRef.current = null;
       }
     });
     return unsubscribe;
@@ -155,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await withPersistence(remember);
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       if (name) await updateProfile(cred.user, { displayName: name });
-      
+
       try {
         await sendEmailVerification(cred.user, {
           url: `${window.location.origin}/auth/action`
@@ -163,7 +206,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.error('Failed to send verification email on signup', e);
       }
-      
+
+      // onAuthStateChanged will fire and trigger syncBackendUser automatically.
+      // Do NOT navigate here — AppShell handles routing once profile loads.
       return cred.user;
     } catch (err: any) {
       throw new Error(friendlyError(err));
@@ -174,6 +219,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await withPersistence(remember);
       const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
+      // onAuthStateChanged will fire and trigger syncBackendUser automatically.
+      // Do NOT navigate here — AppShell handles routing once profile loads.
       return cred.user;
     } catch (err: any) {
       throw new Error(friendlyError(err));
@@ -184,6 +231,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await withPersistence(remember);
     try {
       const cred = await signInWithPopup(firebaseAuth, googleProvider);
+      // onAuthStateChanged will fire and trigger syncBackendUser automatically.
+      // Do NOT navigate here — AppShell handles routing once profile loads.
       return cred.user;
     } catch (err: any) {
       if (POPUP_FALLBACK_CODES.has(err?.code)) {
@@ -232,7 +281,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUserEmail = useCallback(async (email: string) => {
     if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
     try {
-      // Firebase v9+ recommended method
       await verifyBeforeUpdateEmail(firebaseAuth.currentUser, email, {
         url: `${window.location.origin}/auth/action`
       });
@@ -268,12 +316,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => firebaseSignOut(firebaseAuth), []);
 
-  const value = {
+  // Derive the semantic auth state
+  const isLoading = user === undefined;
+  const isAuthenticated = !!user;
+
+  const authState: AuthState =
+    isLoading ? 'initializing' :
+    !isAuthenticated ? 'guest' :
+    isSyncing ? 'syncing' :
+    (profile && !profile.profile_completed) ? 'onboarding' :
+    'authenticated';
+
+  const value: AuthContextValue = {
     user,
     profile,
     setProfile,
-    isAuthenticated: !!user,
-    isLoading: user === undefined,
+    authState,
+    isAuthenticated,
+    isLoading,
+    isSyncing,
     signUpWithEmail,
     signInWithEmail,
     signInWithGoogle,

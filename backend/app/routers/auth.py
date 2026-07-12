@@ -1,4 +1,7 @@
 from datetime import datetime, timezone
+import logging
+
+_log = logging.getLogger("app.auth")
 from fastapi import APIRouter, Depends, Response, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -43,15 +46,20 @@ async def sync_user(response: Response, user: User = Depends(get_current_user), 
     upserts the row; this endpoint's job is just to refresh last_login_at and
     return the canonical profile so the frontend can populate the header/account UI.
     """
-    user.last_login_at = datetime.utcnow()
-    await db.commit()
-    await db.refresh(user)
-    
+    user.last_login_at = datetime.now(timezone.utc)
+    try:
+        await db.commit()
+        await db.refresh(user)
+    except Exception as exc:
+        await db.rollback()
+        _log.error(f"Failed to update last_login_at in /auth/sync: {exc}")
+        # Non-fatal: user object is still valid from get_current_user, just return it
+
     if getattr(user, "_is_new", False):
         response.status_code = 201
     else:
         response.status_code = 200
-        
+
     return user
 
 @router.get("/me", response_model=UserOut, status_code=200)
@@ -60,6 +68,7 @@ async def get_me(user: User = Depends(get_current_user)):
 
 @router.patch("/me", response_model=UserOut)
 async def update_profile(updates: UserUpdate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from fastapi import HTTPException
     if updates.display_name is not None:
         user.display_name = updates.display_name
     if updates.username is not None:
@@ -72,8 +81,13 @@ async def update_profile(updates: UserUpdate, user: User = Depends(get_current_u
         user.theme_preference = updates.theme_preference
     if updates.profile_completed is not None:
         user.profile_completed = updates.profile_completed
-    await db.commit()
-    await db.refresh(user)
+    try:
+        await db.commit()
+        await db.refresh(user)
+    except Exception as exc:
+        await db.rollback()
+        _log.error(f"Failed to update user profile: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to save profile changes. Please try again.")
     return user
 
 @router.patch("/me/settings", response_model=UserOut)

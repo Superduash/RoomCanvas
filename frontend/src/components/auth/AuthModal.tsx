@@ -42,7 +42,7 @@ export function AuthModal() {
       } else {
         await signUpWithEmail({ name, email, password, remember });
       }
-      // On success, the AuthProvider will close the modal and resume action
+      // Close modal — AppShell will redirect to the correct page after backend sync
       close();
     } catch (err: any) {
       toast.error(err.message);
@@ -55,6 +55,7 @@ export function AuthModal() {
     setLoading(true);
     try {
       await signInWithGoogle(remember);
+      // Close modal — AppShell will redirect to the correct page after backend sync
       close();
     } catch (err: any) {
       toast.error(err.message);

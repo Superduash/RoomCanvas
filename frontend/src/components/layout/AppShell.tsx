@@ -1,6 +1,8 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useAuth } from '../../auth/AuthProvider';
 import { TopNav } from './TopNav';
 import { Footer } from './Footer';
 import { CommandPalette } from '../command/CommandPalette';
@@ -17,7 +19,7 @@ function useScrollProgress() {
       setProgress(scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0);
     };
     window.addEventListener('scroll', update, { passive: true });
-    update(); // init
+    update();
     return () => window.removeEventListener('scroll', update);
   }, []);
   return progress;
@@ -26,11 +28,27 @@ function useScrollProgress() {
 export function AppShell() {
   const location = useLocation();
   const scrollProgress = useScrollProgress();
+  const { isLoading, isSyncing, isAuthenticated, profile } = useAuth();
+
+  // Block ALL rendering while Firebase is initializing or backend is syncing.
+  // This is the single source of truth that prevents flickering and premature routing.
+  if (isLoading || isSyncing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <Loader2 size={32} className="animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  // Authenticated users who haven't completed onboarding always go to /setup.
+  if (isAuthenticated && profile && !profile.profile_completed) {
+    return <Navigate to="/setup" replace />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
       {/* Scroll Progress Indicator */}
-      <div 
+      <div
         className="fixed top-0 left-0 h-[2px] bg-accent z-[100] transition-all duration-75 ease-out origin-left"
         style={{ width: `${scrollProgress * 100}%` }}
         aria-hidden="true"

@@ -4,17 +4,18 @@ import { useAuth } from './AuthProvider';
 import { Loader2 } from 'lucide-react';
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading, isSyncing, profile } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  // Wait for both Firebase initialization and backend sync to complete
+  if (isLoading || isSyncing) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', paddingBlock: 'var(--space-9)' }}>
         <Loader2 size={28} color="var(--accent)" className="animate-spin" />
       </div>
     );
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
@@ -22,6 +23,6 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (profile && !profile.profile_completed && location.pathname !== '/setup') {
     return <Navigate to="/setup" replace />;
   }
-  
+
   return <>{children}</>;
 }
