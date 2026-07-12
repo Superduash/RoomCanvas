@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ImagePlus, X, AlertTriangle } from 'lucide-react';
+import { ImagePlus, X, AlertTriangle, Camera, FolderOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
 
@@ -22,76 +22,97 @@ function mimeToExtensions(mime: string): string {
   return map[mime] ?? mime.split('/')[1]?.toUpperCase() ?? mime;
 }
 
+// Platform detection
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  // Check user agent
+  const ua = navigator.userAgent.toLowerCase();
+  const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+  
+  // Check touch support
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  // Check screen size as secondary indicator
+  const isSmallScreen = window.innerWidth <= 768;
+  
+  return isMobileUA || (hasTouch && isSmallScreen);
+}
+
 export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, onRemove }: DropzoneProps) {
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  const [isMobile, setIsMobile] = useState(false);
+  const [customError, setCustomError] = useState('');
+  
+  // Separate refs for camera and file inputs
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Detect platform on mount
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   const acceptObj = allowedTypes.reduce<Record<string, string[]>>((acc, mime) => {
     acc[mime] = [];
     return acc;
   }, {});
 
-  const [customError, setCustomError] = useState('');
+  const validateAndAcceptFile = useCallback((file: File) => {
+    setCustomError('');
+    
+    // Validate size
+    if (file.size > maxSizeBytes) {
+      setCustomError(`File is too large — max ${maxSizeMB}MB`);
+      return;
+    }
+    
+    // Validate type
+    if (!allowedTypes.includes(file.type)) {
+      const fmts = allowedTypes.map(mimeToExtensions).join(', ');
+      setCustomError(`Unsupported format — use ${fmts}`);
+      return;
+    }
+    
+    onFileAccepted(file);
+  }, [maxSizeBytes, maxSizeMB, allowedTypes, onFileAccepted]);
 
   const onDrop = useCallback(
     (accepted: File[]) => {
-      setCustomError('');
-      if (accepted[0]) onFileAccepted(accepted[0]);
+      if (accepted[0]) validateAndAcceptFile(accepted[0]);
     },
-    [onFileAccepted]
+    [validateAndAcceptFile]
   );
 
-  const { getRootProps, getInputProps, isDragActive, fileRejections, open } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     accept: acceptObj,
     maxSize: maxSizeBytes,
     multiple: false,
     noClick: true,
     noKeyboard: false,
+    disabled: isMobile, // Disable dropzone on mobile
   });
 
-  // Enhanced native mobile picker handler
-  const handleMobilePickerOpen = useCallback(async () => {
-    // Try File System Access API first (for better PWA experience)
-    if ('showOpenFilePicker' in window) {
-      try {
-        const [fileHandle] = await (window as any).showOpenFilePicker({
-          types: [
-            {
-              description: 'Images',
-              accept: {
-                'image/*': ['.png', '.jpg', '.jpeg', '.webp']
-              }
-            }
-          ],
-          multiple: false,
-        });
-        const file = await fileHandle.getFile();
-        
-        // Validate file
-        if (file.size > maxSizeBytes) {
-          setCustomError(`File is too large — max ${maxSizeMB}MB`);
-          return;
-        }
-        if (!allowedTypes.includes(file.type)) {
-          const fmts = allowedTypes.map(mimeToExtensions).join(', ');
-          setCustomError(`Unsupported format — use ${fmts}`);
-          return;
-        }
-        
-        setCustomError('');
-        onFileAccepted(file);
-        return;
-      } catch (err: any) {
-        // User cancelled or API not supported, fall through to regular input
-        if (err.name !== 'AbortError') {
-          console.warn('File System Access API failed:', err);
-        }
-      }
+  // Handle camera capture
+  const handleCameraClick = useCallback(() => {
+    cameraInputRef.current?.click();
+  }, []);
+
+  // Handle file browse
+  const handleBrowseClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // Handle file selection from inputs
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      validateAndAcceptFile(file);
     }
-    
-    // Fallback: use react-dropzone's open method which triggers the file input
-    open();
-  }, [open, maxSizeBytes, maxSizeMB, allowedTypes, onFileAccepted]);
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  }, [validateAndAcceptFile]);
 
   const rejectionReason = fileRejections[0]?.errors[0];
   let errorMessage = customError;
@@ -125,7 +146,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               type="button"
               variant="secondary"
               size="sm"
-              onClick={handleMobilePickerOpen}
+              onClick={handleBrowseClick}
               className="bg-surface/95 backdrop-blur-sm shadow-lg touch-manipulation active:scale-95"
             >
               <ImagePlus className="h-4 w-4 mr-1.5" strokeWidth={2} />
@@ -157,47 +178,92 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept={allowedTypes.join(',')}
+        capture="environment"
+        onChange={handleFileInputChange}
+        className="hidden"
+        aria-label="Capture photo with camera"
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={allowedTypes.join(',')}
+        onChange={handleFileInputChange}
+        className="hidden"
+        aria-label="Choose file from device"
+      />
+
       <div
-        {...getRootProps()}
+        {...(isMobile ? {} : getRootProps())}
         className={cn(
-          'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed',
-          'min-h-[240px] sm:min-h-[280px] py-6 sm:py-8 px-4 sm:px-6 transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-          isDragActive
-            ? 'border-accent bg-accent-subtle scale-[1.01] shadow-sm'
-            : errorMessage
-            ? 'border-danger bg-danger-subtle'
-            : 'border-border-strong bg-surface hover:border-accent/40 hover:bg-accent/[0.02]'
+          'relative flex flex-col items-center justify-center rounded-xl transition-all duration-200',
+          isMobile ? 'border border-border bg-surface py-8 px-4' : 'border-2 border-dashed',
+          !isMobile && 'min-h-[240px] sm:min-h-[280px] py-6 sm:py-8 px-4 sm:px-6',
+          !isMobile && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+          !isMobile && isDragActive && 'border-accent bg-accent-subtle scale-[1.01] shadow-sm',
+          !isMobile && !isDragActive && errorMessage && 'border-danger bg-danger-subtle',
+          !isMobile && !isDragActive && !errorMessage && 'border-border-strong bg-surface hover:border-accent/40 hover:bg-accent/[0.02]'
         )}
       >
-        <input {...getInputProps()} capture="environment" />
+        {!isMobile && <input {...getInputProps()} />}
 
-        <div className="flex flex-col items-center gap-3 sm:gap-4 text-center max-w-sm">
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm w-full">
           <div>
             <p className="text-sm sm:text-base font-semibold text-text-primary mb-1 sm:mb-1.5">
-              {isDragActive ? 'Drop your photo here' : 'Add a room photo'}
+              {!isMobile && isDragActive ? 'Drop your photo here' : 'Add a room photo'}
             </p>
-            <p className="text-xs sm:text-sm text-text-secondary mb-0.5 sm:mb-1">
-              Drag & drop or tap to choose
-            </p>
+            {!isMobile && (
+              <p className="text-xs sm:text-sm text-text-secondary mb-0.5 sm:mb-1">
+                Drag & drop or click to browse
+              </p>
+            )}
             <p className="text-[11px] sm:text-xs text-text-tertiary font-mono">
               {allowedTypes.map(mimeToExtensions).join(', ')} • Max {maxSizeMB}MB
             </p>
           </div>
 
-          <Button 
-            variant="primary" 
-            size="lg" 
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              open();
-            }}
-            icon={<ImagePlus className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />}
-            className="mt-1 sm:mt-2 shadow-md touch-manipulation active:scale-95 transition-transform h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base"
-          >
-            Add Photo
-          </Button>
+          {/* Platform-specific buttons */}
+          {isMobile ? (
+            // Mobile: Two buttons (Camera + Browse)
+            <div className="flex flex-col gap-3 w-full">
+              <Button 
+                variant="primary" 
+                size="lg" 
+                type="button"
+                onClick={handleCameraClick}
+                icon={<Camera className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />}
+                className="w-full shadow-md touch-manipulation active:scale-95 transition-transform h-12 sm:h-14 text-sm sm:text-base"
+              >
+                Take Photo
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="lg" 
+                type="button"
+                onClick={handleBrowseClick}
+                icon={<FolderOpen className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />}
+                className="w-full shadow-sm touch-manipulation active:scale-95 transition-transform h-12 sm:h-14 text-sm sm:text-base"
+              >
+                Browse Files
+              </Button>
+            </div>
+          ) : (
+            // Desktop: Single browse button
+            <Button 
+              variant="primary" 
+              size="lg" 
+              type="button"
+              onClick={handleBrowseClick}
+              icon={<FolderOpen className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />}
+              className="mt-1 sm:mt-2 shadow-md hover:shadow-lg transition-all h-12 px-6 text-sm sm:text-base"
+            >
+              Browse Files
+            </Button>
+          )}
         </div>
       </div>
 

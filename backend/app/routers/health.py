@@ -42,9 +42,9 @@ async def check_health(request: Request) -> JSONResponse:
     # 1. DB Connectivity
     db_status = "ok"
     try:
-        # Use a quick connection check without heavy pooling block
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        # Use async engine for connection check
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
     except Exception:
         db_status = "unreachable"
 

@@ -1,4 +1,4 @@
-@echo off
+    @echo off
 setlocal EnableDelayedExpansion
 
 :: -----------------------------------------------------------------------------
@@ -37,7 +37,7 @@ echo.
 :: 2. Start Backend
 echo %YELLOW%[2/5]%RESET% Starting Backend...
 pushd backend
-start "RoomCanvas Backend" cmd /k "call .\venv\Scripts\activate.bat && uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+start "RoomCanvas Backend" cmd /k ".\venv\Scripts\activate.bat & uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 popd
 
 :: 3. Wait for Backend
@@ -106,10 +106,14 @@ exit /b 0
 :WaitForBackend
 set RETRIES=0
 :HttpBackendLoop
-curl -fs http://127.0.0.1:8000/api/health >nul 2>&1
+powershell -Command "try { $null = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/api/health' -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
 if not errorlevel 1 exit /b 0
 set /a RETRIES+=1
-if %RETRIES% geq 30 exit /b 1
+if %RETRIES% geq 30 (
+    echo       %RED%✗ Backend failed to start after 30 seconds%RESET%
+    echo       Check the "RoomCanvas Backend" window for errors.
+    exit /b 1
+)
 timeout /t 1 /nobreak >nul
 goto HttpBackendLoop
 
