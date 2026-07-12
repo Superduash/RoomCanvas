@@ -272,8 +272,8 @@ export default function SetupProfilePage() {
                   <p className="text-text-secondary text-[15px]">Let's set up your space in 30 seconds.</p>
                 </div>
                 <div className="flex flex-col gap-3 mt-4">
-                   <Button size="lg" onClick={handleNextStep}>
-                     Set up my profile <ArrowRight className="h-4 w-4 ml-1" />
+                   <Button size="lg" onClick={handleNextStep} iconRight={<ArrowRight className="h-4 w-4" />}>
+                     Set up my profile
                    </Button>
                    <Button size="lg" variant="ghost" onClick={handleSkip}>
                      Skip for now
@@ -332,8 +332,8 @@ export default function SetupProfilePage() {
                 </div>
 
                 <div className="mt-auto">
-                  <Button className="w-full" size="lg" onClick={handleNextStep}>
-                    Continue <ArrowRight className="h-4 w-4 ml-1" />
+                  <Button className="w-full" size="lg" onClick={handleNextStep} iconRight={<ArrowRight className="h-4 w-4" />}>
+                    Continue
                   </Button>
                 </div>
               </motion.div>
@@ -364,7 +364,7 @@ export default function SetupProfilePage() {
                     onChange={(e) => setUsername(e.target.value.toLowerCase())}
                     className={`pl-8 ${usernameStatus === 'invalid' || usernameStatus === 'taken' ? 'border-danger focus:border-danger focus:ring-danger/20' : ''}`}
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary font-medium">@</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary font-medium pointer-events-none">@</span>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
                     {usernameStatus === 'checking' && <Loader2 size={18} className="animate-spin text-text-secondary" />}
                     {usernameStatus === 'available' && <Check size={18} className="text-success" />}
@@ -409,8 +409,8 @@ export default function SetupProfilePage() {
                 </div>
 
                 <div className="mt-auto">
-                  <Button className="w-full" size="lg" onClick={handleNextStep} disabled={bio.length > 160 || usernameStatus === 'checking'}>
-                    Continue <ArrowRight className="h-4 w-4 ml-1" />
+                  <Button className="w-full" size="lg" onClick={handleNextStep} disabled={bio.length > 160 || usernameStatus === 'checking'} iconRight={<ArrowRight className="h-4 w-4" />}>
+                    Continue
                   </Button>
                 </div>
               </motion.div>
@@ -497,8 +497,8 @@ export default function SetupProfilePage() {
                 </div>
 
                 <div className="mt-auto">
-                  <Button className="w-full" size="lg" onClick={handleNextStep} loading={isSubmitting}>
-                    Let's go! <ArrowRight className="h-4 w-4 ml-1" />
+                  <Button className="w-full" size="lg" onClick={handleNextStep} loading={isSubmitting} iconRight={<ArrowRight className="h-4 w-4" />}>
+                    Let's go!
                   </Button>
                 </div>
               </motion.div>

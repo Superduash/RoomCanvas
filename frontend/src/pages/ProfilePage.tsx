@@ -245,7 +245,7 @@ export function ProfilePage() {
                   placeholder="username"
                   className={cn("pl-8", (usernameStatus === 'invalid' || usernameStatus === 'taken') && 'border-danger focus:border-danger')}
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary font-medium">@</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary font-medium pointer-events-none">@</span>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
                   {usernameStatus === 'checking' && <Loader2 size={18} className="animate-spin text-text-secondary" />}
                   {usernameStatus === 'available' && <Check size={18} className="text-success" />}
