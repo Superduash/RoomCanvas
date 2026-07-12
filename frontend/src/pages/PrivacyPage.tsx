@@ -130,8 +130,8 @@ export function PrivacyPage() {
               </ul>
               <p className="text-text-secondary leading-relaxed mt-3">
                 To exercise these rights, contact us at{' '}
-                <a href="mailto:privacy@roomcanvasai.com" className="text-accent hover:underline">
-                  privacy@roomcanvasai.com
+                <a href="mailto:helloitsashwin@gmail.com" className="text-accent hover:underline">
+                  helloitsashwin@gmail.com
                 </a>
               </p>
             </section>
@@ -179,14 +179,14 @@ export function PrivacyPage() {
               <ul className="list-none text-text-secondary space-y-2 mt-3">
                 <li>
                   Email:{' '}
-                  <a href="mailto:privacy@roomcanvasai.com" className="text-accent hover:underline">
-                    privacy@roomcanvasai.com
+                  <a href="mailto:helloitsashwin@gmail.com" className="text-accent hover:underline">
+                    helloitsashwin@gmail.com
                   </a>
                 </li>
                 <li>
                   Support:{' '}
-                  <a href="mailto:support@roomcanvasai.com" className="text-accent hover:underline">
-                    support@roomcanvasai.com
+                  <a href="mailto:helloitsashwin@gmail.com" className="text-accent hover:underline">
+                    helloitsashwin@gmail.com
                   </a>
                 </li>
               </ul>

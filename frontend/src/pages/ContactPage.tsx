@@ -25,7 +25,7 @@ export function ContactPage() {
           {/* Contact Options */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
             <motion.a
-              href="mailto:support@roomcanvasai.com"
+              href="mailto:helloitsashwin@gmail.com"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -44,7 +44,7 @@ export function ContactPage() {
             </motion.a>
 
             <motion.a
-              href="mailto:bug@roomcanvasai.com"
+              href="mailto:helloitsashwin@gmail.com"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -63,7 +63,7 @@ export function ContactPage() {
             </motion.a>
 
             <motion.a
-              href="mailto:feedback@roomcanvasai.com"
+              href="mailto:helloitsashwin@gmail.com"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -82,7 +82,7 @@ export function ContactPage() {
             </motion.a>
 
             <motion.a
-              href="mailto:legal@roomcanvasai.com"
+              href="mailto:helloitsashwin@gmail.com"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}

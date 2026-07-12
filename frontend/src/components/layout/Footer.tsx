@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Github, Linkedin, Twitter, Mail } from 'lucide-react';
 import { RoomCanvasLogoMark } from './TopNav';
 
 function FooterLink({ to, href, children }: { to?: string; href?: string; children: React.ReactNode }) {
@@ -60,14 +61,55 @@ export function Footer() {
             <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-text-tertiary mb-2.5 sm:mb-4 select-none">More</h4>
             <nav className="flex flex-col gap-2 sm:gap-3">
               <FooterLink to="/about">About</FooterLink>
-              <FooterLink href="mailto:support@roomcanvasai.com">Contact</FooterLink>
+              <FooterLink href="mailto:helloitsashwin@gmail.com">Contact</FooterLink>
             </nav>
           </div>
         </div>
         
         {/* Bottom bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-border">
-          <span className="text-xs sm:text-sm text-text-tertiary text-center sm:text-left">© {year} RoomCanvas. AI-powered interior redesign.</span>
+        <div className="flex flex-col items-center gap-4 pt-4 sm:pt-6 border-t border-border">
+          {/* Social Links */}
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-2xs text-text-tertiary">v1.0.0</span>
+            <div className="flex items-center gap-3">
+              <a
+                href="https://github.com/Superduash"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub Profile"
+                className="p-2 rounded-lg text-text-tertiary hover:text-accent hover:-translate-y-0.5 transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Github size={18} />
+              </a>
+              <a
+                href="https://www.linkedin.com/in/ashwin-a-943114320"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn Profile"
+                className="p-2 rounded-lg text-text-tertiary hover:text-accent hover:-translate-y-0.5 transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Linkedin size={18} />
+              </a>
+              <a
+                href="https://x.com/superduash"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="X/Twitter Profile"
+                className="p-2 rounded-lg text-text-tertiary hover:text-accent hover:-translate-y-0.5 transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Twitter size={18} />
+              </a>
+              <a
+                href="mailto:helloitsashwin@gmail.com"
+                aria-label="Email Contact"
+                className="p-2 rounded-lg text-text-tertiary hover:text-accent hover:-translate-y-0.5 transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Mail size={18} />
+              </a>
+            </div>
+          </div>
+          
+          <span className="text-xs sm:text-sm text-text-tertiary text-center">© {year} RoomCanvas. AI-powered interior redesign.</span>
         </div>
       </div>
     </footer>

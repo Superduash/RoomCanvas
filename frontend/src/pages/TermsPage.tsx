@@ -138,8 +138,8 @@ export function TermsPage() {
               <h2 className="text-2xl font-bold text-text-primary mb-4">12. Contact</h2>
               <p className="text-text-secondary leading-relaxed">
                 For questions about these Terms, contact us at{' '}
-                <a href="mailto:legal@roomcanvasai.com" className="text-accent hover:underline">
-                  legal@roomcanvasai.com
+                <a href="mailto:helloitsashwin@gmail.com" className="text-accent hover:underline">
+                  helloitsashwin@gmail.com
                 </a>
               </p>
             </section>
