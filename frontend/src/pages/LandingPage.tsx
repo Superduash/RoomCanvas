@@ -27,7 +27,7 @@ const STEPS = [
     icon: <Sparkles className="h-5 w-5" />,
     step: '3',
     label: 'Generate',
-    desc: 'Flux creates a stunning photorealistic redesign in 90s.',
+    desc: 'Flux creates a stunning photorealistic redesign in minutes.',
   }
 ];
 
@@ -53,82 +53,83 @@ export function LandingPage() {
     <div className="flex flex-col">
       
       {/* ── HERO SECTION ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden min-h-[85vh] flex flex-col items-center justify-center pt-20">
+      <section className="relative overflow-hidden min-h-[85vh] flex items-center justify-center pt-20 pb-16">
         {/* Animated bg */}
         <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden>
-          <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,var(--color-accent-muted),transparent_70%)] animate-float opacity-60 mix-blend-screen dark:mix-blend-lighten" />
-          <div className="absolute bottom-[-10%] right-[5%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(91,155,213,0.08),transparent_70%)] animate-float [animation-delay:3s] opacity-80" />
+          <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,var(--color-accent-muted),transparent_70%)] animate-float opacity-60 mix-blend-screen dark:mix-blend-lighten" />
+          <div className="absolute bottom-[-10%] left-[5%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(91,155,213,0.08),transparent_70%)] animate-float [animation-delay:3s] opacity-80" />
         </div>
 
-        <div className="mx-auto max-w-content px-5 py-24 text-center flex flex-col items-center gap-8 w-full relative z-10">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-subtle border border-accent/20 text-accent text-xs font-semibold tracking-wide uppercase shadow-sm">
-              <Sparkles className="h-3 w-3" />
-              Powered by Gemini + Flux Kontext
-            </span>
-          </motion.div>
-
-          <motion.h1 
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="text-[clamp(2.4rem,6vw,5rem)] font-bold tracking-tight leading-[1.08] text-text-primary text-balance max-w-4xl"
-          >
-            See your room,<br />
-            <span className="text-accent">redesigned.</span>
-          </motion.h1>
-
-          <motion.p 
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}
-            className="text-lg text-text-secondary max-w-2xl leading-relaxed text-pretty"
-          >
-            Upload a photo. Gemini analyzes it. Flux generates a photorealistic redesign. Done in 90 seconds.
-          </motion.p>
-
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.24 }}
-            className="flex flex-col sm:flex-row items-center gap-4 mt-2"
-          >
-            <Button size="lg" asChild className="h-12 px-6 text-[15px] shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 transition-all">
-              <Link to="/upload">Design my room <ArrowRight className="h-4 w-4 ml-1.5" /></Link>
-            </Button>
-            <Button variant="ghost" size="lg" className="h-12 px-6 text-[15px]" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}>
-              See examples
-            </Button>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-            className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 mt-2"
-          >
-            {['Free to try', 'No credit card', '90-second results'].map(t => (
-              <span key={t} className="text-[13px] font-medium text-text-tertiary flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-accent/60" />
-                {t}
+        <div className="mx-auto max-w-[1280px] px-6 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 w-full relative z-10">
+          
+          {/* Left Column: Content */}
+          <div className="flex-1 flex flex-col items-start text-left max-w-2xl pt-10 lg:pt-0">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-subtle border border-accent/20 text-accent text-xs font-semibold tracking-wide uppercase shadow-sm">
+                <Sparkles className="h-3 w-3" />
+                Photorealistic AI Redesign
               </span>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+            </motion.div>
 
-      {/* ── DEMO SLIDER ────────────────────────────────────────── */}
-      <section id="demo" className="py-10 pb-24 relative z-20">
-        <div className="mx-auto max-w-[1024px] px-5">
-           <motion.div 
-             initial={{ opacity: 0, y: 40 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             viewport={{ once: true, margin: '-100px' }}
-             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-             className="rounded-2xl overflow-hidden shadow-2xl border border-border bg-surface relative group"
-           >
-             <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">Before</div>
-             <div className="absolute top-4 right-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">After</div>
-             <CompareSlider
-                beforeSrc="/originalroom.png"
-                afterSrc="/redesignedroom.png"
-             />
-           </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className="text-[clamp(2.4rem,5vw,4.5rem)] font-bold tracking-tight leading-[1.08] text-text-primary text-balance mt-6"
+            >
+              See your room,<br />
+              <span className="text-accent">redesigned.</span>
+            </motion.h1>
+
+            <motion.p 
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}
+              className="text-lg text-text-secondary max-w-xl leading-relaxed text-pretty mt-6"
+            >
+              Upload a photo. AI understands your room and creates a photorealistic redesign.
+            </motion.p>
+
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.24 }}
+              className="flex flex-col sm:flex-row items-center gap-4 mt-8 w-full sm:w-auto"
+            >
+              <Button size="lg" asChild className="h-12 px-6 text-[15px] shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 transition-all w-full sm:w-auto justify-center">
+                <Link to="/upload">Design my room <ArrowRight className="h-4 w-4 ml-1.5" /></Link>
+              </Button>
+              <Button variant="ghost" size="lg" className="h-12 px-6 text-[15px] w-full sm:w-auto justify-center" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
+                How it works
+              </Button>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+              className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-8"
+            >
+              {['✓ AI Room Analysis', '✓ Photorealistic Designs', '✓ Unlimited Refinements'].map(t => (
+                <span key={t} className="text-[13px] font-medium text-text-tertiary flex items-center">
+                  {t}
+                </span>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Right Column: Interactive Slider */}
+          <motion.div 
+             initial={{ opacity: 0, x: 40 }}
+             animate={{ opacity: 1, x: 0 }}
+             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+             className="flex-1 w-full max-w-3xl lg:max-w-none"
+          >
+             <div className="rounded-2xl overflow-hidden shadow-2xl border border-border bg-surface relative group aspect-[4/3] lg:aspect-[16/10]">
+               <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">Before</div>
+               <div className="absolute top-4 right-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white text-xs font-medium tracking-wide shadow-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">After</div>
+               <CompareSlider
+                  beforeSrc="/originalroom.png"
+                  afterSrc="/redesignedroom.png"
+               />
+             </div>
+          </motion.div>
+
         </div>
       </section>
 
       {/* ── HOW IT WORKS ───────────────────────────────────────── */}
-      <section className="py-24 bg-surface-alt/40 border-y border-border">
+      <section id="how-it-works" className="py-24 bg-surface-alt/40 border-y border-border">
         <div className="mx-auto max-w-content px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-text-primary mb-4">How it works</h2>
@@ -209,14 +210,14 @@ export function LandingPage() {
                </div>
             </div>
 
-            {/* 2. 90-Second Generation */}
+            {/* 2. Lightning Fast Generation */}
             <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
                  <Zap className="h-5 w-5" />
                </div>
-               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">90-Second Generation</h3>
+               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">Lightning Fast Generation</h3>
                <p className="text-text-secondary text-[15px] leading-relaxed z-10">
-                 Powered by Flux Kontext Pro, get stunning high-res renders faster than making coffee.
+                 Powered by Flux Kontext Pro, get stunning high-res renders in just a few minutes.
                </p>
                <div className="mt-auto pt-6 z-10">
                   <div className="h-14 w-full bg-surface-alt border border-border rounded-xl flex items-center px-5 shadow-inner">
