@@ -27,13 +27,13 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
     }
     if (res.status === 401) {
       detail = 'Your session expired \u2014 please sign in again.';
-      logger.info(`API Error on ${method} ${path}: ${detail}`);
+      if (import.meta.env.DEV) logger.info(`API Error on ${method} ${path}: ${detail}`);
     } else if (res.status === 429) {
       detail = 'You\'ve hit the hourly limit \u2014 try again in a few minutes.';
-      logger.warn(`API Error on ${method} ${path}: ${detail}`);
+      if (import.meta.env.DEV) logger.warn(`API Error on ${method} ${path}: ${detail}`);
     } else {
-      // Only warn here; let the caller decide if it should be an Error toast.
-      logger.warn(`API Error on ${method} ${path}: ${detail}`);
+      // Let the caller handle UI rendering. Only log to console in dev mode to keep prod clean.
+      if (import.meta.env.DEV) logger.warn(`API Error on ${method} ${path}: ${detail}`);
     }
 
     throw new ApiError(detail, res.status);
@@ -66,7 +66,9 @@ async function safeFetch<T>(method: string, path: string, options: RequestInit):
     
     // Network failure, DNS error, or CORS error
     const elapsed = performance.now() - start;
-    logger.error(`Network Error on ${method} ${path} after ${Math.round(elapsed)}ms:`, err);
+    if (import.meta.env.DEV) {
+      logger.error(`Network Error on ${method} ${path} after ${Math.round(elapsed)}ms:`, err);
+    }
     
     // Check if offline
     if (!navigator.onLine) {

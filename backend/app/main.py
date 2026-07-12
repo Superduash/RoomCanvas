@@ -165,7 +165,7 @@ async def access_log_middleware(request: Request, call_next):
     return response
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+_origins = [o.strip().rstrip('/') for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
@@ -195,19 +195,26 @@ app.include_router(measure.router,  prefix="/api")
 
 
 # ── Global Exception Handlers ─────────────────────────────────────────────────
+def _inject_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
+    origin = request.headers.get("origin")
+    if origin and (origin in _origins or "*" in _origins):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
 @app.exception_handler(InteriorAIError)
 def app_exception_handler(request: Request, exc: InteriorAIError) -> JSONResponse:
     logger.warning(f"Application error [HTTP {exc.status_code}]: {exc.message}")
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+    return _inject_cors_headers(request, JSONResponse(status_code=exc.status_code, content={"detail": exc.message}))
 
 
 @app.exception_handler(Exception)
 def uncaught_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception(f"Uncaught exception on {request.method} {request.url.path}: {exc}")
-    return JSONResponse(
+    return _inject_cors_headers(request, JSONResponse(
         status_code=500,
         content={"detail": "An unexpected server error occurred. Please try again."},
-    )
+    ))
 
 
 # ── Direct run entry-point ────────────────────────────────────────────────────
