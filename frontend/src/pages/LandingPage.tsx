@@ -21,13 +21,13 @@ const STEPS = [
     icon: <ScanLine className="h-5 w-5" />,
     step: '2',
     label: 'Analyze',
-    desc: 'Gemini AI maps furniture, layout, and lighting conditions.',
+    desc: "AI understands your room's layout, furniture and lighting.",
   },
   {
     icon: <Sparkles className="h-5 w-5" />,
     step: '3',
     label: 'Generate',
-    desc: 'Flux creates a stunning photorealistic redesign in minutes.',
+    desc: 'Generate a realistic redesign tailored to your style.',
   }
 ];
 
@@ -41,9 +41,9 @@ const FAQ = [
 
 const STATS = [
   { value: '10+', label: 'Design Styles' },
-  { value: '<90s', label: 'Avg. Generation' },
-  { value: '5MB', label: 'Max Upload Size' },
-  { value: '∞', label: 'Refinements' },
+  { value: 'AI', label: 'Realistic Redesigns' },
+  { value: 'Private', label: 'Design History' },
+  { value: '∞', label: 'Unlimited Refinements' },
 ];
 
 export function LandingPage() {
@@ -176,9 +176,9 @@ export function LandingPage() {
                  <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4">
                    <ScanLine className="h-5 w-5" />
                  </div>
-                 <h3 className="text-xl font-bold text-text-primary mb-2">Deep Room Analysis</h3>
+                 <h3 className="text-xl font-bold text-text-primary mb-2">Understands Your Room</h3>
                  <p className="text-text-secondary mb-6 text-[15px] leading-relaxed">
-                   Gemini Vision intelligently maps your room before generation, understanding exactly what's structural and what's decor.
+                   Detects walls, windows, furniture, lighting and room structure before generating a redesign.
                  </p>
                  <div className="flex flex-col gap-3">
                    {['Furniture Identification', 'Color Palette Extraction', 'Lighting Detection'].map((item, idx) => (
@@ -215,9 +215,9 @@ export function LandingPage() {
                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
                  <Zap className="h-5 w-5" />
                </div>
-               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">Lightning Fast Generation</h3>
+               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">Fast Photorealistic Generation</h3>
                <p className="text-text-secondary text-[15px] leading-relaxed z-10">
-                 Powered by Flux Kontext Pro, get stunning high-res renders in just a few minutes.
+                 High-quality photorealistic rendering.
                </p>
                <div className="mt-auto pt-6 z-10">
                   <div className="h-14 w-full bg-surface-alt border border-border rounded-xl flex items-center px-5 shadow-inner">
@@ -235,7 +235,7 @@ export function LandingPage() {
                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
                  <Layers className="h-5 w-5" />
                </div>
-               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">Iterative Refinement</h3>
+               <h3 className="text-xl font-bold text-text-primary mb-2 z-10">Refine with Natural Language</h3>
                <p className="text-text-secondary text-[15px] leading-relaxed z-10">
                  Chat with the AI. Say "make it brighter" and keep the bones of the design.
                </p>
@@ -256,9 +256,9 @@ export function LandingPage() {
             <span className="text-xs font-semibold uppercase tracking-widest text-text-tertiary">Trusted by designers and homeowners</span>
             <div className="flex flex-col md:flex-row gap-6 w-full max-w-[1024px] overflow-x-auto pb-4 snap-x">
                {[
-                 { name: "Sarah J.", role: "Interior Designer", quote: "RoomCanvas cuts my concept phase from days to literally minutes." },
-                 { name: "Mark T.", role: "Homeowner", quote: "Finally, I can actually see what my living room looks like before buying furniture." },
-                 { name: "Elena R.", role: "Architect", quote: "The structural awareness is incredible. It keeps the walls and windows where they belong." }
+                 { name: "Beta Tester", role: "Interior Designer", quote: "RoomCanvas cuts my concept phase from days to literally minutes." },
+                 { name: "Beta Tester", role: "Homeowner", quote: "Finally, I can actually see what my living room looks like before buying furniture." },
+                 { name: "Beta Tester", role: "Architect", quote: "The structural awareness is incredible. It keeps the walls and windows where they belong." }
                ].map((t, i) => (
                  <div key={i} className="flex-1 min-w-[280px] p-5 bg-surface border border-border rounded-xl shadow-sm snap-center">
                     <p className="text-[14px] text-text-secondary italic mb-4">"{t.quote}"</p>
@@ -332,10 +332,10 @@ export function LandingPage() {
       <section className="py-24 bg-gradient-to-b from-bg to-accent/5">
         <div className="mx-auto max-w-content px-6 text-center flex flex-col items-center">
           <h2 className="text-4xl font-bold tracking-tight text-text-primary mb-4">
-            Ready to reimagine your space?
+            Transform your room with AI.
           </h2>
           <p className="text-text-secondary mb-8 text-[17px] max-w-md mx-auto leading-relaxed">
-            Upload a photo and get your first AI redesign in minutes.
+            Upload a photo and explore multiple design possibilities.
           </p>
           <Link to="/upload">
             <Button size="lg" className="h-14 px-8 text-base shadow-xl shadow-accent/20">

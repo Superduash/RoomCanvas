@@ -49,7 +49,7 @@ export function Footer() {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-4 select-none">Styles</h4>
             <nav className="flex flex-col gap-3">
-              {['Modern Minimalist', 'Scandinavian', 'Industrial', 'Bohemian', 'Japandi'].map(s => (
+              {['Modern', 'Minimalist', 'Scandinavian', 'Japandi', 'Industrial', 'Contemporary', 'Mid-century Modern', 'Coastal', 'Luxury', 'Rustic', 'Bohemian'].map(s => (
                 <FooterLink key={s} to={`/upload?style=${s.toLowerCase().replace(' ','_')}`}>{s}</FooterLink>
               ))}
             </nav>
@@ -67,13 +67,7 @@ export function Footer() {
         
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border">
-          <span className="text-sm text-text-tertiary">© {year} RoomCanvas. Built with Gemini + Flux.</span>
-          <div className="flex items-center gap-1.5 text-sm text-text-tertiary">
-            <span>Powered by</span>
-            <span className="font-semibold text-text-secondary">Flux Kontext Pro</span>
-            <span>·</span>
-            <span className="font-semibold text-text-secondary">Gemini 2.5 Flash</span>
-          </div>
+          <span className="text-sm text-text-tertiary">© {year} RoomCanvas. Built with modern AI.</span>
         </div>
       </div>
     </footer>
