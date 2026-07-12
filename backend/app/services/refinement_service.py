@@ -8,7 +8,7 @@ from app.ai.prompt_builder import build_refinement_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
 from app.utils.exceptions import InferenceServiceError
-from app.utils.image_utils import load_image, resize_for_upload
+from app.utils.image_utils import resize_for_upload
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class RefinementService:
             )
 
             try:
-                image = load_image(variation.image_path)
+                image = await StorageService.download_image_as_pil(variation.image_path)
                 image_bytes = resize_for_upload(image)
 
                 final_prompt = build_refinement_prompt(instruction)

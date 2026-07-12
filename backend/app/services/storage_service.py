@@ -79,6 +79,26 @@ class StorageService:
             raise RuntimeError(f"Could not save generated image: {e}")
 
     @staticmethod
+    async def download_image_as_pil(key: str) -> "Image.Image":
+        if not key:
+            raise ValueError("Image key is empty")
+        
+        # If the key is already a full URL (e.g. legacy http path), use it, otherwise resolve it
+        url = key if key.startswith("http") else StorageService.resolve_public_url(key)
+        
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                content = resp.content
+                
+            from PIL import Image
+            return Image.open(io.BytesIO(content))
+        except Exception as e:
+            logger.error(f"Failed to download image from Supabase at {url}: {e}")
+            raise RuntimeError(f"Could not load image from Supabase: {e}")
+
+    @staticmethod
     def resolve_public_url(key: str | None) -> str:
         if not key:
             return ""

@@ -45,17 +45,7 @@ def validate_image_file(upload_file: UploadFile) -> None:
         logger.error(f"Image content verification failed: {e}")
         raise InvalidImageError("The uploaded file is not a valid image.")
 
-def load_image(path: str) -> Image.Image:
-    # Resolve path
-    file_path = Path(path)
-    if not file_path.exists():
-        logger.error(f"Image path does not exist: {path}")
-        raise FileNotFoundError(f"Image not found at {path}")
-    try:
-        return Image.open(file_path)
-    except Exception as e:
-        logger.error(f"Failed to load image from {path}: {e}")
-        raise InvalidImageError(f"Could not load image: {e}")
+
 
 def resize_for_upload(image: Image.Image, max_dimension: int = 1536) -> bytes:
     w, h = image.size

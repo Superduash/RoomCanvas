@@ -9,7 +9,7 @@ from app.ai.prompt_builder import build_generation_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
 from app.utils.exceptions import InferenceServiceError
-from app.utils.image_utils import load_image, resize_for_upload
+from app.utils.image_utils import resize_for_upload
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class GenerationService:
 
             try:
                 # 1. Prepare image
-                image = load_image(generation.original_image_path)
+                image = await StorageService.download_image_as_pil(generation.original_image_path)
                 image_bytes = resize_for_upload(image)
 
                 # 2. Build prompt
