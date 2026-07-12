@@ -245,7 +245,7 @@ export function CompareSlider({
     <div
       ref={containerRef}
       className={cn(
-        'relative w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9] overflow-hidden bg-surface-alt select-none touch-none focus:outline-none',
+        'relative w-full overflow-hidden bg-surface-alt select-none touch-none focus:outline-none',
         className
       )}
       tabIndex={0}
@@ -270,7 +270,7 @@ export function CompareSlider({
         ref={afterImgRef}
         src={afterSrc}
         alt={afterLabel}
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        className="block w-full h-auto pointer-events-none"
         draggable={false}
         loading="eager"
         fetchPriority="high"
@@ -309,7 +309,7 @@ export function CompareSlider({
         {/* Elegant handle with premium feel */}
         <div
           ref={handleRef}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-11 w-11 sm:h-14 sm:w-14 rounded-full bg-white shadow-[0_6px_20px_rgba(0,0,0,0.15)] flex items-center justify-center border-2 border-white/20 will-change-transform"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)] flex items-center justify-center border-2 border-white/20 will-change-transform"
           style={{
             opacity: isRevealing ? 0 : 1,
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1)',
@@ -330,7 +330,7 @@ export function CompareSlider({
       <div className="absolute top-4 left-4 pointer-events-none z-20">
         <span
           ref={beforeLabelRef}
-          className="rounded-full bg-black/75 backdrop-blur-md border border-white/10 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-white shadow-md will-change-auto"
+          className="rounded-full bg-black/75 backdrop-blur-md border border-white/10 px-3 py-1.5 text-[11px] font-semibold tracking-wide uppercase text-white shadow-sm will-change-auto"
           style={{
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)'
           }}
@@ -341,7 +341,7 @@ export function CompareSlider({
       <div className="absolute top-4 right-4 pointer-events-none z-20">
         <span
           ref={afterLabelRef}
-          className="rounded-full bg-black/75 backdrop-blur-md border border-white/10 px-3.5 py-2 text-xs font-semibold tracking-wide uppercase text-white shadow-md will-change-auto"
+          className="rounded-full bg-black/75 backdrop-blur-md border border-white/10 px-3 py-1.5 text-[11px] font-semibold tracking-wide uppercase text-white shadow-sm will-change-auto"
           style={{
             transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)'
           }}
@@ -355,7 +355,7 @@ export function CompareSlider({
 
 export function CompareSliderSkeleton() {
   return (
-    <div className="w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9] overflow-hidden">
+    <div className="w-full aspect-[16/10] overflow-hidden">
       <Skeleton className="w-full h-full rounded-none" />
     </div>
   );
