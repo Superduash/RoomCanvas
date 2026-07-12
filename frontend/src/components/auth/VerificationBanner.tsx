@@ -1,9 +1,14 @@
+/* 
 import { useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { AlertCircle, X, Loader2 } from 'lucide-react';
 import { toast } from '../../lib/toast';
+*/
 
 export function VerificationBanner() {
+  return null; // TEMPORARILY DISABLED — see AuthProvider.signUpWithEmail note
+
+  /*
   const { user, sendVerification } = useAuth();
   const [dismissed, setDismissed] = useState(false);
   const [sending, setSending] = useState(false);
@@ -60,4 +65,5 @@ export function VerificationBanner() {
       </div>
     </div>
   );
+  */
 }

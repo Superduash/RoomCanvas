@@ -12,7 +12,6 @@ import {
   confirmPasswordReset,
   updateProfile,
   setPersistence,
-  sendEmailVerification,
   updatePassword,
   verifyBeforeUpdateEmail,
   deleteUser,
@@ -213,13 +212,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       if (name) await updateProfile(cred.user, { displayName: name });
 
-      try {
-        await sendEmailVerification(cred.user, {
-          url: `${window.location.origin}/auth/action`
-        });
-      } catch (e) {
-        console.error('Failed to send verification email on signup', e);
-      }
+      // TEMPORARILY DISABLED — Firebase project isn't actually delivering
+      // verification emails right now. Re-enable once email sending is fixed
+      // (check Firebase Console → Authentication → Templates → sender config,
+      // and that you're not hitting the free-tier daily email quota).
+      //
+      // try {
+      //   await sendEmailVerification(cred.user, {
+      //     url: `${window.location.origin}/auth/action`
+      //   });
+      // } catch (e) {
+      //   console.error('Failed to send verification email on signup', e);
+      // }
 
       // onAuthStateChanged will fire and trigger syncBackendUser automatically.
       // Do NOT navigate here — AppShell handles routing once profile loads.
@@ -280,14 +284,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sendVerification = useCallback(async () => {
-    if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
-    try {
-      await sendEmailVerification(firebaseAuth.currentUser, {
-        url: `${window.location.origin}/auth/action`
-      });
-    } catch (err: any) {
-      throw new Error(friendlyError(err));
-    }
+    // TEMPORARILY DISABLED — see note in signUpWithEmail above.
+    return;
+    // if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
+    // try {
+    //   await sendEmailVerification(firebaseAuth.currentUser, {
+    //     url: `${window.location.origin}/auth/action`
+    //   });
+    // } catch (err: any) {
+    //   throw new Error(friendlyError(err));
+    // }
   }, []);
 
   const updateUserPassword = useCallback(async (password: string) => {
