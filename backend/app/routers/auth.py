@@ -43,7 +43,7 @@ async def sync_user(response: Response, user: User = Depends(get_current_user), 
     upserts the row; this endpoint's job is just to refresh last_login_at and
     return the canonical profile so the frontend can populate the header/account UI.
     """
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.utcnow()
     await db.commit()
     await db.refresh(user)
     

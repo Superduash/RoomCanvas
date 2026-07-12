@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, func, Index
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, func, Index, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.session import Base
 
@@ -91,7 +91,7 @@ class Variation(Base):
         nullable=False
     )
     image_path: Mapped[str] = mapped_column(String, nullable=False)
-    seed: Mapped[int] = mapped_column(Integer, nullable=False)
+    seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     # Relationships
