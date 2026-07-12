@@ -31,7 +31,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             className={cn(
               'h-11 w-full rounded-xl border bg-surface-raised px-4 text-[15px] text-text-primary shadow-xs cursor-text select-text',
-              'placeholder:text-text-tertiary/60',
+              'placeholder:text-text-tertiary',
               'transition-all duration-base ease-out',
               'focus:outline-none focus:border-accent focus:shadow-focus',
               'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-surface-alt',
@@ -98,7 +98,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           maxLength={maxLength}
           className={cn(
             'w-full rounded-xl border bg-surface-raised px-4 py-3 text-[15px] text-text-primary cursor-text select-text shadow-xs',
-            'placeholder:text-text-tertiary/60 resize-none',
+            'placeholder:text-text-tertiary resize-none',
             'transition-all duration-base ease-out',
             'focus:outline-none focus:border-accent focus:shadow-focus',
             'disabled:opacity-50 disabled:cursor-not-allowed',

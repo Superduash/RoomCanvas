@@ -6,8 +6,11 @@ export default {
     extend: {
       colors: {
         bg:      'var(--color-bg)',
-        surface: 'var(--color-surface)',
-        'surface-alt': 'var(--color-surface-alt)',
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          alt: 'var(--color-surface-alt)',
+          raised: 'var(--color-surface-raised)',
+        },
         border: {
           DEFAULT: 'var(--color-border)',
           strong:  'var(--color-border-strong)',
