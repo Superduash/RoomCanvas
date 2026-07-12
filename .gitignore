@@ -43,7 +43,10 @@ nosetests.xml
 # ── Node / Frontend ───────────────────────────────────────────────────────────
 node_modules/
 frontend/dist/
-# ── Environment files ─────────────────────────────────────────────────────────
+frontend/build/
+.npm/
+
+# ── Environment files & Credentials ───────────────────────────────────────────
 .env
 .env.*
 !.env.example
@@ -58,7 +61,16 @@ frontend/.env.*
 frontend/vercel.env
 !frontend/.env.example
 
-# ── SQLite ────────────────────────────────────────────────────────────────────
+# Firebase service account and credentials
+backend/credentials/
+*.json
+!package.json
+!package-lock.json
+!tsconfig*.json
+!.vscode/settings.json
+!backend/credentials/.gitkeep
+
+# ── SQLite & Database ─────────────────────────────────────────────────────────
 *.db
 *.sqlite3
 *.db-journal
@@ -74,23 +86,36 @@ backend/storage/generated/*
 !backend/storage/control_images/.gitkeep
 !backend/storage/generated/.gitkeep
 
-# ── VS Code ───────────────────────────────────────────────────────────────────
-.vscode/settings.json
-.vscode/*.log
+# AI outputs and generated files
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+!frontend/src/assets/*
+!public/*
+
+# ── IDE & Editor ──────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
 
 # ── OS generated ──────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ── Misc ──────────────────────────────────────────────────────────────────────
+# ── Logs & Caches ─────────────────────────────────────────────────────────────
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+.stylelintcache
 
-# Architecture review & planning docs (not project source)
-roomcanvas_architecture_review.md
-AI_Interior_Design_13Day_Plan_v2.md
-
-# Temp build/audit scripts that may appear at project root
+# ── Misc & Export Reports ─────────────────────────────────────────────────────
 export_output.txt
 export.py
 docs/
@@ -100,10 +125,8 @@ Backend.txt
 code_export.txt
 full_audit_out.txt
 
-# Ignore all markdown files except README.md
+# Architecture review & planning docs (not project source)
+roomcanvas_architecture_review.md
+AI_Interior_Design_13Day_Plan_v2.md
 *.md
 !README.md
-
-# Firebase service account and credentials
-backend/credentials/
-*.json
