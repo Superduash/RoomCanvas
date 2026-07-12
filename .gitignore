@@ -22,6 +22,13 @@ parts/
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Python caches
+*.pyc
+*.pyo
+
+# Environment managers
+.python-version
+
 # Virtual environments
 backend/venv/
 venv/
@@ -46,6 +53,9 @@ frontend/dist/
 frontend/build/
 .npm/
 
+# Vite
+.vite/
+
 # ── Environment files & Credentials ───────────────────────────────────────────
 .env
 .env.*
@@ -63,12 +73,8 @@ frontend/vercel.env
 
 # Firebase service account and credentials
 backend/credentials/
-*.json
-!package.json
-!package-lock.json
-!tsconfig*.json
-!.vscode/settings.json
-!backend/credentials/.gitkeep
+backend/credentials/*.json
+firebase-admin*.json
 
 # ── SQLite & Database ─────────────────────────────────────────────────────────
 *.db
@@ -79,24 +85,15 @@ backend/credentials/
 *.sqlite3-journal
 
 # ── Storage (generated images & uploads) — keep folder structure ──────────────
-backend/storage/uploads/*
-backend/storage/control_images/*
-backend/storage/generated/*
+backend/storage/uploads/
+backend/storage/control_images/
+backend/storage/generated/
 !backend/storage/uploads/.gitkeep
 !backend/storage/control_images/.gitkeep
 !backend/storage/generated/.gitkeep
 
-# AI outputs and generated files
-*.png
-*.jpg
-*.jpeg
-*.webp
-*.gif
-!frontend/src/assets/*
-!public/*
-
 # ── IDE & Editor ──────────────────────────────────────────────────────────────
-.vscode/
+.vscode/*
 !.vscode/settings.json
 .idea/
 *.swp
@@ -107,6 +104,13 @@ backend/storage/generated/*
 Thumbs.db
 desktop.ini
 
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+ehthumbs.db
+
 # ── Logs & Caches ─────────────────────────────────────────────────────────────
 *.log
 npm-debug.log*
@@ -115,10 +119,19 @@ yarn-error.log*
 .eslintcache
 .stylelintcache
 
-# ── Misc & Export Reports ─────────────────────────────────────────────────────
+# Build caches
+.cache/
+tmp/
+temp/
+
+# Logs
+logs/
+
+# Runtime
+*.pid
+
+# ── Export Reports ────────────────────────────────────────────────────────────
 export_output.txt
-docs/
-archive/
 Frontend.txt
 Backend.txt
 code_export.txt
@@ -127,5 +140,3 @@ full_audit_out.txt
 # Architecture review & planning docs (not project source)
 roomcanvas_architecture_review.md
 AI_Interior_Design_13Day_Plan_v2.md
-*.md
-!README.md

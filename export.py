@@ -2,6 +2,14 @@ import os
 import subprocess
 from pathlib import Path
 
+# Common binary and non-text extensions to skip reading
+SKIP_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", 
+    ".mp4", ".mp3", ".wav", ".zip", ".7z", ".rar", ".pdf", 
+    ".exe", ".dll", ".so", ".db", ".sqlite", ".sqlite3", 
+    ".pyc", ".pyo", ".woff", ".woff2", ".ttf", ".otf"
+}
+
 def get_project_files():
     """
     Returns a sorted list of all project files, respecting .gitignore.
@@ -18,20 +26,22 @@ def get_project_files():
         # Filter out empty strings and sort
         files = sorted([f for f in result.stdout.split('\n') if f])
         
-        # Additional manual filters just in case
         filtered_files = []
+        
+        # Only hardcode ignores that we truly don't want exported but might be tracked
+        # or are large generated files we want to skip unconditionally
         ignores = [
-            "node_modules", "venv", ".venv", "__pycache__", "dist", "build", 
-            ".git", "storage", "logs", "credentials", "export_output.txt", 
-            "export.py", "Frontend.txt", "Backend.txt", "code_export.txt"
+            "Backend.txt",
+            "Frontend.txt",
+            "export_output.txt",
+            "package-lock.json"
         ]
         
         for file_path in files:
             path_obj = Path(file_path)
-            # Skip if matches hardcoded ignores or is a binary/image file
+            
+            # Skip if matches explicit hardcoded ignores
             if any(part in ignores for part in path_obj.parts) or file_path in ignores:
-                continue
-            if path_obj.suffix.lower() in ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico', '.sqlite3', '.db', '.pyc']:
                 continue
                 
             filtered_files.append(file_path)
@@ -46,8 +56,7 @@ def is_backend(file_path):
     filename = Path(file_path).name
     if "backend" in parts:
         return True
-    # Root level configuration files relevant to backend
-    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example'):
+    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py'):
         return True
     return False
 
@@ -56,8 +65,7 @@ def is_frontend(file_path):
     filename = Path(file_path).name
     if "frontend" in parts:
         return True
-    # Root level configuration files relevant to frontend
-    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example'):
+    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py'):
         return True
     return False
 
@@ -84,6 +92,14 @@ def print_tree(tree, indent=""):
             output += print_tree(v, indent + "    ")
     return output
 
+def format_size(size_bytes):
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+
 def write_files(output_file, filter_fn, all_files):
     relevant_files = [f for f in all_files if filter_fn(f)]
     if not relevant_files:
@@ -105,14 +121,36 @@ def write_files(output_file, filter_fn, all_files):
         outfile.write("="*80 + "\n\n")
 
         for file_path in relevant_files:
+            path_obj = Path(file_path)
+            
+            try:
+                size = path_obj.stat().st_size
+                size_str = format_size(size)
+            except OSError:
+                size = 0
+                size_str = "Unknown"
+
             outfile.write(f"\n\n{'='*80}\n")
             outfile.write(f"FILE: {file_path}\n")
+            outfile.write(f"SIZE: {size_str}\n")
             outfile.write(f"{'='*80}\n\n")
+            
+            # 1. Check size limit
+            if size > 2_000_000:
+                outfile.write(f"[Skipped: File larger than 2 MB]\n")
+                continue
+                
+            # 2. Check binary extension
+            if path_obj.suffix.lower() in SKIP_EXTENSIONS:
+                outfile.write(f"[Skipped: Binary or excluded extension]\n")
+                continue
+            
+            # 3. Read and write content
             try:
                 with open(file_path, 'r', encoding='utf-8') as infile:
                     outfile.write(infile.read())
             except UnicodeDecodeError:
-                outfile.write(f"[Binary or non-UTF-8 file skipped]\n")
+                outfile.write(f"[Skipped: Binary or non-UTF-8 file]\n")
             except Exception as e:
                 outfile.write(f"[Could not read file: {e}]\n")
 
