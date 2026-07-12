@@ -28,11 +28,11 @@ function useScrollProgress() {
 export function AppShell() {
   const location = useLocation();
   const scrollProgress = useScrollProgress();
-  const { isLoading, isSyncing, isAuthenticated, profile } = useAuth();
+  const { isLoading, isSyncing, isAuthenticated, profile, syncError } = useAuth();
 
   // Block ALL rendering while Firebase is initializing or backend is syncing.
-  // This is the single source of truth that prevents flickering and premature routing.
-  if (isLoading || isSyncing) {
+  // We only block for isSyncing if we don't have a profile yet (initial load).
+  if (isLoading || (isSyncing && !profile && !syncError)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg">
         <Loader2 size={32} className="animate-spin text-accent" />

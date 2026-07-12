@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  onAuthStateChanged,
+  onIdTokenChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -23,6 +23,7 @@ import {
 import {
   firebaseAuth, googleProvider, browserLocalPersistence, browserSessionPersistence,
 } from '../lib/firebase';
+import { useTheme } from '../hooks/useTheme';
 import { api } from '../api/client';
 import { useAuthModalStore } from './authModalStore';
 
@@ -116,68 +117,108 @@ function parseSyncError(err: any): string {
   return detail || 'Backend sync failed. Please try again.';
 }
 
+const getCachedProfile = (): ApiUser | null => {
+  try {
+    const cached = localStorage.getItem('roomcanvas-profile-cache');
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { setTheme } = useTheme();
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [profile, setProfile] = useState<ApiUser | null>(null);
+  const [profile, setProfileState] = useState<ApiUser | null>(getCachedProfile);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  // Guard against concurrent syncs for the same Firebase user
-  const syncingUidRef = useRef<string | null>(null);
+  
+  const lastTokenRef = useRef<string | null>(null);
+  const activeSyncPromiseRef = useRef<Promise<void> | null>(null);
 
-  const syncBackendUser = useCallback(async (fbUser: User) => {
-    // Avoid duplicate concurrent syncs for the same user
-    if (syncingUidRef.current === fbUser.uid) return;
-    syncingUidRef.current = fbUser.uid;
-    setIsSyncing(true);
-    setSyncError(null);
-
-    const delays = [0, 800, 2000];
-    let attempts = 0;
-
-    while (attempts < 3) {
-      try {
-        // Force refresh on first attempt to avoid race conditions right after sign-up
-        await fbUser.getIdToken(attempts === 0);
-        const data = await api.post<ApiUser>('/auth/sync', { 
-          display_name: fbUser.displayName ?? undefined 
-        });
-        setProfile(data);
-        setSyncError(null);
-        setIsSyncing(false);
-        syncingUidRef.current = null;
-        return; // Success
-      } catch (err: any) {
-        attempts++;
-        const isAuthError = err?.status === 401 || err?.status === 403;
-
-        if (isAuthError && attempts < 3) {
-          try { await fbUser.getIdToken(true); } catch (_) { /* ignore */ }
-        }
-
-        if (attempts >= 3) {
-          const msg = parseSyncError(err);
-          setSyncError(msg);
-          setIsSyncing(false);
-          syncingUidRef.current = null;
-          return;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, delays[attempts]));
-      }
-    }
+  const setProfile = useCallback((p: ApiUser | null) => {
+    setProfileState(p);
+    if (p) localStorage.setItem('roomcanvas-profile-cache', JSON.stringify(p));
+    else localStorage.removeItem('roomcanvas-profile-cache');
   }, []);
 
+  const syncBackendUser = useCallback((fbUser: User) => {
+    if (activeSyncPromiseRef.current) return activeSyncPromiseRef.current;
+
+    const promise = (async () => {
+      setIsSyncing(true);
+      setSyncError(null);
+      let attempts = 0;
+
+      while (attempts < 3) {
+        try {
+          const data = await api.post<ApiUser>('/auth/sync', { 
+            display_name: fbUser.displayName ?? undefined 
+          });
+          setProfile(data);
+          if (data.theme_preference) {
+            setTheme(data.theme_preference as any);
+          }
+          setSyncError(null);
+          return;
+        } catch (err: any) {
+          attempts++;
+          const status = err?.status ?? err?.response?.status ?? 0;
+
+          if (status === 0) {
+            setSyncError('Network offline. Working from cache.');
+            return;
+          }
+
+          if (status === 401 || status === 403) {
+            if (attempts === 1) {
+              continue;
+            } else if (attempts === 2) {
+              try { 
+                const newToken = await fbUser.getIdToken(true);
+                lastTokenRef.current = newToken;
+              } catch (_) {}
+              continue;
+            } else {
+              await firebaseSignOut(firebaseAuth);
+              setUser(null);
+              setProfile(null);
+              lastTokenRef.current = null;
+              return;
+            }
+          }
+
+          if (attempts >= 3) {
+            setSyncError(parseSyncError(err));
+            return;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+      }
+    })().finally(() => {
+      setIsSyncing(false);
+      activeSyncPromiseRef.current = null;
+    });
+
+    activeSyncPromiseRef.current = promise;
+    return promise;
+  }, [setProfile, setTheme]);
+
   useEffect(() => {
-    // Handle any redirect-based auth result (noop for popup flow)
     getRedirectResult(firebaseAuth).catch(() => {});
 
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (fbUser) => {
+    const unsubscribe = onIdTokenChanged(firebaseAuth, async (fbUser) => {
       setUser(fbUser);
       if (fbUser) {
-        syncBackendUser(fbUser);
+        try {
+          const token = await fbUser.getIdToken();
+          if (token === lastTokenRef.current) return;
+          lastTokenRef.current = token;
+          syncBackendUser(fbUser);
+        } catch (err) {}
 
-        // Resume any pending action (e.g. triggered from AuthModal)
         const pending = useAuthModalStore.getState().consumePendingAction();
         if (pending) {
           useAuthModalStore.getState().close();
@@ -187,11 +228,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setIsSyncing(false);
         setSyncError(null);
-        syncingUidRef.current = null;
+        lastTokenRef.current = null;
+        activeSyncPromiseRef.current = null;
       }
     });
     return unsubscribe;
   }, [syncBackendUser]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (user && syncError) syncBackendUser(user);
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user, syncError, syncBackendUser]);
 
   // Reload user on window focus to sync email verification status
   useEffect(() => {
@@ -356,9 +406,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authState: AuthState =
     isLoading ? 'initializing' :
     !isAuthenticated ? 'guest' :
-    isSyncing ? 'syncing' :
+    (isSyncing && !profile) ? 'syncing' :
     (profile && !profile.profile_completed) ? 'onboarding' :
-    'authenticated';
+    (profile) ? 'authenticated' : 'syncing';
 
   const value: AuthContextValue = {
     user,

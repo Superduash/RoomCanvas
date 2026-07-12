@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { useTheme } from '../hooks/useTheme';
 import { api } from '../api/client';
 import { type User } from '../api/types';
 import { Toggle } from '../components/primitives/Toggle';
@@ -11,16 +12,15 @@ import { cn } from '../lib/utils';
 export function SettingsPage() {
   const { profile, setProfile } = useAuth();
   
-  const [theme, setTheme] = useState('system');
+  const { themePreference: theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [budget, setBudget] = useState('mid-range');
   const [lighting, setLighting] = useState('natural');
 
   useEffect(() => {
     if (profile) {
-      setTheme(profile.theme_preference || 'system');
+      setTheme((profile.theme_preference as any) || 'system');
       setNotifications(profile.email_notifications);
-      // We don't have default preferences in User model yet, but mock state for UI
     }
   }, [profile]);
 
@@ -28,29 +28,19 @@ export function SettingsPage() {
     try {
       const updatedUser = await api.patch<User>('/auth/me/settings', updates);
       setProfile(updatedUser);
-      
-      if (updates.theme_preference) {
-         if (updates.theme_preference === 'dark') document.documentElement.classList.add('dark');
-         else if (updates.theme_preference === 'light') document.documentElement.classList.remove('dark');
-         else {
-           if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
-           else document.documentElement.classList.remove('dark');
-         }
-      }
-      
       toast.success('Settings updated.');
     } catch (err: any) {
       toast.error(err.message || 'Failed to update settings.');
       // Revert optimism
       if (profile) {
-        setTheme(profile.theme_preference || 'system');
+        setTheme((profile.theme_preference as any) || 'system');
         setNotifications(profile.email_notifications);
       }
     }
   };
 
   const updateTheme = (t: string) => {
-     setTheme(t);
+     setTheme(t as any);
      handleSave({ theme_preference: t });
   };
   
