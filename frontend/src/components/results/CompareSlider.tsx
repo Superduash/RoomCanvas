@@ -231,6 +231,7 @@ export function CompareSlider({
   useEffect(() => {
     setAfterLoaded(false);
     hasPlayedReveal.current = false;
+    setIsRevealing(false);
   }, [afterSrc]);
 
   return (
