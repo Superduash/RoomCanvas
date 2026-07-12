@@ -165,7 +165,7 @@ export function LandingPage() {
              <h2 className="text-3xl font-bold tracking-tight text-text-primary">More than a style filter</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[280px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-auto">
             
             {/* 1. Deep Room Analysis (Large Col-Span-2) - Premium AI Visualization */}
             <motion.div 
@@ -301,7 +301,7 @@ export function LandingPage() {
             </motion.div>
 
             {/* 2. Lightning Fast Generation */}
-            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow group min-h-[280px]">
                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
                  <Zap className="h-5 w-5" />
                </div>
@@ -321,7 +321,7 @@ export function LandingPage() {
             </div>
 
             {/* 3. Iterative Refinement */}
-            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow group min-h-[280px]">
                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
                  <Layers className="h-5 w-5" />
                </div>
