@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from app.database.session import get_db
 from app.database.models import User
 from app.auth.dependencies import get_current_user
@@ -18,8 +18,7 @@ class UserOut(BaseModel):
     theme_preference: str
     email_notifications: bool
     created_at: datetime
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserUpdate(BaseModel):
     display_name: str | None = None
