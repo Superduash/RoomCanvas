@@ -14,7 +14,8 @@ def measure_image(request: MeasurementRequest, db: AsyncSession = Depends(get_db
         scale_cm_per_px = calculate_scale(
             request.reference_object_type,
             request.reference_points[0],
-            request.reference_points[1]
+            request.reference_points[1],
+            request.custom_reference_length_cm
         )
         
         # Calculate real distance of the target points

@@ -26,6 +26,8 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
   const [refPoints, setRefPoints] = useState<Point2D[]>([]);
   const [targetPoints, setTargetPoints] = useState<Point2D[]>([]);
   const [result, setResult] = useState<any>(null);
+  const [customLength, setCustomLength] = useState<number | ''>('');
+  const [customUnit, setCustomUnit] = useState<'cm' | 'inches'>('cm');
 
 
   useEffect(() => {
@@ -116,11 +118,18 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
 
   const measureDistance = async (refs: Point2D[], targets: Point2D[]) => {
     try {
+      let custom_reference_length_cm = undefined;
+      if (referenceType === 'custom') {
+        if (!customLength) throw new Error("Please enter a custom length.");
+        custom_reference_length_cm = customUnit === 'inches' ? Number(customLength) * 2.54 : Number(customLength);
+      }
+      
       const res = await api.post('/measure', {
         image_id: imageId,
         reference_object_type: referenceType,
         reference_points: refs,
-        target_points: targets
+        target_points: targets,
+        custom_reference_length_cm
       });
       setResult(res);
       if (onMeasurementComplete) {
@@ -163,15 +172,38 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
         </div>
         <div className="flex items-center gap-4">
           {mode === 'reference' && (
-            <select 
-              value={referenceType}
-              onChange={e => setReferenceType(e.target.value)}
-              className="px-3 py-1.5 border border-border rounded-md text-sm bg-surface"
-            >
-              <option value="credit_card">Credit Card (8.56cm)</option>
-              <option value="a4_paper">A4 Paper (29.7cm)</option>
-              <option value="standard_door">Standard Door (203cm)</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <select 
+                value={referenceType}
+                onChange={e => setReferenceType(e.target.value)}
+                className="px-3 py-1.5 border border-border rounded-md text-sm bg-surface"
+              >
+                <option value="credit_card">Credit Card (8.56cm)</option>
+                <option value="a4_paper">A4 Paper (29.7cm)</option>
+                <option value="standard_door">Standard Door (203cm)</option>
+                <option value="custom">Custom</option>
+              </select>
+              
+              {referenceType === 'custom' && (
+                <>
+                  <input 
+                    type="number" 
+                    value={customLength} 
+                    onChange={e => setCustomLength(e.target.value === '' ? '' : Number(e.target.value))} 
+                    className="px-3 py-1.5 border border-border rounded-md text-sm bg-surface w-24"
+                    placeholder="Length"
+                  />
+                  <select 
+                    value={customUnit}
+                    onChange={e => setCustomUnit(e.target.value as 'cm' | 'inches')}
+                    className="px-2 py-1.5 border border-border rounded-md text-sm bg-surface"
+                  >
+                    <option value="cm">cm</option>
+                    <option value="inches">in</option>
+                  </select>
+                </>
+              )}
+            </div>
           )}
           <Button variant="secondary" onClick={handleReset}>Reset</Button>
           <Button variant="ghost" onClick={onClose}>Close</Button>
