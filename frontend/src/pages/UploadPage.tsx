@@ -7,19 +7,18 @@ import { Dropzone } from '../components/upload/Dropzone';
 import { Card } from '../components/primitives/Card';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton } from '../components/primitives/Skeleton';
-import { useConfig, useStyles, useAnalyzeRoom, useUserStats } from '../api/queries';
+import { useConfig, useStyles, useAnalyzeRoom } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
 import { toast } from '../lib/toast';
 import { useRequireAuthAction } from '../auth/useRequireAuthAction';
-import { useAuth } from '../auth/AuthProvider';
+
 
 export function UploadPage() {
   const navigate = useNavigate();
   const { data: config } = useConfig();
   const { data: styles, isLoading: stylesLoading } = useStyles();
-  const { isAuthenticated, user } = useAuth();
-  const { data: stats } = useUserStats(isAuthenticated);
+
 
   const pendingFile = useUIStore((s) => s.pendingFile);
   const pendingPreviewUrl = useUIStore((s) => s.pendingPreviewUrl);
