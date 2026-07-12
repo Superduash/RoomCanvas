@@ -6,13 +6,18 @@ import { AuthProvider } from './auth/AuthProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider } from './hooks/useTheme';
 import { useEffect } from 'react';
-import { api } from './api/client';
+import { api, ApiError } from './api/client';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 2,
+      retry: (failureCount, error) => {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404)) {
+          return false;
+        }
+        return failureCount < 2;
+      },
       refetchOnWindowFocus: false,
     },
   },

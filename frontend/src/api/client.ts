@@ -25,14 +25,17 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
     } catch {
       /* body wasn't JSON — keep default message */
     }
-    // Only warn here; let the caller decide if it should be an Error toast.
-    logger.warn(`API Error on ${method} ${path}: ${detail}`);
     if (res.status === 401) {
       detail = 'Your session expired \u2014 please sign in again.';
-    }
-    if (res.status === 429) {
+      logger.info(`API Error on ${method} ${path}: ${detail}`);
+    } else if (res.status === 429) {
       detail = 'You\'ve hit the hourly limit \u2014 try again in a few minutes.';
+      logger.warn(`API Error on ${method} ${path}: ${detail}`);
+    } else {
+      // Only warn here; let the caller decide if it should be an Error toast.
+      logger.warn(`API Error on ${method} ${path}: ${detail}`);
     }
+
     throw new ApiError(detail, res.status);
   }
   return res.json() as Promise<T>;
