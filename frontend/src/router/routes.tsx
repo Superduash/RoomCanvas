@@ -16,6 +16,12 @@ const ProfilePage   = lazy(() => import('../pages/ProfilePage').then(m => ({ def
 const SettingsPage  = lazy(() => import('../pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const NotFoundPage  = lazy(() => import('../pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
+// Static pages
+const AboutPage     = lazy(() => import('../pages/AboutPage'));
+const TermsPage     = lazy(() => import('../pages/TermsPage'));
+const PrivacyPage   = lazy(() => import('../pages/PrivacyPage'));
+const ContactPage   = lazy(() => import('../pages/ContactPage'));
+
 // Auth pages
 const SignUpPage         = lazy(() => import('../pages/SignUpPage'));
 const SignInPage         = lazy(() => import('../pages/SignInPage'));
@@ -190,6 +196,38 @@ export const router = createBrowserRouter([
             <RequireAuth>
               <SettingsPage />
             </RequireAuth>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'about',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AboutPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'terms',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'privacy',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <PrivacyPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'contact',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ContactPage />
           </Suspense>
         ),
       },

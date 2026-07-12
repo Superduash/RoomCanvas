@@ -75,22 +75,22 @@ export function SignUpPage() {
       panelTitle="Design your first room in minutes."
       panelSubtitle="Join RoomCanvas to start transforming your spaces instantly."
     >
-      <div className="flex flex-col mb-6">
-        <h2 className="text-2xl font-semibold text-text-primary tracking-tight mb-1.5">Sign up</h2>
-        <p className="text-[14px] text-text-secondary">
+      <div className="flex flex-col mb-4 sm:mb-6">
+        <h2 className="text-xl sm:text-2xl font-semibold text-text-primary tracking-tight mb-1">Sign up</h2>
+        <p className="text-sm text-text-secondary">
           Already have an account? <Link to="/signin" className="text-accent font-semibold hover:underline">Sign in</Link>
         </p>
       </div>
 
       <SocialAuthButton loading={googleLoading} onClick={handleGoogle} />
 
-      <div className="flex items-center gap-4 my-6">
+      <div className="flex items-center gap-3 my-5">
         <div className="flex-1 h-px bg-border-strong/50"></div>
-        <span className="text-[12px] text-text-tertiary font-semibold uppercase tracking-wider">or continue with email</span>
+        <span className="text-[11px] text-text-tertiary font-semibold uppercase tracking-wider">or email</span>
         <div className="flex-1 h-px bg-border-strong/50"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 relative">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 relative">
         <Input
           id="name"
           label="Full Name"
@@ -133,25 +133,23 @@ export function SignUpPage() {
           error={errors.confirm}
         />
 
-        <div className="flex flex-col mb-4">
-          <label className="flex items-start gap-2.5 mt-1 cursor-pointer select-none group">
+        <div className="flex flex-col mt-1 mb-2">
+          <label className="flex items-start gap-2 cursor-pointer select-none group touch-manipulation">
             <input 
               type="checkbox" 
               checked={agreed} 
               onChange={(e) => setAgreed(e.target.checked)} 
-              className="w-4 h-4 mt-[3px] rounded border-border text-accent focus:ring-2 focus:ring-accent/30 focus:ring-offset-0 cursor-pointer shrink-0 transition-colors"
+              className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-2 focus:ring-accent/30 focus:ring-offset-0 cursor-pointer shrink-0 transition-colors"
             />
-            <span className="text-[14px] text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors">
+            <span className="text-sm text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors">
               I agree to the <Link to="/terms" className="text-text-primary font-medium hover:underline">Terms of Service</Link> and{' '}
               <Link to="/privacy" className="text-text-primary font-medium hover:underline">Privacy Policy</Link>
             </span>
           </label>
-          <div className="min-h-[20px] mt-1 pl-6.5">
-            {errors.agreed && <p className="text-[13px] text-danger leading-tight font-medium" role="alert">{errors.agreed}</p>}
-          </div>
+          {errors.agreed && <p className="text-xs text-danger mt-1.5 pl-6" role="alert">{errors.agreed}</p>}
         </div>
 
-        <Button type="submit" size="lg" className="w-full h-11 text-[15px]" loading={submitting}>Create account</Button>
+        <Button type="submit" size="lg" className="w-full h-11 text-[15px] touch-manipulation active:scale-[0.98]" loading={submitting}>Create account</Button>
       </form>
     </AuthLayout>
   );

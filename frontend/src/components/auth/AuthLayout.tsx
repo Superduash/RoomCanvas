@@ -70,9 +70,13 @@ export function AuthLayout({ children, panelTitle, panelSubtitle }: { children: 
         </div>
       </div>
 
-      {/* Right Form Panel */}
-      <div className="flex flex-1 items-center justify-center p-6 sm:p-10 lg:p-12 xl:p-16">
+      {/* Right Form Panel - Mobile Optimized */}
+      <div className="flex flex-1 items-start md:items-center justify-center p-4 sm:p-6 md:p-10 lg:p-12 xl:p-16 pt-6 sm:pt-8 md:pt-10">
         <div className="w-full max-w-[460px]">
+          {/* Mobile Back Button */}
+          <div className="md:hidden mb-6">
+            <BackButton />
+          </div>
           {children}
         </div>
       </div>

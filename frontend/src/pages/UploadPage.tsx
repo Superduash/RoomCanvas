@@ -116,43 +116,43 @@ export function UploadPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-12 md:py-20 page-enter">
-      <div className="text-center max-w-2xl mx-auto mb-16">
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8 sm:py-12 md:py-20 page-enter">
+      <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
         <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Start a new project</p>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-text-primary mb-4" style={{ lineHeight: 1.1 }}>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-text-primary mb-4" style={{ lineHeight: 1.1 }}>
           Design your room
         </h1>
-        <p className="text-lg text-text-secondary leading-relaxed">
+        <p className="text-base sm:text-lg text-text-secondary leading-relaxed px-4 sm:px-0">
           Upload a photo of your space and choose an aesthetic direction. Our AI will analyze the room and generate a complete redesign.
         </p>
       </div>
 
       {!isAuthenticated ? (
-        <div className="max-w-2xl mx-auto mb-10 bg-accent/10 border border-accent/20 rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div className="max-w-2xl mx-auto mb-8 sm:mb-10 bg-accent/10 border border-accent/20 rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
             <h3 className="text-sm font-semibold text-accent-dark">Continue as guest, save later</h3>
             <p className="text-sm text-text-secondary">You can try the product and upload a photo before committing to an account.</p>
           </div>
         </div>
       ) : (
-        <div className="max-w-2xl mx-auto mb-10">
+        <div className="max-w-2xl mx-auto mb-8 sm:mb-10">
           <WelcomeBanner profile={user} stats={stats} />
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12 lg:gap-16 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 lg:gap-12 xl:gap-16 items-start">
         
         {/* Left Col: Styles */}
         <section aria-labelledby="style-heading" className="order-2 lg:order-1">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-surface-alt border border-border text-sm font-semibold text-text-primary">1</div>
-            <h2 id="style-heading" className="text-lg font-semibold text-text-primary">
+            <h2 id="style-heading" className="text-base sm:text-lg font-semibold text-text-primary">
               Select an aesthetic
             </h2>
           </div>
           
           {stylesLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-[140px] rounded-2xl" />
               ))}
@@ -161,7 +161,7 @@ export function UploadPage() {
             <div
               role="radiogroup"
               aria-label="Design style"
-              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
             >
               {styles?.map((style) => (
                 <Card
@@ -178,10 +178,10 @@ export function UploadPage() {
                       setSelectedStyle(style.id);
                     }
                   }}
-                  className="p-6 flex flex-col gap-4 h-full group"
+                  className="p-5 sm:p-6 flex flex-col gap-3 sm:gap-4 h-full group active:scale-[0.98] transition-transform touch-manipulation"
                 >
                   <div className="flex items-start justify-between gap-4 w-full">
-                    <h3 className="text-lg font-semibold text-text-primary leading-snug break-words">
+                    <h3 className="text-base sm:text-lg font-semibold text-text-primary leading-snug break-words">
                       {titleCase(style.id)}
                     </h3>
                     <Badge variant={budgetVariant(style.budget_tag) as any} dot className="flex-shrink-0 mt-0.5">
@@ -206,10 +206,10 @@ export function UploadPage() {
         </section>
 
         {/* Right Col: Upload & Submit */}
-        <section aria-labelledby="upload-heading" className="order-1 lg:order-2 sticky top-24">
-          <div className="flex items-center gap-3 mb-6">
+        <section aria-labelledby="upload-heading" className="order-1 lg:order-2 lg:sticky lg:top-24">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-surface-alt border border-border text-sm font-semibold text-text-primary">2</div>
-            <h2 id="upload-heading" className="text-lg font-semibold text-text-primary">
+            <h2 id="upload-heading" className="text-base sm:text-lg font-semibold text-text-primary">
               Upload photo
             </h2>
           </div>
@@ -218,11 +218,11 @@ export function UploadPage() {
             {selectedStyle && (
               <motion.div
                 initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                 className="overflow-hidden"
               >
-                <div className="bg-surface rounded-2xl border border-accent/20 ring-1 ring-accent/10 p-5 shadow-sm">
+                <div className="bg-surface rounded-2xl border border-accent/20 ring-1 ring-accent/10 p-4 sm:p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-semibold text-text-primary">
                       {titleCase(selectedStyle.id)}
@@ -244,7 +244,7 @@ export function UploadPage() {
             )}
           </AnimatePresence>
           
-          <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm mb-6">
+          <div className="bg-surface rounded-2xl border border-border p-4 sm:p-5 shadow-sm mb-5 sm:mb-6">
             <Dropzone
               onFileAccepted={handleFileAccepted}
               maxSizeMB={config?.max_upload_mb ?? 10}
@@ -258,7 +258,7 @@ export function UploadPage() {
             <Button
               variant="primary"
               size="lg"
-              className="w-full justify-center shadow-md py-4 text-base"
+              className="w-full justify-center shadow-md py-4 text-base active:scale-[0.98] transition-transform touch-manipulation"
               disabled={!canSubmit}
               loading={analyze.isPending}
               iconRight={!analyze.isPending ? <ArrowRight className="h-5 w-5" /> : undefined}

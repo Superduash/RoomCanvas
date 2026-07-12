@@ -65,27 +65,27 @@ export function TopNav() {
       )}
 
       {/* Main nav */}
-      <header className="sticky top-0 z-30 bg-surface-raised/75 backdrop-blur-[16px] border-b border-black/5 dark:border-white/5 h-14 w-full transition-colors duration-base select-none">
-        <div className="mx-auto max-w-content h-full flex items-center justify-between px-4 md:px-6 gap-4">
+      <header className="sticky top-0 z-30 bg-surface-raised/75 backdrop-blur-[16px] border-b border-black/5 dark:border-white/5 h-12 sm:h-14 w-full transition-colors duration-base select-none">
+        <div className="mx-auto max-w-content h-full flex items-center justify-between px-3 sm:px-4 md:px-6 gap-3 sm:gap-4">
           
           {/* Left: Logo & Nav */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Logo */}
             <Link
               to="/"
-              className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:shadow-focus rounded-lg py-1.5 pr-2 cursor-pointer select-none"
+              className="flex items-center gap-2 group focus-visible:outline-none focus-visible:shadow-focus rounded-lg py-1 pr-1.5 cursor-pointer select-none"
               aria-label="RoomCanvas home"
             >
               <div className="transition-transform duration-base group-hover:rotate-[-4deg]">
-                <RoomCanvasLogoMark size={24} />
+                <RoomCanvasLogoMark size={22} />
               </div>
-              <span className="text-[14px] font-semibold text-text-primary tracking-tight mt-[1px]">
+              <span className="text-[13px] sm:text-sm font-semibold text-text-primary tracking-tight mt-px hidden xs:inline">
                 RoomCanvas
               </span>
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-1 ml-4" aria-label="Main navigation">
+            <nav className="hidden md:flex items-center gap-0.5 ml-2 sm:ml-4" aria-label="Main navigation">
               <NavLink to="/" className={navLinkClass} end={true}>
                 Home
               </NavLink>
@@ -103,17 +103,17 @@ export function TopNav() {
           )}
 
           {/* Right: Desktop actions */}
-          <div className="hidden md:flex items-center justify-end gap-2 shrink-0 ml-auto">
+          <div className="hidden md:flex items-center justify-end gap-1.5 shrink-0 ml-auto">
             {isLoading ? (
               <div className="flex items-center gap-2 mr-2">
                 <Skeleton className="h-8 w-16 rounded-md" />
                 <Skeleton className="h-8 w-24 rounded-md" />
               </div>
             ) : user ? (
-              <div className="relative flex items-center gap-2" ref={avatarMenuRef}>
+              <div className="relative flex items-center gap-1.5" ref={avatarMenuRef}>
                 <button 
                   onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
-                  className="flex items-center gap-2 focus-visible:outline-none focus-visible:shadow-focus rounded-full pl-1 pr-3 py-1 hover:bg-surface-alt border border-transparent hover:border-border transition-all duration-[180ms] h-8 cursor-pointer select-none"
+                  className="flex items-center gap-1.5 focus-visible:outline-none focus-visible:shadow-focus rounded-full pl-0.5 pr-2.5 py-0.5 hover:bg-surface-alt border border-transparent hover:border-border transition-all duration-[180ms] h-8 cursor-pointer select-none"
                 >
                   <img 
                     src={profile?.photo_url || user.photoURL || 'https://www.gravatar.com/avatar/?d=mp'} 
@@ -158,7 +158,7 @@ export function TopNav() {
                 </AnimatePresence>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Link to="/signin">
                   <Button variant="ghost" size="sm">Log in</Button>
                 </Link>
@@ -172,7 +172,7 @@ export function TopNav() {
               onClick={toggleTheme}
               title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-              className="h-8 w-8 flex items-center justify-center rounded-lg text-text-primary hover:bg-surface-alt transition-colors duration-[180ms] focus-visible:outline-none focus-visible:shadow-focus cursor-pointer select-none ml-1 mr-1"
+              className="h-8 w-8 flex items-center justify-center rounded-lg text-text-primary hover:bg-surface-alt transition-colors duration-[180ms] focus-visible:outline-none focus-visible:shadow-focus cursor-pointer select-none ml-0.5"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -184,9 +184,9 @@ export function TopNav() {
                   className="flex items-center justify-center"
                 >
                   {theme === 'light' ? (
-                    <Moon className="h-5 w-5" strokeWidth={2} />
+                    <Moon className="h-[18px] w-[18px]" strokeWidth={2} />
                   ) : (
-                    <Sun className="h-5 w-5" strokeWidth={2} />
+                    <Sun className="h-[18px] w-[18px]" strokeWidth={2} />
                   )}
                 </motion.div>
               </AnimatePresence>
@@ -201,12 +201,12 @@ export function TopNav() {
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden h-8 w-8 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-[180ms] focus-visible:outline-none focus-visible:shadow-focus ml-auto cursor-pointer select-none"
+            className="md:hidden h-9 w-9 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors duration-[180ms] focus-visible:outline-none focus-visible:shadow-focus ml-auto cursor-pointer select-none touch-manipulation active:scale-95"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-5 w-5" />
           </button>
         </div>
       </header>
@@ -226,7 +226,7 @@ export function TopNav() {
             />
             <FocusTrap active={mobileOpen}>
               <motion.div
-                className="fixed right-0 top-0 z-50 h-dvh w-72 bg-surface border-l border-border shadow-xl md:hidden flex flex-col"
+                className="fixed right-0 top-0 z-50 h-dvh w-[280px] bg-surface border-l border-border shadow-xl md:hidden flex flex-col"
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
@@ -236,26 +236,26 @@ export function TopNav() {
                 aria-label="Navigation menu"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
+                <div className="flex items-center justify-between px-3 py-2.5 border-b border-border shrink-0">
                   <Link
                     to="/"
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2.5"
+                    className="flex items-center gap-2"
                   >
-                    <RoomCanvasLogoMark size={26} />
-                    <span className="text-sm font-semibold text-text-primary tracking-[-0.01em]">RoomCanvas</span>
+                    <RoomCanvasLogoMark size={24} />
+                    <span className="text-sm font-semibold text-text-primary tracking-tight">RoomCanvas</span>
                   </Link>
                   <button
                     onClick={() => setMobileOpen(false)}
-                    className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:bg-surface-alt transition-colors duration-base"
+                    className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:bg-surface-alt transition-colors duration-base touch-manipulation active:scale-95"
                     aria-label="Close menu"
                   >
-                    <X className="h-[18px] w-[18px]" />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
 
                 {/* Nav links */}
-                <nav className="flex flex-col gap-0.5 p-3 flex-1 overflow-y-auto" aria-label="Mobile navigation">
+                <nav className="flex flex-col gap-0.5 p-2.5 flex-1 overflow-y-auto" aria-label="Mobile navigation">
                   <MobileNavLink to="/" label="Home" onClick={() => setMobileOpen(false)} />
                   <MobileNavLink to="/upload" label="New Design" icon={<Plus className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
                   <MobileNavLink to="/history" label="Library" icon={<History className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
@@ -263,7 +263,7 @@ export function TopNav() {
                     <>
                       <MobileNavLink to="/profile" label="Profile" onClick={() => setMobileOpen(false)} />
                       <MobileNavLink to="/settings" label="Settings" onClick={() => setMobileOpen(false)} />
-                      <div className="mt-3 px-2">
+                      <div className="mt-2 px-1.5">
                         <GlobalSearch isMobile onNavigate={() => setMobileOpen(false)} />
                       </div>
                     </>
@@ -271,10 +271,10 @@ export function TopNav() {
                 </nav>
 
                 {/* CTA */}
-                <div className="p-3 border-t border-border flex flex-col gap-2">
+                <div className="p-2.5 border-t border-border flex flex-col gap-2 shrink-0">
                   <button
                     onClick={toggleTheme}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-base text-text-secondary hover:bg-surface-alt hover:text-text-primary"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-base text-text-secondary hover:bg-surface-alt hover:text-text-primary touch-manipulation active:scale-[0.98]"
                   >
                     <AnimatePresence mode="wait" initial={false}>
                       <motion.div
@@ -301,24 +301,19 @@ export function TopNav() {
                       <Skeleton className="h-10 w-full rounded-md" />
                     </div>
                   ) : user ? (
-                    <Button size="md" variant="secondary" className="w-full" onClick={() => { setMobileOpen(false); signOut(); }}>
+                    <Button size="md" variant="secondary" className="w-full touch-manipulation active:scale-[0.98]" onClick={() => { setMobileOpen(false); signOut(); }}>
                       Sign Out
                     </Button>
                   ) : (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
                       <Link to="/signin" onClick={() => setMobileOpen(false)} className="block">
-                        <Button size="md" variant="secondary" className="w-full">Log in</Button>
+                        <Button size="md" variant="secondary" className="w-full touch-manipulation active:scale-[0.98]">Log in</Button>
                       </Link>
                       <Link to="/signup" onClick={() => setMobileOpen(false)} className="block">
-                        <Button size="md" variant="primary" className="w-full">Sign up free</Button>
+                        <Button size="md" variant="primary" className="w-full touch-manipulation active:scale-[0.98]">Sign up free</Button>
                       </Link>
                     </div>
                   )}
-                  <Link to="/upload" onClick={() => setMobileOpen(false)} className="block mt-1">
-                    <Button size="md" variant="primary" className="w-full" icon={<Plus className="h-4 w-4" />}>
-                      Start New Design
-                    </Button>
-                  </Link>
                 </div>
               </motion.div>
             </FocusTrap>
@@ -337,7 +332,7 @@ function MobileNavLink({ to, label, icon, onClick }: { to: string; label: string
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-base',
+          'flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-base touch-manipulation active:scale-[0.98]',
           isActive
             ? 'bg-accent-subtle text-accent shadow-xs'
             : 'text-text-secondary hover:bg-surface-alt hover:text-text-primary'
