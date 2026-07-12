@@ -28,7 +28,7 @@ export function SignUpPage() {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = 'Please enter your name.';
-    if (!/^\\S+@\\S+\\.\\S+$/.test(email)) e.email = 'Enter a valid email address.';
+    if (!/^\S+@\S+\.\S+$/.test(email)) e.email = 'Enter a valid email address.';
     if (!strength.isAcceptable) e.password = 'Use at least 8 characters, mixing letters, numbers, or symbols.';
     if (confirm !== password) e.confirm = "Passwords don't match.";
     if (!agreed) e.agreed = 'You must accept the Terms to continue.';
