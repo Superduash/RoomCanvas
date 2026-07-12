@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database.session import get_db
 from app.database.models import User
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from fastapi.concurrency import run_in_threadpool
 import logging
@@ -23,7 +23,7 @@ async def _get_or_create_user(db: AsyncSession, firebase_uid: str, email: str, d
         if user:
             # Existing user matched by email — attach their Firebase UID
             user.firebase_uid = firebase_uid
-            user.last_login_at = datetime.utcnow()
+            user.last_login_at = datetime.now(timezone.utc)
             try:
                 await db.commit()
                 await db.refresh(user)
@@ -55,7 +55,7 @@ async def _get_or_create_user(db: AsyncSession, firebase_uid: str, email: str, d
                 _log.error(f"Unexpected DB error creating user: {exc}")
                 raise HTTPException(status_code=500, detail="Database error creating user. Please try again.")
     else:
-        user.last_login_at = datetime.utcnow()
+        user.last_login_at = datetime.now(timezone.utc)
         try:
             await db.commit()
         except Exception as exc:

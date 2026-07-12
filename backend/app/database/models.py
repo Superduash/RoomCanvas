@@ -17,8 +17,8 @@ class User(Base):
     theme_preference: Mapped[str] = mapped_column(String, default="system", nullable=False)
     email_notifications: Mapped[bool] = mapped_column(Integer, default=1, nullable=False) # SQLite uses Integer for boolean
     profile_completed: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
-    last_login_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     generations: Mapped[list["Generation"]] = relationship(
@@ -57,7 +57,7 @@ class Generation(Base):
         ForeignKey("variations.id", use_alter=True, name="fk_generation_selected_variation_id"), 
         nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     owner: Mapped[User | None] = relationship(
@@ -92,7 +92,7 @@ class Variation(Base):
     )
     image_path: Mapped[str] = mapped_column(String, nullable=False)
     seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     generation: Mapped["Generation"] = relationship(
