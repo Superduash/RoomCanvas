@@ -4,7 +4,7 @@ import { api } from '../api/client';
 import { type User } from '../api/types';
 import { useUserStats } from '../api/queries';
 import { Button } from '../components/primitives/Button';
-import { Input } from '../components/primitives/Input';
+import { Input, Textarea } from '../components/primitives/Input';
 import { ImageCropModal } from '../components/profile-setup/ImageCropModal';
 import { useDropzone } from 'react-dropzone';
 import { toast } from '../lib/toast';
@@ -38,7 +38,6 @@ export function ProfilePage() {
   
   // Avatar state
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
@@ -93,28 +92,12 @@ export function ProfilePage() {
 
     setLoading(true);
     try {
-      let finalPhotoUrl = avatarPreview;
-      
-      if (avatarBlob) {
-        const formData = new FormData();
-        formData.append('image', avatarBlob, 'avatar.jpg');
-        const res = await api.postForm<{photo_url: string}>('/auth/avatar', formData);
-        finalPhotoUrl = res.photo_url;
-      }
-      
-      // If photo was explicitly removed but no new blob
-      if (!avatarBlob && avatarPreview === null && profile?.photo_url) {
-        finalPhotoUrl = null; 
-      }
-
       const updatedUser = await api.patch<User>('/auth/me', {
         display_name: displayName,
         username,
         bio,
-        photo_url: finalPhotoUrl,
       });
       setProfile(updatedUser);
-      setAvatarBlob(null); // Reset blob
       toast.success('Profile updated successfully.');
     } catch (err: any) {
       if (err.status === 409) {
@@ -150,18 +133,28 @@ export function ProfilePage() {
     maxFiles: 1,
   });
 
-  const handleCropComplete = (croppedBlob: Blob) => {
-    setAvatarBlob(croppedBlob);
-    setAvatarPreview(URL.createObjectURL(croppedBlob));
+  const handleCropComplete = async (croppedBlob: Blob) => {
     setCropModalOpen(false);
+    const optimisticUrl = URL.createObjectURL(croppedBlob);
+    setAvatarPreview(optimisticUrl);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', croppedBlob, 'avatar.jpg');
+      const updatedUser = await api.postForm<User>('/auth/avatar', formData);
+      setProfile(updatedUser);
+      setAvatarPreview(updatedUser.photo_url);
+      toast.success('Photo updated successfully');
+    } catch (err: any) {
+      setAvatarPreview(profile?.photo_url || null);
+      toast.error(err.message || 'Failed to upload photo.');
+    }
   };
 
   const hasChanges = 
     displayName !== (profile?.display_name || '') || 
     username !== (profile?.username || '') || 
-    bio !== (profile?.bio || '') ||
-    avatarBlob !== null ||
-    (avatarPreview === null && profile?.photo_url !== null);
+    bio !== (profile?.bio || '');
 
   if (!profile) return null;
 
@@ -198,20 +191,29 @@ export function ProfilePage() {
              </div>
              
              <div className="flex flex-col gap-3">
-               <Button variant="secondary" onClick={() => {
-                 // Trigger file input manually via ref or just let dropzone handle it,
-                 // but since we want the button to trigger, we can reuse getRootProps for it:
-               }}>
+               <Button variant="secondary">
                  <div {...getRootProps()} className="flex items-center">
                    <input {...getInputProps()} />
                    Upload new photo
                  </div>
                </Button>
                {avatarPreview && (
-                 <button onClick={() => { setAvatarPreview(null); setAvatarBlob(null); }} className="text-sm font-medium text-text-secondary hover:text-danger text-left w-fit transition-colors">
-                   Remove photo
-                 </button>
-               )}
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const updatedUser = await api.patch<User>('/auth/me', { photo_url: null });
+                        setProfile(updatedUser);
+                        setAvatarPreview(null);
+                        toast.success('Photo removed');
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to remove photo.');
+                      }
+                    }} 
+                    className="text-sm font-medium text-text-secondary hover:text-danger text-left w-fit transition-colors"
+                  >
+                    Remove photo
+                  </button>
+                )}
              </div>
           </div>
         </section>
@@ -238,38 +240,33 @@ export function ProfilePage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text-primary">Username</label>
-              <div className="relative">
-                <Input
-                  value={username}
-                  onChange={e => setUsername(e.target.value.toLowerCase())}
-                  placeholder="username"
-                  className={cn("pl-8", (usernameStatus === 'invalid' || usernameStatus === 'taken') && 'border-danger focus:border-danger')}
-                />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary font-medium pointer-events-none">@</span>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                  {usernameStatus === 'checking' && <Loader2 size={18} className="animate-spin text-text-secondary" />}
-                  {usernameStatus === 'available' && <Check size={18} className="text-success" />}
-                  {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <AlertCircle size={18} className="text-danger" />}
-                </div>
-              </div>
+              <Input
+                value={username}
+                onChange={e => setUsername(e.target.value.toLowerCase())}
+                placeholder="username"
+                leftIcon="@"
+                className={(usernameStatus === 'invalid' || usernameStatus === 'taken') ? 'border-danger focus:border-danger' : ''}
+                rightElement={
+                  <div className="flex items-center">
+                    {usernameStatus === 'checking' && <Loader2 size={18} className="animate-spin text-text-secondary" />}
+                    {usernameStatus === 'available' && <Check size={18} className="text-success" />}
+                    {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <AlertCircle size={18} className="text-danger" />}
+                  </div>
+                }
+              />
               {(usernameStatus === 'taken' || usernameStatus === 'invalid') && (
                 <p className="text-xs text-danger font-medium mt-1">{usernameError}</p>
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-primary flex justify-between">
-                <span>Bio</span>
-                <span className={cn("text-xs", bio.length > 280 ? 'text-danger' : 'text-text-tertiary')}>{bio.length}/280</span>
-              </label>
-              <textarea
-                value={bio}
-                onChange={e => setBio(e.target.value)}
-                rows={4}
-                className="w-full rounded-xl border border-border bg-surface-alt/60 px-4 py-3 text-[15px] text-text-primary focus:border-accent focus:bg-surface focus:outline-none focus:shadow-focus transition-all resize-none shadow-xs"
-                placeholder="Interior design enthusiast..."
-              />
-            </div>
+            <Textarea
+              label="Bio"
+              value={bio}
+              onChange={e => setBio(e.target.value)}
+              rows={4}
+              maxLength={280}
+              placeholder="Interior design enthusiast..."
+            />
 
             <div className="flex justify-end mt-2">
                <Button onClick={handleSave} loading={loading} disabled={!hasChanges || bio.length > 280 || usernameStatus === 'checking'}>

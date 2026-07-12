@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../components/primitives/Button';
-import { Input } from '../components/primitives/Input';
+import { Input, Textarea } from '../components/primitives/Input';
 import { ImageCropModal } from '../components/profile-setup/ImageCropModal';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Check, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
@@ -45,6 +45,25 @@ export default function SetupProfilePage() {
   
   // Submit State
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Apply theme in real-time during onboarding
+  useEffect(() => {
+    if (step === 4) { // Only apply when on the preferences step
+      if (themePref === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (themePref === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        // System preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    }
+  }, [themePref, step]);
 
   // Focus trap workaround for keyboard support
   useEffect(() => {
@@ -356,20 +375,22 @@ export default function SetupProfilePage() {
                   <p className="text-sm text-text-secondary">This is how others can find you.</p>
                 </div>
                 
-                <div className="relative mb-2">
+                <div className="mb-2">
                   <Input
                     autoFocus
                     placeholder="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                    className={`pl-8 ${usernameStatus === 'invalid' || usernameStatus === 'taken' ? 'border-danger focus:border-danger focus:ring-danger/20' : ''}`}
+                    leftIcon="@"
+                    className={usernameStatus === 'invalid' || usernameStatus === 'taken' ? 'border-danger focus:border-danger focus:ring-danger/20' : ''}
+                    rightElement={
+                      <div className="flex items-center">
+                        {usernameStatus === 'checking' && <Loader2 size={18} className="animate-spin text-text-secondary" />}
+                        {usernameStatus === 'available' && <Check size={18} className="text-success" />}
+                        {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <AlertCircle size={18} className="text-danger" />}
+                      </div>
+                    }
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary font-medium pointer-events-none">@</span>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                    {usernameStatus === 'checking' && <Loader2 size={18} className="animate-spin text-text-secondary" />}
-                    {usernameStatus === 'available' && <Check size={18} className="text-success" />}
-                    {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <AlertCircle size={18} className="text-danger" />}
-                  </div>
                 </div>
 
                 <div className="h-10 mb-4">
@@ -394,19 +415,15 @@ export default function SetupProfilePage() {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2 mb-6">
-                  <label className="text-sm font-medium text-text-primary flex justify-between">
-                    <span>Bio (Optional)</span>
-                    <span className={`text-xs ${bio.length > 160 ? 'text-danger' : 'text-text-tertiary'}`}>{bio.length}/160</span>
-                  </label>
-                  <textarea
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 transition-all resize-none shadow-sm"
-                    placeholder="Interior design enthusiast..."
-                    rows={3}
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                  />
-                </div>
+                <Textarea
+                  label="Bio (Optional)"
+                  placeholder="Interior design enthusiast..."
+                  rows={3}
+                  maxLength={160}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  className="mb-6"
+                />
 
                 <div className="mt-auto">
                   <Button className="w-full" size="lg" onClick={handleNextStep} disabled={bio.length > 160 || usernameStatus === 'checking'} iconRight={<ArrowRight className="h-4 w-4" />}>

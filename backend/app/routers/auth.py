@@ -177,11 +177,42 @@ async def get_user_stats(user: User = Depends(get_current_user), db: AsyncSessio
         "member_since": user.created_at.isoformat() if user.created_at else None,
     }
 
-@router.post("/avatar")
-async def upload_avatar(image: UploadFile = File(...), user: User = Depends(get_current_user)):
-    """Saves the uploaded avatar to Supabase Storage and returns its public URL."""
-    
-    key = await StorageService.save_upload(image, prefix="avatars")
-    photo_url = StorageService.resolve_public_url(key)
-    
-    return {"photo_url": photo_url}
+@router.post("/avatar", response_model=UserOut)
+async def upload_avatar(
+    image: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.utils.image_utils import validate_image_file
+    from app.utils.exceptions import InvalidImageError
+    from fastapi import HTTPException
+
+    try:
+        validate_image_file(image)
+    except InvalidImageError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    old_photo_key = user.photo_url  # capture before overwrite, to clean up after
+
+    try:
+        key = await StorageService.save_upload(image, prefix="avatars")
+        photo_url = StorageService.resolve_public_url(key)
+    except Exception as e:
+        _log.error(f"Avatar upload failed for user {user.id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Could not upload photo: {e}")
+
+    # Persist to DB right here — don't make the frontend do a second PATCH call for this
+    user.photo_url = photo_url
+    try:
+        await db.commit()
+        await db.refresh(user)
+    except Exception as exc:
+        await db.rollback()
+        _log.error(f"Failed to save photo_url for user {user.id}: {exc}")
+        raise HTTPException(status_code=500, detail="Photo uploaded but failed to save to your profile. Please try again.")
+
+    # Clean up the old avatar file now that the new one is safely saved
+    if old_photo_key and old_photo_key != photo_url:
+        StorageService.delete_by_url_if_exists(old_photo_key)
+
+    return user

@@ -91,4 +91,13 @@ class StorageService:
         except Exception as e:
             logger.warning(f"Could not delete file {file_path} from Supabase: {e}")
 
+    @staticmethod
+    def delete_by_url_if_exists(url: str):
+        if not url:
+            return
+        bucket_segment = f"/{_BUCKET}/"
+        if bucket_segment in url:
+            key = url.split(bucket_segment, 1)[1]
+            StorageService.delete_file_if_exists(key)
+
 

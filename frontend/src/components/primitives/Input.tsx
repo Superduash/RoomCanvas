@@ -22,7 +22,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative flex items-center">
           {leftIcon && (
-            <span className="absolute left-4 flex items-center text-text-tertiary pointer-events-none" aria-hidden="true">
+            <span className="absolute left-4 top-0 bottom-0 flex items-center text-text-tertiary pointer-events-none select-none font-medium text-[15px]" aria-hidden="true">
               {leftIcon}
             </span>
           )}
@@ -30,7 +30,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'h-11 w-full rounded-xl border bg-surface-raised px-4 text-[15px] text-text-primary shadow-xs cursor-text select-text',
+              'h-11 w-full rounded-xl border bg-surface-raised px-4 text-[15px] text-text-primary shadow-xs cursor-text select-text appearance-none',
               'placeholder:text-text-tertiary',
               'transition-all duration-base ease-out',
               'focus:outline-none focus:border-accent focus:shadow-focus',
@@ -45,7 +45,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightElement && (
-            <span className="absolute right-3 flex items-center" aria-hidden="true">
+            <span className="absolute right-3 top-0 bottom-0 flex items-center" aria-hidden="true">
               {rightElement}
             </span>
           )}
@@ -97,12 +97,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           id={inputId}
           maxLength={maxLength}
           className={cn(
-            'w-full rounded-xl border bg-surface-raised px-4 py-3 text-[15px] text-text-primary cursor-text select-text shadow-xs',
+            'w-full rounded-xl border bg-surface-raised px-4 py-3 text-[15px] text-text-primary cursor-text select-text shadow-xs appearance-none',
             'placeholder:text-text-tertiary resize-none',
             'transition-all duration-base ease-out',
             'focus:outline-none focus:border-accent focus:shadow-focus',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            error ? 'border-danger' : 'border-border hover:border-border-strong',
+            'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-surface-alt',
+            error ? 'border-danger bg-danger-subtle focus:border-danger focus:shadow-focus-danger' : 'border-border hover:border-border-strong',
             className
           )}
           aria-invalid={!!error}
