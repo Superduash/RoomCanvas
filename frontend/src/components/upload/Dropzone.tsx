@@ -49,6 +49,50 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
     noKeyboard: false,
   });
 
+  // Enhanced native mobile picker handler
+  const handleMobilePickerOpen = useCallback(async () => {
+    // Try File System Access API first (for better PWA experience)
+    if ('showOpenFilePicker' in window) {
+      try {
+        const [fileHandle] = await (window as any).showOpenFilePicker({
+          types: [
+            {
+              description: 'Images',
+              accept: {
+                'image/*': ['.png', '.jpg', '.jpeg', '.webp']
+              }
+            }
+          ],
+          multiple: false,
+        });
+        const file = await fileHandle.getFile();
+        
+        // Validate file
+        if (file.size > maxSizeBytes) {
+          setCustomError(`File is too large — max ${maxSizeMB}MB`);
+          return;
+        }
+        if (!allowedTypes.includes(file.type)) {
+          const fmts = allowedTypes.map(mimeToExtensions).join(', ');
+          setCustomError(`Unsupported format — use ${fmts}`);
+          return;
+        }
+        
+        setCustomError('');
+        onFileAccepted(file);
+        return;
+      } catch (err: any) {
+        // User cancelled or API not supported, fall through to regular input
+        if (err.name !== 'AbortError') {
+          console.warn('File System Access API failed:', err);
+        }
+      }
+    }
+    
+    // Fallback: use react-dropzone's open method which triggers the file input
+    open();
+  }, [open, maxSizeBytes, maxSizeMB, allowedTypes, onFileAccepted]);
+
   const rejectionReason = fileRejections[0]?.errors[0];
   let errorMessage = customError;
   if (!errorMessage && rejectionReason) {
@@ -81,7 +125,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               type="button"
               variant="secondary"
               size="sm"
-              onClick={open}
+              onClick={handleMobilePickerOpen}
               className="bg-surface/95 backdrop-blur-sm shadow-lg touch-manipulation active:scale-95"
             >
               <ImagePlus className="h-4 w-4 mr-1.5" strokeWidth={2} />
@@ -126,7 +170,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
             : 'border-border-strong bg-surface hover:border-accent/40 hover:bg-accent/[0.02]'
         )}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} capture="environment" />
 
         <div className="flex flex-col items-center gap-3 sm:gap-4 text-center max-w-sm">
           <div>
@@ -149,10 +193,10 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               e.stopPropagation();
               open();
             }}
-            className="mt-1 sm:mt-2 shadow-md touch-manipulation active:scale-95 transition-transform h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base flex items-center justify-center gap-2"
+            icon={<ImagePlus className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />}
+            className="mt-1 sm:mt-2 shadow-md touch-manipulation active:scale-95 transition-transform h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base"
           >
-            <ImagePlus className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />
-            <span>Add Photo</span>
+            Add Photo
           </Button>
         </div>
       </div>
