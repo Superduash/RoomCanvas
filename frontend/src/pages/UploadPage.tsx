@@ -14,32 +14,6 @@ import { toast } from '../lib/toast';
 import { useRequireAuthAction } from '../auth/useRequireAuthAction';
 import { useAuth } from '../auth/AuthProvider';
 
-function Stat({ value, label }: { value: string | number; label: string }) {
-  return (
-    <div className="flex flex-col items-end sm:items-start">
-      <span className="text-xl sm:text-2xl font-bold text-text-primary leading-tight">{value}</span>
-      <span className="text-xs text-text-tertiary uppercase tracking-wider font-semibold">{label}</span>
-    </div>
-  );
-}
-
-function WelcomeBanner({ profile, stats }: { profile: any; stats: any }) {
-  return (
-    <div className="rounded-2xl bg-surface border border-border p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-      <div>
-        <p className="text-sm text-text-tertiary font-medium">Welcome back,</p>
-        <p className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">{profile?.display_name || 'Designer'} 👋</p>
-      </div>
-      <div className="flex items-center gap-6 self-start sm:self-auto">
-        <Stat value={stats?.total_designs || 0} label="Designs" />
-        {stats?.favorite_style && (
-          <Stat value={titleCase(stats.favorite_style)} label="Fav Style" />
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function UploadPage() {
   const navigate = useNavigate();
   const { data: config } = useConfig();
@@ -126,12 +100,6 @@ export function UploadPage() {
           Upload a photo of your space and choose an aesthetic direction. Our AI will analyze the room and generate a complete redesign.
         </p>
       </div>
-
-      {isAuthenticated && (
-        <div className="max-w-2xl mx-auto mb-8 sm:mb-10">
-          <WelcomeBanner profile={user} stats={stats} />
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 lg:gap-12 xl:gap-16 items-start">
         
