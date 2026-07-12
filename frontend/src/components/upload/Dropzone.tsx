@@ -45,7 +45,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
     accept: acceptObj,
     maxSize: maxSizeBytes,
     multiple: false,
-    noClick: true, // We'll handle clicks manually
+    noClick: true,
     noKeyboard: false,
   });
 
@@ -74,7 +74,6 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
             decoding="async"
           />
           
-          {/* Mobile: show controls always, Desktop: show on hover */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/40 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-200" />
           
           <div className="absolute top-3 right-3 flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-200 focus-within:opacity-100">
@@ -83,7 +82,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               variant="secondary"
               size="sm"
               onClick={open}
-              className="bg-surface/95 backdrop-blur-sm shadow-lg"
+              className="bg-surface/95 backdrop-blur-sm shadow-lg touch-manipulation active:scale-95"
             >
               <ImagePlus className="h-4 w-4 mr-1.5" />
               Replace
@@ -94,7 +93,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
                 variant="ghost"
                 size="sm"
                 onClick={onRemove}
-                className="bg-surface/95 backdrop-blur-sm shadow-lg hover:bg-danger hover:text-white"
+                className="bg-surface/95 backdrop-blur-sm shadow-lg hover:bg-danger hover:text-white touch-manipulation active:scale-95"
                 aria-label="Remove image"
               >
                 <X className="h-4 w-4" />
@@ -118,7 +117,7 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
         {...getRootProps()}
         className={cn(
           'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed',
-          'min-h-[280px] py-8 px-6 transition-all duration-200',
+          'min-h-[240px] sm:min-h-[280px] py-6 sm:py-8 px-4 sm:px-6 transition-all duration-200',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
           isDragActive
             ? 'border-accent bg-accent-subtle scale-[1.01] shadow-sm'
@@ -129,33 +128,32 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
       >
         <input {...getInputProps()} />
 
-        <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+        <div className="flex flex-col items-center gap-3 sm:gap-4 text-center max-w-sm">
           <div className={cn(
-            'flex items-center justify-center h-16 w-16 rounded-full shadow-sm transition-all duration-200',
+            'flex items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full shadow-sm transition-all duration-200',
             isDragActive 
               ? 'bg-accent text-white scale-110' 
               : 'bg-surface-alt text-text-secondary border border-border'
           )}>
             {isDragActive ? (
-              <ImagePlus className="h-7 w-7" />
+              <ImagePlus className="h-6 w-6 sm:h-7 sm:w-7" />
             ) : (
-              <ImageIcon className="h-7 w-7" />
+              <ImageIcon className="h-6 w-6 sm:h-7 sm:w-7" />
             )}
           </div>
           
           <div>
-            <p className="text-base font-semibold text-text-primary mb-1.5">
+            <p className="text-sm sm:text-base font-semibold text-text-primary mb-1 sm:mb-1.5">
               {isDragActive ? 'Drop your photo here' : 'Add a room photo'}
             </p>
-            <p className="text-sm text-text-secondary mb-1">
+            <p className="text-xs sm:text-sm text-text-secondary mb-0.5 sm:mb-1">
               Drag & drop or tap to choose
             </p>
-            <p className="text-xs text-text-tertiary font-mono">
+            <p className="text-[11px] sm:text-xs text-text-tertiary font-mono">
               {allowedTypes.map(mimeToExtensions).join(', ')} • Max {maxSizeMB}MB
             </p>
           </div>
 
-          {/* Single button that opens native picker (Camera/Gallery/Files) */}
           <Button 
             variant="primary" 
             size="lg" 
@@ -164,16 +162,16 @@ export function Dropzone({ onFileAccepted, maxSizeMB, allowedTypes, previewUrl, 
               e.stopPropagation();
               open();
             }}
-            className="mt-2 shadow-md active:scale-95 transition-transform touch-manipulation"
+            className="mt-1 sm:mt-2 shadow-md touch-manipulation active:scale-95 transition-transform h-11 sm:h-12 px-5 sm:px-6 text-sm sm:text-base"
           >
-            <ImagePlus className="h-5 w-5 mr-2" />
+            <ImagePlus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Add Photo
           </Button>
         </div>
       </div>
 
       {errorMessage && (
-        <p className="text-sm text-danger flex items-center gap-2 p-3 rounded-lg bg-danger-subtle border border-danger/20" role="alert">
+        <p className="text-xs sm:text-sm text-danger flex items-center gap-2 p-2.5 sm:p-3 rounded-lg bg-danger-subtle border border-danger/20" role="alert">
           <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
           {errorMessage}
         </p>
