@@ -179,35 +179,38 @@ export function LandingPage() {
                  <p className="text-text-secondary mb-6 text-[15px] leading-relaxed">
                    Gemini Vision intelligently maps your room before generation, understanding exactly what's structural and what's decor.
                  </p>
-                 <div className="flex flex-col gap-2">
+                 <div className="flex flex-col gap-3">
                    {['Furniture Identification', 'Color Palette Extraction', 'Lighting Detection'].map((item, idx) => (
-                     <div key={idx} className="flex items-center gap-2 text-sm font-medium text-text-primary bg-surface-alt w-fit px-3 py-1.5 rounded-lg border border-border">
+                     <div key={idx} className="flex items-center gap-2.5 text-[14px] font-medium text-text-primary bg-surface-alt w-fit px-3.5 py-2 rounded-xl border border-border shadow-sm">
                        <ShieldCheck className="h-4 w-4 text-success" />
                        {item}
                      </div>
                    ))}
                  </div>
                </div>
-               <div className="flex-1 bg-surface-alt rounded-xl border border-border relative overflow-hidden hidden md:block">
+               <div className="flex-1 bg-surface-alt rounded-2xl border border-border relative overflow-hidden hidden md:flex items-center justify-center p-6">
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent" />
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-48 h-48 bg-accent/10 blur-[50px] rounded-full" />
-                  <div className="absolute left-6 top-6 bottom-6 right-[-20%] bg-surface border border-border shadow-lg rounded-xl overflow-hidden flex flex-col">
-                     <div className="h-10 border-b border-border bg-surface-alt flex items-center px-4 gap-2">
-                       <div className="w-3 h-3 rounded-full bg-danger/80" />
-                       <div className="w-3 h-3 rounded-full bg-warning/80" />
-                       <div className="w-3 h-3 rounded-full bg-success/80" />
+                  <div className="absolute right-[-10%] top-[-10%] w-64 h-64 bg-accent/10 blur-[60px] rounded-full" />
+                  <div className="w-full max-w-[280px] bg-surface border border-border shadow-xl rounded-xl overflow-hidden flex flex-col relative z-10">
+                     <div className="h-9 border-b border-border bg-surface-alt/50 flex items-center px-4 gap-2">
+                       <div className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+                       <div className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+                       <div className="w-2.5 h-2.5 rounded-full bg-border-strong" />
                      </div>
-                     <div className="p-4 space-y-3">
-                        <div className="h-2 w-1/3 bg-border rounded-full" />
-                        <div className="h-2 w-3/4 bg-border-strong rounded-full" />
-                        <div className="h-2 w-1/2 bg-border-strong rounded-full" />
+                     <div className="p-5 space-y-4">
+                        <div className="h-2.5 w-1/3 bg-border-strong rounded-full" />
+                        <div className="space-y-2">
+                          <div className="h-2 w-full bg-border rounded-full" />
+                          <div className="h-2 w-5/6 bg-border rounded-full" />
+                          <div className="h-2 w-4/6 bg-border rounded-full" />
+                        </div>
                      </div>
                   </div>
                </div>
             </div>
 
             {/* 2. 90-Second Generation */}
-            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col relative overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
                  <Zap className="h-5 w-5" />
                </div>
@@ -215,17 +218,19 @@ export function LandingPage() {
                <p className="text-text-secondary text-[15px] leading-relaxed z-10">
                  Powered by Flux Kontext Pro, get stunning high-res renders faster than making coffee.
                </p>
-               <div className="absolute -bottom-4 left-6 right-6 h-16 bg-surface-alt border border-border rounded-t-xl overflow-hidden flex items-center px-4">
-                  <div className="w-full h-2 bg-border rounded-full overflow-hidden">
-                     <div className="w-[85%] h-full bg-accent rounded-full relative overflow-hidden">
-                        <div className="absolute inset-0 bg-white/20 w-1/2 animate-[skeleton-shimmer_1s_infinite]" />
-                     </div>
+               <div className="mt-auto pt-6 z-10">
+                  <div className="h-14 w-full bg-surface-alt border border-border rounded-xl flex items-center px-5 shadow-inner">
+                    <div className="w-full h-2.5 bg-border rounded-full overflow-hidden">
+                       <div className="w-[85%] h-full bg-accent rounded-full relative overflow-hidden">
+                          <div className="absolute inset-0 bg-white/20 w-1/2 animate-[skeleton-shimmer_1s_infinite]" />
+                       </div>
+                    </div>
                   </div>
                </div>
             </div>
 
             {/* 3. Iterative Refinement */}
-            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col relative overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+            <div className="rounded-[24px] bg-surface border border-border p-8 flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
                <div className="w-10 h-10 rounded-xl bg-accent-subtle text-accent flex items-center justify-center mb-4 z-10">
                  <Layers className="h-5 w-5" />
                </div>
@@ -233,8 +238,10 @@ export function LandingPage() {
                <p className="text-text-secondary text-[15px] leading-relaxed z-10">
                  Chat with the AI. Say "make it brighter" and keep the bones of the design.
                </p>
-               <div className="absolute bottom-6 right-6 left-12 bg-accent text-white p-3 rounded-2xl rounded-br-none shadow-md text-sm font-medium">
-                  "Make the lighting warmer and add some plants."
+               <div className="mt-auto pt-6 flex justify-end z-10">
+                  <div className="bg-accent text-white px-4 py-3 rounded-2xl rounded-br-sm shadow-md text-[14px] font-medium w-fit max-w-[90%] relative">
+                     "Make the lighting warmer and add some plants."
+                  </div>
                </div>
             </div>
 
