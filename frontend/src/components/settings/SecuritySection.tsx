@@ -36,14 +36,22 @@ export function SecuritySection() {
     return () => window.removeEventListener('roomcanvas:reauth-required', handleReauthRequired);
   }, []);
 
-  const withReauth = async (action: () => Promise<void>) => {
+  const withReauth = async (action: () => Promise<void>): Promise<boolean> => {
     try {
       await action();
+      return true;
     } catch (err: any) {
-      if (err.message.includes('sign in again') || err.message.includes('recent-login')) {
+      const errorMessage = err?.message || String(err);
+      
+      // Check if reauth is required
+      if (errorMessage.includes('sign in again') || 
+          errorMessage.includes('recent-login') ||
+          errorMessage.includes('requires-recent-login')) {
         setPendingAction(() => action);
         setReauthOpen(true);
+        return false;
       } else {
+        // For other errors, show toast and re-throw
         toast.error(getFriendlyApiError(err));
         throw err;
       }
@@ -53,16 +61,27 @@ export function SecuritySection() {
   const handleReauthenticate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsReauthenticating(true);
+    
     try {
+      // Reauthenticate with password or Google popup
       await reauthenticate(reauthPassword || undefined);
+      
+      // Close reauth modal
       setReauthOpen(false);
       setReauthPassword('');
+      
+      // Execute the pending action if any
       if (pendingAction) {
-        await pendingAction();
-        setPendingAction(null);
+        try {
+          await pendingAction();
+          setPendingAction(null);
+        } catch (err: any) {
+          toast.error(getFriendlyApiError(err));
+          setPendingAction(null);
+        }
       }
     } catch (err: any) {
-      toast.error(getFriendlyApiError(err));
+      toast.error(getFriendlyApiError(err, 'Reauthentication failed'));
     } finally {
       setIsReauthenticating(false);
     }
@@ -105,18 +124,38 @@ export function SecuritySection() {
   };
 
   const handleDeleteAccount = async () => {
+    if (isDeleting || deleteConfirmText !== 'DELETE') return;
+    
     setIsDeleting(true);
+    
     try {
-      await withReauth(async () => {
+      const completed = await withReauth(async () => {
+        // Delete the account (backend + Firebase + all state)
         await deleteAccount();
-        toast.success('Account deleted successfully');
       });
-    } catch (err) {
-      // Error handled in withReauth
-    } finally {
-      setIsDeleting(false);
+      
+      // If reauth is required, withReauth returns false and will call this again after reauth
+      if (!completed) {
+        setIsDeleting(false);
+        return;
+      }
+      
+      // Show success message briefly
+      toast.success('Account deleted successfully');
+      
+      // Close modal
       setDeleteModalOpen(false);
       setDeleteConfirmText('');
+      
+      // Small delay to let the toast show
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force navigate to landing page with full reload to clear ALL state
+      window.location.href = '/';
+    } catch (err: any) {
+      // Error already handled by withReauth
+      setIsDeleting(false);
+      // Don't show duplicate error toast - withReauth already shows it
     }
   };
 
@@ -207,7 +246,7 @@ export function SecuritySection() {
                 variant="destructive" 
                 onClick={handleDeleteAccount}
                 loading={isDeleting}
-                disabled={deleteConfirmText !== 'DELETE'}
+                disabled={deleteConfirmText !== 'DELETE' || isDeleting}
               >
                 Delete My Account
               </Button>

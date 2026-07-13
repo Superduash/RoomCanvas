@@ -126,6 +126,76 @@ const getCachedProfile = (): ApiUser | null => {
   }
 };
 
+/**
+ * Clear all browser session state including localStorage, sessionStorage, 
+ * caches, and IndexedDB
+ */
+async function clearBrowserSessionState() {
+  try {
+    localStorage.clear();
+  } catch {}
+
+  try {
+    sessionStorage.clear();
+  } catch {}
+
+  try {
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+    }
+  } catch {}
+
+  await clearIndexedDbStorage();
+}
+
+/**
+ * Clear all IndexedDB databases (Firebase persistence, etc.)
+ */
+async function clearIndexedDbStorage() {
+  if (!('indexedDB' in window)) return;
+
+  try {
+    const databases = await window.indexedDB.databases();
+    await Promise.all(
+      databases.map((db) => {
+        if (db.name) {
+          return new Promise<void>((resolve) => {
+            const deleteRequest = window.indexedDB.deleteDatabase(db.name!);
+            deleteRequest.onsuccess = () => resolve();
+            deleteRequest.onerror = () => resolve(); // Resolve even on error
+            deleteRequest.onblocked = () => resolve();
+          });
+        }
+        return Promise.resolve();
+      })
+    );
+  } catch (err) {
+    // Fallback: try to delete common Firebase database names
+    const commonDbNames = [
+      'firebaseLocalStorageDb',
+      'firebaseLocalStorage',
+      'firebase-auth',
+      'firebase-installations-database',
+    ];
+
+    await Promise.all(
+      commonDbNames.map((dbName) => {
+        return new Promise<void>((resolve) => {
+          try {
+            const deleteRequest = window.indexedDB.deleteDatabase(dbName);
+            deleteRequest.onsuccess = () => resolve();
+            deleteRequest.onerror = () => resolve();
+            deleteRequest.onblocked = () => resolve();
+          } catch {
+            resolve();
+          }
+        });
+      })
+    );
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { setTheme } = useTheme();
@@ -367,18 +437,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async () => {
-    if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
+    const currentUser = firebaseAuth.currentUser;
+    if (!currentUser) throw new Error('Not authenticated');
+
+    // 1. Delete backend user and all related data
     try {
-      // 1. Delete backend data FIRST — needs a still-valid token
       await api.del('/auth/me');
-      // 2. THEN delete the Firebase credential — invalidates the token
-      await deleteUser(firebaseAuth.currentUser);
-      setProfile(null);
-      setUser(null);
     } catch (err: any) {
-      throw new Error(friendlyError(err));
+      // If user doesn't exist in backend (404), continue with Firebase cleanup
+      if (err?.status !== 404) {
+        throw new Error(friendlyError(err));
+      }
     }
-  }, []);
+
+    // 2. Delete Firebase Authentication user
+    try {
+      await deleteUser(currentUser);
+    } catch (err: any) {
+      // If user not found in Firebase, continue with cleanup
+      if (err?.code !== 'auth/user-not-found') {
+        throw new Error(friendlyError(err));
+      }
+    }
+
+    // 3. Sign out from Firebase
+    try {
+      await firebaseSignOut(firebaseAuth);
+    } catch {}
+
+    // 4. Clear all query caches
+    queryClient.clear();
+    
+    // 5. Clear all local state
+    setProfile(null);
+    setUser(null);
+    setSyncError(null);
+    lastTokenRef.current = null;
+    activeSyncPromiseRef.current = null;
+
+    // 6. Clear all browser storage (localStorage, sessionStorage, IndexedDB, caches)
+    await clearBrowserSessionState();
+    
+    // Account successfully deleted - caller should handle navigation
+  }, [queryClient, setProfile]);
 
   const reauthenticate = useCallback(async (password?: string) => {
     if (!firebaseAuth.currentUser) throw new Error('Not authenticated');
@@ -397,6 +498,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await firebaseSignOut(firebaseAuth);
     queryClient.clear();   // wipe every cached query — next sign-in starts clean
+    setProfile(null);
+    setUser(null);
+    setSyncError(null);
+    lastTokenRef.current = null;
+    activeSyncPromiseRef.current = null;
   }, [queryClient]);
 
   // Derive the semantic auth state

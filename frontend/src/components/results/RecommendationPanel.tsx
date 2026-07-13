@@ -1,6 +1,8 @@
 import { type FurnitureItem, type ColorSwatch } from '../../api/types';
 import { Badge } from '../primitives/Badge';
 import { Ruler, Palette, TrendingUp, Grid3x3, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
+import { toast } from '../../lib/toast';
+import { needsColorBorder } from '../../utils/colorHelpers';
 
 
 interface FurnitureListProps {
@@ -111,8 +113,6 @@ export function DimensionCard({ width, length, confidence, onMeasureClick }: Dim
   );
 }
 
-import { toast } from '../../lib/toast';
-
 interface PaletteSwatchesProps {
   swatches: ColorSwatch[];
 }
@@ -130,27 +130,30 @@ export function PaletteSwatches({ swatches }: PaletteSwatchesProps) {
       <div className="flex items-center gap-2 mb-4">
         <Palette className="h-4 w-4 text-text-tertiary" aria-hidden="true" />
         <h4 className="text-xs font-semibold uppercase tracking-widest text-text-secondary">
-          Color Extraction
+          Color Palette
         </h4>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="flex flex-wrap items-center gap-2.5">
         {swatches.map((s, i) => (
           <button
             key={i} 
             onClick={() => copyHex(s.hex)}
-            className="flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-surface-alt transition-colors duration-fast group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            title="Click to copy hex"
+            className="group relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded-lg"
+            title={`${s.name} • ${s.hex}\nClick to copy`}
+            aria-label={`${s.name} color swatch, hex code ${s.hex}. Click to copy.`}
           >
             <div
-              className="h-10 w-full rounded-md border border-border shadow-xs group-hover:scale-105 transition-transform duration-base"
+              className={`h-11 w-11 rounded-lg shadow-sm group-hover:scale-110 group-active:scale-95 transition-transform duration-200 ease-out ${
+                needsColorBorder(s.hex) ? 'border border-border/40' : ''
+              }`}
               style={{ backgroundColor: s.hex }}
               role="img"
-              aria-label={`${s.name} — ${s.hex}`}
+              aria-hidden="true"
             />
-            <div className="text-center">
-              <p className="text-[11px] font-semibold text-text-primary line-clamp-2 leading-tight w-full px-1 group-hover:text-accent transition-colors">{s.name}</p>
-              <p className="text-[10px] text-text-tertiary font-mono tracking-wider">{s.hex}</p>
-            </div>
+            {/* Tooltip on hover - minimal, elegant */}
+            <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-text-primary text-bg text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-10">
+              {s.name}
+            </span>
           </button>
         ))}
       </div>

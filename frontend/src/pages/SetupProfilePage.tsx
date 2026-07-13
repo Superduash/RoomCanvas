@@ -20,7 +20,7 @@ const slideVariants = {
 };
 
 export default function SetupProfilePage() {
-  const { profile, setProfile } = useAuth();
+  const { profile, user, setProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState(1);
@@ -179,17 +179,34 @@ export default function SetupProfilePage() {
   }, [step]);
 
   const handleSkip = async () => {
-     try {
-       setIsSubmitting(true);
-       const updatedUser = await api.patch('/auth/me', {
-         profile_completed: true
-       });
-       setProfile(updatedUser as any);
-       navigate(location.state?.from?.pathname || '/upload', { replace: true });
-     } catch (e: any) {
-       toast.error(getFriendlyApiError(e, 'Failed to skip'));
-       setIsSubmitting(false);
-     }
+    if (isSubmitting) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Generate sensible defaults
+      const fallbackDisplayName = 
+        profile?.display_name?.trim() || 
+        user?.displayName?.trim() || 
+        user?.email?.split('@')[0] || 
+        'RoomCanvas User';
+      
+      // Mark profile as completed with defaults
+      const updatedUser = await api.patch('/auth/me', {
+        display_name: fallbackDisplayName,
+        profile_completed: true,
+        theme_preference: themePref,
+        email_notifications: emailNotifications,
+      });
+      
+      setProfile(updatedUser as any);
+      
+      // Navigate to main app (upload page)
+      navigate('/upload', { replace: true });
+    } catch (e: any) {
+      toast.error(getFriendlyApiError(e, 'Failed to skip profile setup'));
+      setIsSubmitting(false);
+    }
   };
 
   const handleComplete = async () => {
@@ -271,17 +288,18 @@ export default function SetupProfilePage() {
       <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 h-screen max-h-screen relative bg-bg">
         <div className="w-full max-w-md flex flex-col relative h-[500px]">
           
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 relative z-20">
             {step > 1 ? (
               <button
                 onClick={prevStep}
-                className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
+                className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors font-medium"
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </button>
             ) : <span />}
 
             <button
+              type="button"
               onClick={handleSkip}
               disabled={isSubmitting}
               className="text-sm text-text-tertiary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
@@ -302,7 +320,7 @@ export default function SetupProfilePage() {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0 flex flex-col justify-center gap-6"
+                className="absolute inset-0 flex flex-col justify-center gap-6 z-10"
               >
                 <div>
                   <h2 className="text-3xl font-bold tracking-tight text-text-primary mb-2">Welcome to RoomCanvas</h2>
@@ -326,7 +344,7 @@ export default function SetupProfilePage() {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0 flex flex-col"
+                className="absolute inset-0 flex flex-col z-10"
               >
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">How should we know you?</h2>
@@ -383,7 +401,7 @@ export default function SetupProfilePage() {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0 flex flex-col"
+                className="absolute inset-0 flex flex-col z-10"
               >
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">Claim your username</h2>
@@ -458,7 +476,7 @@ export default function SetupProfilePage() {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0 flex flex-col"
+                className="absolute inset-0 flex flex-col z-10"
               >
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">Make it yours</h2>

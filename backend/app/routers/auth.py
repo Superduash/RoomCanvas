@@ -4,12 +4,13 @@ import logging
 _log = logging.getLogger("app.auth")
 from fastapi import APIRouter, Depends, Response, UploadFile, File, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete, update
 from pydantic import BaseModel, ConfigDict
 from app.database.session import get_db
-from app.database.models import User, Generation
+from app.database.models import User, Generation, Variation
 from app.auth.dependencies import get_current_user
 from app.services.storage_service import StorageService
+from firebase_admin import auth as firebase_auth
 import random, re
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -117,25 +118,94 @@ async def delete_account(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Collect every file this user owns BEFORE the cascade delete removes the rows
-    result = await db.execute(select(Generation).where(Generation.user_id == user.id))
-    generations = result.scalars().all()
-    files = [user.photo_url] if user.photo_url else []
-    for g in generations:
-        if g.original_image_path:
-            files.append(g.original_image_path)
-        for v in getattr(g, "variations", []):
-            if v.image_path:
-                files.append(v.image_path)
-
-    await db.delete(user)   # cascades Generations + Variations at the DB row level
-    await db.commit()
-
-    # Clean up files in background
-    def _cleanup():
-        for f in files:
-            StorageService.delete_file_if_exists(f)
+    """
+    Delete user account and all associated data.
     
+    Deletion order:
+    1. Collect all files for cleanup
+    2. Break FK cycles in generations
+    3. Delete variations
+    4. Delete generations
+    5. Delete Firebase user (best effort)
+    6. Delete database user
+    7. Schedule file cleanup
+    """
+    # Collect every file this user owns before the delete so storage cleanup can happen after commit.
+    generation_rows = await db.execute(
+        select(Generation.id, Generation.original_image_path).where(Generation.user_id == user.id)
+    )
+    generations = generation_rows.all()
+    generation_ids = [row.id for row in generations]
+
+    variation_rows = []
+    if generation_ids:
+        variation_rows = (
+            await db.execute(
+                select(Variation.id, Variation.image_path).where(Variation.generation_id.in_(generation_ids))
+            )
+        ).all()
+
+    files = [user.photo_url] if user.photo_url else []
+    files.extend([row.original_image_path for row in generations if row.original_image_path])
+    files.extend([row.image_path for row in variation_rows if row.image_path])
+
+    try:
+        if generation_ids:
+            # Break FK cycles first (parent_generation_id and selected_variation_id)
+            await db.execute(
+                update(Generation)
+                .where(Generation.user_id == user.id)
+                .values(parent_generation_id=None, selected_variation_id=None)
+            )
+            await db.flush()
+            
+            # Delete variations (must be before generations due to FK)
+            await db.execute(delete(Variation).where(Variation.generation_id.in_(generation_ids)))
+            await db.flush()
+            
+            # Delete generations
+            await db.execute(delete(Generation).where(Generation.user_id == user.id))
+            await db.flush()
+
+        # Try to delete Firebase user (best effort - don't fail if Firebase user is already gone)
+        try:
+            firebase_auth.delete_user(user.firebase_uid)
+            _log.info(f"Deleted Firebase user {user.firebase_uid}")
+        except firebase_auth.UserNotFoundError:
+            _log.info(f"Firebase user {user.firebase_uid} already deleted; continuing with local cleanup.")
+        except Exception as firebase_err:
+            # Log but don't fail the entire operation if Firebase deletion fails
+            _log.warning(f"Failed to delete Firebase user {user.firebase_uid}: {firebase_err}")
+
+        # Delete database user
+        await db.execute(delete(User).where(User.id == user.id))
+        await db.commit()
+        
+        _log.info(f"Successfully deleted user account {user.id} ({user.email})")
+        
+    except Exception as exc:
+        await db.rollback()
+        _log.error(f"Failed to delete account {user.id}: {exc}", exc_info=True)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Failed to delete account. Please try again.")
+
+    # Schedule background file cleanup
+    def _cleanup():
+        for file_path in files:
+            StorageService.delete_file_if_exists(file_path)
+
+    background_tasks.add_task(_cleanup)
+
+    return Response(status_code=204)
+        _log.error(f"Failed to delete account {user.id}: {exc}", exc_info=True)
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=500, detail="Failed to delete account. Please try again.")
+
+    def _cleanup():
+        for file_path in files:
+            StorageService.delete_file_if_exists(file_path)
+
     background_tasks.add_task(_cleanup)
 
     return Response(status_code=204)

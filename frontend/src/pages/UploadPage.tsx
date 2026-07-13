@@ -12,6 +12,7 @@ import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
 import { toast } from '../lib/toast';
 import { useRequireAuthAction } from '../auth/useRequireAuthAction';
+import { toHexColor, needsColorBorder, formatColorName } from '../utils/colorHelpers';
 
 
 export function UploadPage() {
@@ -189,15 +190,23 @@ export function UploadPage() {
                     </span>
                     <Badge variant="outline" className="text-[10px] uppercase tracking-wider py-0.5">Palette</Badge>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedStyle.palette.map((color, i) => (
-                      <span
-                        key={i}
-                        className="text-xs px-2.5 py-1 rounded bg-surface-alt border border-border text-text-secondary font-medium"
-                      >
-                        {color}
-                      </span>
-                    ))}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedStyle.palette.map((color, i) => {
+                      const hexColor = toHexColor(color);
+                      const hasBorder = needsColorBorder(hexColor);
+                      return (
+                        <div
+                          key={i}
+                          className={`h-9 w-9 rounded-lg shadow-sm transition-transform hover:scale-110 ${
+                            hasBorder ? 'border border-border/40' : ''
+                          }`}
+                          style={{ backgroundColor: hexColor }}
+                          title={formatColorName(color)}
+                          aria-label={`${formatColorName(color)} color swatch`}
+                          role="img"
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               </motion.div>
