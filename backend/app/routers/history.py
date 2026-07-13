@@ -121,7 +121,7 @@ async def delete_all_history(
         logger.error(f"Error truncating generations: {ex}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error clearing history: {ex}"
+            detail="An unexpected error occurred while clearing history."
         )
     
     asyncio.create_task(asyncio.to_thread(invalidate_history_cache, repo.user_id))
@@ -229,7 +229,7 @@ async def select_variation(
     except Exception as e:
         logger.error(f"Failed to set selected variation: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="Internal database update error.")
+                            detail="An unexpected error occurred while resetting the active variation.")
 
 
 class RenameRequest(BaseModel):
@@ -262,7 +262,7 @@ async def rename_generation(
         logger.error(f"Failed to rename generation {generation_id}: {ex}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error renaming generation: {ex}"
+            detail="An unexpected error occurred while renaming the project."
         )
 
     asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, generation_id, repo.user_id))
@@ -348,7 +348,7 @@ async def delete_refinement(
         logger.error(f"Failed to delete refinement {generation_id}: {ex}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error deleting refinement: {ex}"
+            detail="An unexpected error occurred while deleting the refinement."
         )
     
     asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, parent_id, repo.user_id))

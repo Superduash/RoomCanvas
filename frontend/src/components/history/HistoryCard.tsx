@@ -12,6 +12,7 @@ import { Skeleton } from '../primitives/Skeleton';
 import { formatRelativeTime, cn } from '../../lib/utils';
 import { formatStyleName } from '../../utils/formatters';
 import { toast } from '../../lib/toast';
+import { getFriendlyApiError } from '../../utils/errors';
 import { CompareSlider } from '../results/CompareSlider';
 
 interface HistoryCardProps {
@@ -42,7 +43,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
       toast.success('Project deleted');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(`Delete failed: ${msg}`);
+      toast.error(getFriendlyApiError(err, `Delete failed: ${msg}`));
     }
   };
 
@@ -55,7 +56,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
       toast.success('Project renamed successfully');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(`Rename failed: ${msg}`);
+      toast.error(getFriendlyApiError(err, `Rename failed: ${msg}`));
     }
   };
 
@@ -81,7 +82,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
       toast.success('Download started');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(`Download failed: ${msg}. Try right-clicking the image and saving.`);
+      toast.error(getFriendlyApiError(err, `Download failed: ${msg}. Try right-clicking the image and saving.`));
     }
     setMenuOpen(false);
   };

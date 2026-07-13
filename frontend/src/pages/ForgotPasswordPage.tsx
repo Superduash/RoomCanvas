@@ -5,6 +5,7 @@ import { AuthLayout } from '../components/auth/AuthLayout';
 import { Button } from '../components/primitives/Button';
 import { Input } from '../components/primitives/Input';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { MailCheck } from 'lucide-react';
 
 export function ForgotPasswordPage() {
@@ -36,7 +37,7 @@ export function ForgotPasswordPage() {
       setDone(true);
       startCooldown();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
     } finally {
       setSubmitting(false);
     }

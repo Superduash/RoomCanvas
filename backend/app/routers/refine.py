@@ -67,6 +67,7 @@ async def refine_design(
     result = await service.prepare_refinement(
         request.generation_id,
         request.instruction,
+        request.customization,
         user_id=current_user.id
     )
     
@@ -79,7 +80,8 @@ async def refine_design(
         service.run_refinement_task,
         result.id,
         request.generation_id,
-        request.instruction
+        request.instruction,
+        request.customization
     )
     
     return result

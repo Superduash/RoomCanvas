@@ -4,6 +4,7 @@ import { Button } from '../primitives/Button';
 import { Input } from '../primitives/Input';
 import { PasswordField } from '../auth/PasswordField';
 import { toast } from '../../lib/toast';
+import { getFriendlyApiError } from '../../utils/errors';
 import { AlertTriangle } from 'lucide-react';
 import { usePasswordStrength } from '../../hooks/usePasswordStrength';
 
@@ -43,7 +44,7 @@ export function SecuritySection() {
         setPendingAction(() => action);
         setReauthOpen(true);
       } else {
-        toast.error(err.message);
+        toast.error(getFriendlyApiError(err));
         throw err;
       }
     }
@@ -61,7 +62,7 @@ export function SecuritySection() {
         setPendingAction(null);
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
     } finally {
       setIsReauthenticating(false);
     }

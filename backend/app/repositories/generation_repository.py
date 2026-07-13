@@ -4,20 +4,13 @@ Uses eager-loading (selectinload) to prevent N+1 query problems when
 serializing variations alongside their parent generation.
 """
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 from sqlalchemy import select, desc
 from app.database.models import Generation, Variation
 import logging
 
 logger = logging.getLogger(__name__)
 
-# ── Reusable eager-load options ────────────────────────────────────────────────
-# Every query that returns a Generation includes its variations in ONE extra
-# SELECT rather than one SELECT per row (N+1 prevention).
-_GENERATION_LOAD_OPTIONS = (
-    selectinload(Generation.variations),
-    selectinload(Generation.selected_variation),
-)
+
 
 
 class GenerationRepository:
@@ -58,7 +51,6 @@ class GenerationRepository:
         )
         if self.user_id is not None:
             query = query.where(Generation.user_id == self.user_id)
-        query = query.options(*_GENERATION_LOAD_OPTIONS)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -66,7 +58,7 @@ class GenerationRepository:
         query = select(Generation).order_by(desc(Generation.created_at))
         if self.user_id is not None:
             query = query.where(Generation.user_id == self.user_id)
-        query = query.limit(limit).options(*_GENERATION_LOAD_OPTIONS)
+        query = query.limit(limit)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -75,7 +67,6 @@ class GenerationRepository:
         query = select(Generation).where(Generation.parent_generation_id.is_(None))
         if self.user_id is not None:
             query = query.where(Generation.user_id == self.user_id)
-        query = query.options(*_GENERATION_LOAD_OPTIONS)
         result = await self.db.execute(query)
         roots = list(result.scalars().all())
         
@@ -168,7 +159,7 @@ class GenerationRepository:
         query = select(Generation).where(Generation.parent_generation_id == parent_id)
         if self.user_id is not None:
             query = query.where(Generation.user_id == self.user_id)
-        query = query.order_by(Generation.created_at).options(*_GENERATION_LOAD_OPTIONS)
+        query = query.order_by(Generation.created_at)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 

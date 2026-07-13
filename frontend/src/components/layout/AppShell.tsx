@@ -46,6 +46,12 @@ export function AppShell() {
     return <Navigate to="/setup" state={{ from: location }} replace />;
   }
 
+  // Authenticated users who have completed onboarding shouldn't be on auth pages.
+  if (isAuthenticated && profile && profile.profile_completed && (location.pathname === '/signin' || location.pathname === '/signup')) {
+    const from = location.state?.from?.pathname || '/upload';
+    return <Navigate to={from} replace />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-bg">
       {/* Scroll Progress Indicator */}

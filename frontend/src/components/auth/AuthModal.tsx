@@ -8,6 +8,7 @@ import { SocialAuthButton } from './SocialAuthButton';
 import { PasswordField } from './PasswordField';
 import { Button } from '../primitives/Button';
 import { toast } from '../../lib/toast';
+import { getFriendlyApiError } from '../../utils/errors';
 
 export function AuthModal() {
   const { isOpen, close } = useAuthModalStore();
@@ -45,7 +46,7 @@ export function AuthModal() {
       // Close modal — AppShell will redirect to the correct page after backend sync
       close();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export function AuthModal() {
       // Close modal — AppShell will redirect to the correct page after backend sync
       close();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
     } finally {
       setLoading(false);
     }

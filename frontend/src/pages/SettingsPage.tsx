@@ -7,6 +7,7 @@ import { Toggle } from '../components/primitives/Toggle';
 import { Select, SelectItem } from '../components/primitives/Select';
 import { SecuritySection } from '../components/settings/SecuritySection';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { cn } from '../lib/utils';
 
 export function SettingsPage() {
@@ -30,7 +31,7 @@ export function SettingsPage() {
       setProfile(updatedUser);
       toast.success('Settings updated.');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update settings.');
+      toast.error(getFriendlyApiError(err, 'Failed to update settings.'));
       // Revert optimism
       if (profile) {
         setTheme((profile.theme_preference as any) || 'system');

@@ -8,6 +8,7 @@ import { Input, Textarea } from '../components/primitives/Input';
 import { ImageCropModal } from '../components/profile-setup/ImageCropModal';
 import { useDropzone } from 'react-dropzone';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { Upload, Loader2, Check, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -105,7 +106,7 @@ export function ProfilePage() {
         setUsernameError('That username was just taken. Try another.');
         toast.error('Username unavailable — please pick another.');
       } else {
-        toast.error(err.message || 'Failed to update profile.');
+        toast.error(getFriendlyApiError(err, 'Failed to update profile.'));
       }
     } finally {
       setLoading(false);
@@ -147,7 +148,7 @@ export function ProfilePage() {
       toast.success('Photo updated successfully');
     } catch (err: any) {
       setAvatarPreview(profile?.photo_url || null);
-      toast.error(err.message || 'Failed to upload photo.');
+      toast.error(getFriendlyApiError(err, 'Failed to upload photo.'));
     }
   };
 
@@ -206,7 +207,7 @@ export function ProfilePage() {
                         setAvatarPreview(null);
                         toast.success('Photo removed');
                       } catch (err: any) {
-                        toast.error(err.message || 'Failed to remove photo.');
+                        toast.error(getFriendlyApiError(err, 'Failed to remove photo.'));
                       }
                     }} 
                     className="text-sm font-medium text-text-secondary hover:text-danger text-left w-fit transition-colors"

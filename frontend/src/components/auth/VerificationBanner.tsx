@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { AlertCircle, X, Loader2 } from 'lucide-react';
-import { toast } from '../../lib/toast';
+import { getFriendlyApiError } from '../../utils/errors';
 */
 
 export function VerificationBanner() {
@@ -29,7 +29,7 @@ export function VerificationBanner() {
       setSent(true);
       toast.success('Verification email sent! Please check your inbox.');
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
     } finally {
       setSending(false);
     }

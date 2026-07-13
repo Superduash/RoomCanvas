@@ -5,6 +5,7 @@ import { AuthLayout } from '../components/auth/AuthLayout';
 import { PasswordField } from '../components/auth/PasswordField';
 import { Button } from '../components/primitives/Button';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { CheckCircle2 } from 'lucide-react';
 import { usePasswordStrength } from '../hooks/usePasswordStrength';
 
@@ -48,7 +49,7 @@ export function ResetPasswordPage() {
       setDone(true);
       setTimeout(() => navigate('/signin'), 3000);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
     } finally {
       setSubmitting(false);
     }

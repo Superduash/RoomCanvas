@@ -25,7 +25,8 @@ class User(Base):
         "Generation",
         back_populates="owner",
         cascade="all, delete-orphan",
-        foreign_keys="[Generation.user_id]"
+        foreign_keys="[Generation.user_id]",
+        lazy="selectin"
     )
 
 class Generation(Base):
@@ -63,7 +64,8 @@ class Generation(Base):
     owner: Mapped[User | None] = relationship(
         "User",
         back_populates="generations",
-        foreign_keys=[user_id]
+        foreign_keys=[user_id],
+        lazy="selectin"
     )
 
     # One Generation has many Variations (with cascading delete)
@@ -71,14 +73,16 @@ class Generation(Base):
         "Variation",
         back_populates="generation",
         cascade="all, delete-orphan",
-        foreign_keys="[Variation.generation_id]"
+        foreign_keys="[Variation.generation_id]",
+        lazy="selectin"
     )
 
     # Allow mapping to the specific selected variation
     selected_variation: Mapped[Variation | None] = relationship(
         "Variation",
         foreign_keys=[selected_variation_id],
-        post_update=True
+        post_update=True,
+        lazy="selectin"
     )
 
 class Variation(Base):
@@ -98,5 +102,6 @@ class Variation(Base):
     generation: Mapped["Generation"] = relationship(
         "Generation",
         back_populates="variations",
-        foreign_keys=[generation_id]
+        foreign_keys=[generation_id],
+        lazy="selectin"
     )

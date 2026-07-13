@@ -100,7 +100,21 @@ COMPOSITION_LOCK = """CRITICAL COMPOSITION RULES:
 4. CHANGE only: furniture style, materials, colors, decorations, lighting fixtures, and soft furnishings.
 5. Use the verb "change" - not "transform" or "redesign" - to signal precise targeted edits."""
 
-def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = None, customization=None, is_regenerate=False, style_id=None) -> str:
+def build_full_prompt(base_prompt: str, customization=None, instruction: str | None = None) -> str:
+    parts = [base_prompt]
+    
+    custom_clause = build_customization_clause(customization)
+    if custom_clause:
+        parts.append(custom_clause)
+        
+    if instruction:
+        parts.append(f"Additionally: {sanitize_prompt(instruction)}")
+        
+    parts.append(QUALITY_SUFFIX)
+    return "\n".join(p for p in parts if p)
+
+
+def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = None, customization=None, is_regenerate=False, style_id=None, instruction: str | None = None) -> str:
     gemini_redesign_prompt = sanitize_prompt(gemini_redesign_prompt)
     
     # Swap 'transform' with 'change' for better layout retention
@@ -118,28 +132,25 @@ def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = N
             f"Preserve the original lighting direction ({arch.get('lighting_direction', 'keep original')}). "
         )
 
-    custom_clause = build_customization_clause(customization)
-    
-    if is_regenerate and style_id:
-        variation_desc = pick_variation_descriptors(style_id)
-        if variation_desc:
-            custom_clause = (custom_clause + "\n" + variation_desc).strip()
-
-    if custom_clause:
-        custom_clause = f"\n{custom_clause}"
-
-    return f"""{COMPOSITION_LOCK}
+    base_prompt = f"""{COMPOSITION_LOCK}
 
 {gemini_redesign_prompt}
 
 {arch_hints}
-Change the furniture, decor, and finishes while preserving the room's walls, windows, doors, and camera framing exactly as shown. Preserve the original direction and quality of natural and ambient light — only add or adjust light sources the redesign explicitly calls for. Only change furniture, decor, surface colors/materials, and lighting fixtures.{custom_clause}
-{QUALITY_SUFFIX}"""
+Change the furniture, decor, and finishes while preserving the room's walls, windows, doors, and camera framing exactly as shown. Preserve the original direction and quality of natural and ambient light — only add or adjust light sources the redesign explicitly calls for. Only change furniture, decor, surface colors/materials, and lighting fixtures."""
 
-def build_refinement_prompt(user_instruction: str) -> str:
-    user_instruction = sanitize_prompt(user_instruction)
-    return f"""{COMPOSITION_LOCK}
+    # We manually inject the variation descriptors into customization or instruction if needed
+    if is_regenerate and style_id:
+        variation_desc = pick_variation_descriptors(style_id)
+        if variation_desc:
+            # Append it to the base_prompt
+            base_prompt += f"\n{variation_desc}"
+            
+    return build_full_prompt(base_prompt, customization, instruction)
 
-{user_instruction}
-Apply this change only. Keep everything else in the image exactly as it is — same furniture placement, same room structure, same lighting direction, same camera angle — unless the instruction explicitly says otherwise.
-{QUALITY_SUFFIX}"""
+def build_refinement_prompt(user_instruction: str | None, customization=None) -> str:
+    base_prompt = f"""{COMPOSITION_LOCK}
+
+Apply this change only. Keep everything else in the image exactly as it is — same furniture placement, same room structure, same lighting direction, same camera angle — unless the instruction explicitly says otherwise."""
+
+    return build_full_prompt(base_prompt, customization, user_instruction)

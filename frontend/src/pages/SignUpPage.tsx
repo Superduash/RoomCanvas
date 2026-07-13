@@ -6,12 +6,13 @@ import { SocialAuthButton } from '../components/auth/SocialAuthButton';
 import { Button } from '../components/primitives/Button';
 import { Input } from '../components/primitives/Input';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { PasswordField } from '../components/auth/PasswordField';
 import { usePasswordStrength } from '../hooks/usePasswordStrength';
 
 export function SignUpPage() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const { signUpWithEmail, signInWithGoogle, profile, isSyncing } = useAuth();
   const from = location.state?.from?.pathname || '/upload';
 
@@ -59,7 +60,7 @@ export function SignUpPage() {
       if (err.message === 'An account with this email already exists.') {
         toast.error('Account already exists. Please sign in.');
       } else {
-        toast.error(err.message);
+        toast.error(getFriendlyApiError(err));
       }
     } finally {
       setSubmitting(false);
@@ -76,7 +77,7 @@ export function SignUpPage() {
         setAwaitingSync(true);
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
       setGoogleLoading(false);
     }
     // Don't setGoogleLoading(false) if redirect happened - page is navigating away

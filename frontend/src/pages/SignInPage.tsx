@@ -6,6 +6,7 @@ import { SocialAuthButton } from '../components/auth/SocialAuthButton';
 import { Button } from '../components/primitives/Button';
 import { Input } from '../components/primitives/Input';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { PasswordField } from '../components/auth/PasswordField';
 
 export function SignInPage() {
@@ -39,7 +40,7 @@ export function SignInPage() {
       toast.success('Welcome back!');
       setAwaitingSync(true);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
     } finally {
       setSubmitting(false);
     }
@@ -55,7 +56,7 @@ export function SignInPage() {
         setAwaitingSync(true);
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(getFriendlyApiError(err));
       setGoogleLoading(false);
     }
     // Don't setGoogleLoading(false) if redirect happened - page is navigating away

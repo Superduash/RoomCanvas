@@ -18,7 +18,14 @@ class GenerationService:
         self.repository = repository
         self.provider = get_generation_provider()
 
-    async def prepare_generation(self, analysis_id: int, force_new: bool = False, customization=None, user_id: int = None):
+    async def prepare_generation(
+        self,
+        analysis_id: int,
+        force_new: bool = False,
+        customization=None,
+        user_id: int = None,
+        instruction: str = None
+    ) -> Generation:
         generation = await self.repository.get_by_id(analysis_id)
         if not generation:
             raise InferenceServiceError(f"Analysis id={analysis_id} not found", 404)
@@ -51,18 +58,15 @@ class GenerationService:
         updated_gen = await self.repository.update_status(generation.id, "pending")
         return updated_gen
 
-    async def run_generation_task(self, analysis_id: int, customization=None, is_regenerate=False):
-        """
-        Runs on the main event loop. Uses AsyncSessionLocal to avoid
-        sharing the HTTP request's DB session.
-        """
+    async def run_generation_task(self, generation_id: int, customization=None, is_regenerate=False, instruction=None):
+        """Runs the Replicate task in the background and updates the DB."""
         t0 = time.perf_counter()
-        from app.database.session import AsyncSessionLocal
-
-        async with AsyncSessionLocal() as db:
-            repo = GenerationRepository(db)
-            generation = await repo.get_by_id(analysis_id)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with session_factory() as session:
+            repo = GenerationRepository(session)
+            generation = await session.get(Generation, generation_id)
             if not generation:
+                logger.error(f"Generation {generation_id} not found in background task.")
                 return
 
             try:
@@ -79,7 +83,14 @@ class GenerationService:
                         pass
                 
                 effective_style = customization.style_override if (customization and getattr(customization, 'style_override', None)) else generation.style
-                final_prompt = build_generation_prompt(generation.redesign_prompt, analysis_data, customization, is_regenerate, effective_style)
+                final_prompt = build_generation_prompt(
+                    generation.redesign_prompt, 
+                    analysis_data, 
+                    customization, 
+                    is_regenerate, 
+                    effective_style,
+                    instruction
+                )
 
                 # 3. Call Replicate
                 logger.info(

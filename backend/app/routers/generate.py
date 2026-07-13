@@ -77,6 +77,12 @@ async def generate_design(
     
     # 3. Schedule Replicate task
     if result.status == "pending":
-        background_tasks.add_task(service.run_generation_task, result.id, request.customization, request.force_new)
+        background_tasks.add_task(
+            service.run_generation_task, 
+            result.id, 
+            request.customization, 
+            request.force_new, 
+            request.instruction
+        )
     
     return result

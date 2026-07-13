@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '../primitives/Button';
 import { api } from '../../api/client';
 import { toast } from '../../lib/toast';
+import { getFriendlyApiError } from '../../utils/errors';
 
 export interface Point2D {
   x: number;
@@ -136,7 +137,7 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
         onMeasurementComplete(res);
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to measure distance.');
+      toast.error(getFriendlyApiError(err, 'Failed to measure distance.'));
       setMode('target');
       setTargetPoints([]);
     }

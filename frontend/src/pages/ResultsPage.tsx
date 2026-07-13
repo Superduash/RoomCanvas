@@ -9,8 +9,7 @@ import React, { Suspense } from 'react';
 import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
 import { CompareSliderSkeleton } from '../components/results/CompareSlider';
 const CompareSlider = React.lazy(() => import('../components/results/CompareSlider').then(m => ({ default: m.CompareSlider })));
-const RefinementPanel = React.lazy(() => import('../components/refine/RefinementPanel').then(m => ({ default: m.RefinementPanel })));
-const CustomizationPanel = React.lazy(() => import('../components/refine/CustomizationPanel').then(m => ({ default: m.CustomizationPanel })));
+const DesignEditorPanel = React.lazy(() => import('../components/refine/DesignEditorPanel').then(m => ({ default: m.DesignEditorPanel })));
 import {
   FurnitureList, DimensionCard, PaletteSwatches, BudgetCard, TextBlock, DesignRationale
 } from '../components/results/RecommendationPanel';
@@ -24,6 +23,7 @@ import { resolveImageUrl } from '../api/client';
 import { formatRelativeTime } from '../lib/utils';
 import type { AnalyzeResponse } from '../api/types';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { formatStyleName } from '../utils/formatters';
 
 type ViewMode = 'compare' | 'side-by-side' | 'generated';
@@ -146,20 +146,11 @@ export function ResultsPage() {
       toast.success('New version started.');
       setSearchParams({ v: result.id.toString() });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to regenerate');
+      toast.error(getFriendlyApiError(err, 'Failed to regenerate'));
     }
   };
 
-  const handleCustomize = async (options: import('../api/types').CustomizationOptions) => {
-    try {
-      const result = await generateDesign.mutateAsync({ analysisId: activeGeneration.id, forceNew: true, customization: options });
-      useUIStore.getState().setLastCustomization(project.id, options);
-      toast.success('New customized version started.');
-      setSearchParams({ v: result.id.toString() });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to regenerate with options');
-    }
-  };
+
 
   const handleSave = async () => {
     if (!variation) return;
@@ -168,7 +159,7 @@ export function ResultsPage() {
       toast.success('Design saved!');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(`Failed to save design: ${msg}`);
+      toast.error(getFriendlyApiError(err, `Failed to save design: ${msg}`));
     }
   };
 
@@ -415,11 +406,11 @@ export function ResultsPage() {
         {/* Right: Panel */}
         <div className="space-y-6 lg:border-l lg:border-border lg:pl-10">
           
-          {/* Refinement Panel */}
+          {/* Design Editor Panel */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Layers className="h-5 w-5 text-accent" />
-              <h2 className="text-lg font-semibold text-text-primary">Refine Design</h2>
+              <h2 className="text-lg font-semibold text-text-primary">Edit Design</h2>
             </div>
             
             {/* Context for what was generated */}
@@ -431,22 +422,15 @@ export function ResultsPage() {
             )}
             
             <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}>
-              <RefinementPanel
+              <DesignEditorPanel
                 generationId={activeGeneration.id}
+                projectId={project.id}
                 disabled={!isCompleted}
+                defaultDimensions={analysisData?.estimated_dimensions}
+                initialOptions={lastCustomizationMap[project.id]}
+                isRefinement={isRefinement}
               />
             </Suspense>
-            
-            <div className="mt-4">
-              <Suspense fallback={<Skeleton className="h-10 w-full rounded-xl" />}>
-                <CustomizationPanel
-                  onCustomize={handleCustomize}
-                  disabled={!isCompleted}
-                  defaultDimensions={analysisData?.estimated_dimensions}
-                  initialOptions={lastCustomizationMap[project.id]}
-                />
-              </Suspense>
-            </div>
           </div>
 
           <div className="border-t border-border" />

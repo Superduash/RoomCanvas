@@ -5,6 +5,10 @@ from app.measurement.schemas import MeasurementRequest, MeasurementResult
 from app.measurement.calibration import calculate_scale, cm_to_inches
 from app.measurement.vanishing_point import correct_for_perspective
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["Measurement"])
 
 @router.post("/measure", response_model=MeasurementResult)
@@ -38,4 +42,5 @@ def measure_image(request: MeasurementRequest, db: AsyncSession = Depends(get_db
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal measurement error: {e}")
+        logger.error(f"Internal measurement error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred during measurement.")

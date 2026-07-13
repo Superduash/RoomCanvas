@@ -9,6 +9,7 @@ import { ImageCropModal } from '../components/profile-setup/ImageCropModal';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Check, Loader2, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { api } from '../api/client';
 import confetti from 'canvas-confetti';
 
@@ -186,7 +187,7 @@ export default function SetupProfilePage() {
        setProfile(updatedUser as any);
        navigate(location.state?.from?.pathname || '/upload', { replace: true });
      } catch (e: any) {
-       toast.error(e.message || 'Failed to skip');
+       toast.error(getFriendlyApiError(e, 'Failed to skip'));
        setIsSubmitting(false);
      }
   };
@@ -236,7 +237,7 @@ export default function SetupProfilePage() {
         setDirection(-1);
         setStep(3); // Go back to username step
       } else {
-        toast.error(err.message || 'Failed to complete profile.');
+        toast.error(getFriendlyApiError(err, 'Failed to complete profile.'));
       }
       setIsSubmitting(false);
     }

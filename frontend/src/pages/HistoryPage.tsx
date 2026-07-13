@@ -7,6 +7,7 @@ import { Button } from '../components/primitives/Button';
 import { Dialog } from '../components/primitives/Dialog';
 import { useDeleteAllHistory } from '../api/queries';
 import { toast } from '../lib/toast';
+import { getFriendlyApiError } from '../utils/errors';
 import { cn } from '../lib/utils';
 import { useDebounce } from '../hooks/useDebounce';
 
@@ -257,7 +258,7 @@ export function HistoryPage() {
                 toast.success('Library cleared successfully');
               } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Unknown error';
-                toast.error(`Failed to clear library: ${msg}`);
+                toast.error(getFriendlyApiError(err, `Failed to clear library: ${msg}`));
               }
             }}
             icon={<Trash2 className="h-4 w-4" />}

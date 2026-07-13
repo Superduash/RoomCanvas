@@ -54,8 +54,8 @@ export function useAnalyzeRoom() {
 export function useGenerateDesign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ analysisId, forceNew, customization }: { analysisId: number; forceNew?: boolean; customization?: any }) =>
-      api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false, customization }),
+    mutationFn: ({ analysisId, forceNew, customization, instruction }: { analysisId: number; forceNew?: boolean; customization?: any; instruction?: string }) =>
+      api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false, customization, instruction }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
   });
 }
@@ -64,8 +64,8 @@ export function useGenerateDesign() {
 export function useRefineDesign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ generation_id, instruction }: { generation_id: number; instruction: string }) =>
-      api.post<GenerationOut>('/refine', { generation_id, instruction }),
+    mutationFn: ({ generation_id, instruction, customization }: { generation_id: number; instruction?: string; customization?: any }) =>
+      api.post<GenerationOut>('/refine', { generation_id, instruction, customization }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
   });
 }
@@ -83,8 +83,8 @@ export function useHistory(limit = 50, enabled = true) {
   return useQuery({
     queryKey: ['history', limit],
     queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
-    staleTime: 30000,
-    gcTime: 5 * 60000,
+    staleTime: 5 * 60000,
+    gcTime: 15 * 60000,
     enabled,
   });
 }

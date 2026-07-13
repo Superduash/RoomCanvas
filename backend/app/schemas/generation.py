@@ -59,13 +59,15 @@ class GenerateRequest(BaseModel):
     analysis_id: int
     force_new: bool = False
     customization: CustomizationOptions | None = None
+    instruction: str | None = None
 
 class GenerateResponse(GenerationOut):
     pass
 
 class RefineRequest(BaseModel):
     generation_id: int
-    instruction: str
+    instruction: str | None = None
+    customization: CustomizationOptions | None = None
 
 class RefineResponse(GenerationOut):
     pass

@@ -199,7 +199,7 @@ async def upload_avatar(
         photo_url = StorageService.resolve_public_url(key)
     except Exception as e:
         _log.error(f"Avatar upload failed for user {user.id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Could not upload photo: {e}")
+        raise HTTPException(status_code=500, detail="Could not upload photo. Please try again.")
 
     # Persist to DB right here — don't make the frontend do a second PATCH call for this
     user.photo_url = photo_url
