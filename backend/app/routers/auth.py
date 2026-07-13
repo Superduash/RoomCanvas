@@ -197,18 +197,6 @@ async def delete_account(
     background_tasks.add_task(_cleanup)
 
     return Response(status_code=204)
-        _log.error(f"Failed to delete account {user.id}: {exc}", exc_info=True)
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=500, detail="Failed to delete account. Please try again.")
-
-    def _cleanup():
-        for file_path in files:
-            StorageService.delete_file_if_exists(file_path)
-
-    background_tasks.add_task(_cleanup)
-
-    return Response(status_code=204)
 
 @router.get("/check-username")
 async def check_username(username: str, db: AsyncSession = Depends(get_db)):
