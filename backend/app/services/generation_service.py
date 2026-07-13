@@ -4,6 +4,9 @@ generation_service.py — Orchestrates Replicate generation from an analysis.
 import time
 import json
 import logging
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from app.database.models import Generation
+from app.database.session import engine
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_generation_prompt
 from app.repositories.generation_repository import GenerationRepository
@@ -126,8 +129,8 @@ class GenerationService:
                 generation.provider_version = "replicate-python 1.0.0"
                 generation.model_used = "black-forest-labs/flux-kontext-pro"
                 generation.model_version = "latest"
-                await db.commit()
-                await db.refresh(generation)
+                await session.commit()
+                await session.refresh(generation)
                 await repo.update_status(generation.id, "completed")
 
                 logger.info(f"Background task: Generation id={generation.id} done ({elapsed}s)")
