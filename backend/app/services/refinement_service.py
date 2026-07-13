@@ -3,6 +3,9 @@ refinement_service.py — Orchestrates Replicate refinement on an existing image
 """
 import time
 import logging
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from app.database.models import Generation
+from app.database.session import engine
 from app.ai.providers.provider_registry import get_generation_provider
 from app.ai.prompt_builder import build_refinement_prompt
 from app.repositories.generation_repository import GenerationRepository
@@ -62,7 +65,6 @@ class RefinementService:
 
     async def run_refinement_task(self, new_gen_id: int, parent_id: int, instruction: str | None, customization=None):
         """Runs the Replicate task in the background for refinement."""
-        import time
         t0 = time.perf_counter()
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         
