@@ -6,7 +6,7 @@ import { API_PREFIX, getAuthHeader } from '../api/client';
 import { logger } from '../lib/logger';
 import { type GenerationOut } from '../api/types';
 
-const TIMEOUT_MS = 90_000;
+const TIMEOUT_MS = 150_000; // 150 seconds
 
 export function usePollGeneration(id: number | null) {
   const query = useGeneration(id);

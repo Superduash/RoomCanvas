@@ -19,7 +19,6 @@ class ReplicateProvider(GenerationProvider):
         if not settings.REPLICATE_API_TOKEN:
             raise InferenceServiceError("REPLICATE_API_TOKEN is not configured", 500)
         self.model = "black-forest-labs/flux-kontext-pro"
-        self.model = "black-forest-labs/flux-kontext-pro"
 
     @retry(
         stop=stop_after_attempt(2),

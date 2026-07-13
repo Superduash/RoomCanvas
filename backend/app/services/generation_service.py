@@ -76,6 +76,8 @@ class GenerationService:
                 # 1. Prepare image
                 image = await StorageService.download_image_as_pil(generation.original_image_path)
                 image_bytes = resize_for_upload(image)
+                t1 = time.perf_counter()
+                logger.info(f"Generation id={generation.id}: image prep took {t1-t0:.1f}s")
 
                 # 2. Build prompt
                 analysis_data = {}
@@ -107,9 +109,13 @@ class GenerationService:
                     mime_type="image/jpeg",
                     prompt=final_prompt,
                 )
+                t2 = time.perf_counter()
+                logger.info(f"Generation id={generation.id}: replicate call took {t2-t1:.1f}s")
 
                 # 4. Download result
                 generated_filepath = await StorageService.download_and_save(output_url)
+                t3 = time.perf_counter()
+                logger.info(f"Generation id={generation.id}: result download took {t3-t2:.1f}s")
 
                 # 5. Persist variation
                 await repo.add_variations(generation.id, [{"image_path": generated_filepath, "seed": seed_used}])

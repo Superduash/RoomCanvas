@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 
     # Timeouts
     GEMINI_TIMEOUT_SECONDS: int = 60
-    REPLICATE_TIMEOUT_SECONDS: int = 45
+    REPLICATE_TIMEOUT_SECONDS: int = 120
 
     @field_validator("MAX_UPLOAD_SIZE_MB")
     @classmethod
