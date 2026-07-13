@@ -8,7 +8,7 @@ import {
   browserPopupRedirectResolver,
 } from 'firebase/auth';
 
-const firebaseConfig = {
+const firebaseConfig: Record<string, string | undefined> = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
@@ -18,7 +18,7 @@ const firebaseConfig = {
 };
 
 const required = ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'];
-const missing = required.filter((k) => !firebaseConfig[k as keyof typeof firebaseConfig]);
+const missing = required.filter((k) => !firebaseConfig[k]);
 if (missing.length) {
   throw new Error(`Missing Firebase env vars: ${missing.map(k => `VITE_FIREBASE_${k.replace(/[A-Z]/g, m => '_' + m).toUpperCase()}`).join(', ')}. Check frontend/.env`);
 }
