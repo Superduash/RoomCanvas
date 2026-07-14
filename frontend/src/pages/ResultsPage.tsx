@@ -234,7 +234,8 @@ export function ResultsPage() {
       {/* Failed state */}
       {showMeasurement && originalSrc && (
         <MeasurementOverlay 
-          imageUrl={originalSrc} 
+          originalImageUrl={originalSrc}
+          generatedImageUrl={isCompleted && variation ? generatedSrc : null}
           imageId={activeGeneration.id} 
           onClose={() => setShowMeasurement(false)} 
         />

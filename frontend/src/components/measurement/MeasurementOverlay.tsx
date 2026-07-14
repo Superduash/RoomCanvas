@@ -10,7 +10,8 @@ export interface Point2D {
 }
 
 interface MeasurementOverlayProps {
-  imageUrl: string;
+  originalImageUrl: string;
+  generatedImageUrl: string | null;
   imageId: number;
   onClose: () => void;
   onMeasurementComplete?: (result: any) => void;
@@ -18,7 +19,7 @@ interface MeasurementOverlayProps {
 
 type Mode = 'reference' | 'target' | 'done';
 
-export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementComplete }: MeasurementOverlayProps) {
+export function MeasurementOverlay({ originalImageUrl, generatedImageUrl, imageId, onClose, onMeasurementComplete }: MeasurementOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -29,7 +30,13 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
   const [result, setResult] = useState<any>(null);
   const [customLength, setCustomLength] = useState<number | ''>('');
   const [customUnit, setCustomUnit] = useState<'cm' | 'inches'>('cm');
+  const [activeSource, setActiveSource] = useState<'original' | 'latest'>('original');
 
+  const imageUrl = activeSource === 'latest' && generatedImageUrl ? generatedImageUrl : originalImageUrl;
+
+  useEffect(() => {
+    handleReset();
+  }, [activeSource]);
 
   useEffect(() => {
     drawCanvas();
@@ -178,6 +185,22 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
           </p>
         </div>
         <div className="flex items-center gap-4">
+          {generatedImageUrl && (
+            <div className="flex rounded-lg border border-border p-1 bg-surface-subtle">
+              <button 
+                onClick={() => setActiveSource('original')} 
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${activeSource === 'original' ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+              >
+                Original
+              </button>
+              <button 
+                onClick={() => setActiveSource('latest')} 
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${activeSource === 'latest' ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+              >
+                Latest Version
+              </button>
+            </div>
+          )}
           {mode === 'reference' && (
             <div className="flex items-center gap-2">
               <select 
