@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 def _is_transient(exc: Exception) -> bool:
     if isinstance(exc, (socket.gaierror, TimeoutError, ConnectionError, httpx.TimeoutException, httpx.NetworkError)):
         return True
+    exc_str = str(exc)
+    if "429" in exc_str or "throttled" in exc_str.lower():
+        return True
     return False
 
 class ReplicateProvider(GenerationProvider):
@@ -21,8 +24,8 @@ class ReplicateProvider(GenerationProvider):
         self.model = "black-forest-labs/flux-kontext-pro"
 
     @retry(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=10, max=15),
         retry=retry_if_exception(_is_transient),
         reraise=True
     )
@@ -72,8 +75,8 @@ class ReplicateProvider(GenerationProvider):
             raise InferenceServiceError(f"Replicate generation failed: {str(e)}", 500)
 
     @retry(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=10, max=15),
         retry=retry_if_exception(_is_transient),
         reraise=True
     )

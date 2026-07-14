@@ -181,7 +181,7 @@ export function ResultsPage() {
         </div>
         
         {/* Action row */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isCompleted && (
             <Button
               variant="secondary"

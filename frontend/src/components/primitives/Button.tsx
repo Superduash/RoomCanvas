@@ -66,7 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps & HTMLMotionProp
     const isIcon = size === 'icon' || size === 'icon-sm' || size === 'icon-lg';
 
     const classes = cn(
-      'inline-flex items-center justify-center font-medium',
+      'inline-flex items-center justify-center font-medium whitespace-nowrap flex-shrink-0',
       'transition-all duration-base ease-out cursor-pointer select-none',
       'focus-visible:outline-none focus-visible:shadow-focus',
       'disabled:cursor-not-allowed',

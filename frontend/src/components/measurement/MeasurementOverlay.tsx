@@ -175,16 +175,16 @@ export function MeasurementOverlay({ originalImageUrl, generatedImageUrl, imageI
 
   return (
     <div className="fixed inset-0 z-50 bg-bg/95 flex flex-col">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-surface">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">Measure Room Dimensions</h2>
-          <p className="text-sm text-text-secondary">
+          <h2 className="text-base sm:text-lg font-semibold text-text-primary">Measure Room Dimensions</h2>
+          <p className="text-xs sm:text-sm text-text-secondary">
             {mode === 'reference' && 'Step 1: Tap the 4 corners of the reference object (TL, TR, BR, BL).'}
             {mode === 'target' && 'Step 2: Tap two points to measure a distance.'}
             {mode === 'done' && 'Measurement complete.'}
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {generatedImageUrl && (
             <div className="flex rounded-lg border border-border p-1 bg-surface-subtle">
               <button 
@@ -202,7 +202,7 @@ export function MeasurementOverlay({ originalImageUrl, generatedImageUrl, imageI
             </div>
           )}
           {mode === 'reference' && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select 
                 value={referenceType}
                 onChange={e => setReferenceType(e.target.value)}
