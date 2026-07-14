@@ -7,7 +7,7 @@ SKIP_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", 
     ".mp4", ".mp3", ".wav", ".zip", ".7z", ".rar", ".pdf", 
     ".exe", ".dll", ".so", ".db", ".sqlite", ".sqlite3", 
-    ".pyc", ".pyo", ".woff", ".woff2", ".ttf", ".otf"
+    ".pyc", ".pyo", ".woff", ".woff2", ".ttf", ".otf", ".eot"
 }
 
 def get_project_files():
@@ -30,12 +30,14 @@ def get_project_files():
         
         # Only hardcode ignores that we truly don't want exported but might be tracked
         # or are large generated files we want to skip unconditionally
-        ignores = [
+        ignores = {
             "Backend.txt",
             "Frontend.txt",
             "export_output.txt",
-            "package-lock.json"
-        ]
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml"
+        }
         
         for file_path in files:
             path_obj = Path(file_path)
@@ -52,20 +54,18 @@ def get_project_files():
         return []
 
 def is_backend(file_path):
-    parts = file_path.split(os.sep) if os.sep in file_path else file_path.split('/')
-    filename = Path(file_path).name
+    parts = Path(file_path).parts
     if "backend" in parts:
         return True
-    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py', 'render.yaml'):
+    if Path(file_path).name in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py', 'render.yaml'):
         return True
     return False
 
 def is_frontend(file_path):
-    parts = file_path.split(os.sep) if os.sep in file_path else file_path.split('/')
-    filename = Path(file_path).name
+    parts = Path(file_path).parts
     if "frontend" in parts:
         return True
-    if filename in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py', 'render.yaml'):
+    if Path(file_path).name in ('.gitignore', 'README.md', 'start-all.bat', 'LICENSE', '.env.example', 'export.py', 'render.yaml'):
         return True
     return False
 

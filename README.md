@@ -1,181 +1,218 @@
-# RoomCanvas AI Backend
+# RoomCanvas — Interactive Interior Redesign Web Application Using Multimodal Analysis and Diffusion-Based Image Synthesis
 
-**RoomCanvas AI** is an intelligent interior space redesign application. It implements a robust, two-stage AI pipeline:
-1. **Gemini 2.5/3 Flash** for deep multimodal room analysis (detects room types, furniture items, color palettes, dimensions, budget estimates, and generates a tailored design prompt).
-2. **`black-forest-labs/flux-kontext-pro` on Replicate** for structure-preserving generation and iterative refinement (e.g. "make the sofa blue").
+RoomCanvas is a full-stack, AI-powered web application that allows users to upload photos of interior spaces and generate photorealistic redesigns. By combining state-of-the-art vision-language models (for spatial analysis) and advanced diffusion models (for image synthesis), RoomCanvas intelligently restyles rooms while strictly preserving their original architectural geometry, camera perspective, and lighting constraints.
 
 ---
 
-## AI Redesign Pipeline Overview
+## 🌟 Key Highlights & Features
 
-```
-[ Upload Room Photo ]
-         │
-         ▼
- POST /api/analyze (Gemini 2.5 Flash)
- ├── Analyzes room structure, furniture, colors, and layout
- └── Generates a tailored redesign_prompt matching the style
-         │
-         ▼
- POST /api/generate (Flux-Kontext-Pro Background Task)
- ├── Schedules the redesign task in the background
- └── Returns "pending" status with generation ID immediately
-         │
-         ▼
- [ Poll GET /api/history/{id} ]
- └── Wait until status becomes "completed" (or "failed")
-         │
-         ▼
- POST /api/refine (Iterative Refinement - Flux-Kontext-Pro Task)
- ├── Submits a change instruction (e.g. "make the sofa blue")
- ├── Schedules background task to edit previous generation in-place
- └── Poll GET /api/history/{id} for the updated image
-```
+### Core Capabilities
+* **Multimodal Room Analysis:** Analyzes uploaded photos to detect room type, map architectural features (walls, windows, doors, ceiling height), identify existing furniture, and estimate space occupancy.
+* **Structure-Preserving Image Synthesis:** Generates high-quality redesigns using diffusion models, ensuring the original room layout and camera angle remain completely intact.
+* **Iterative Refinement:** Allows users to refine generated designs by providing targeted text instructions (e.g., "remove the coffee table", "change the sofa to green velvet").
+* **Smart Measurement System:** Includes an interactive calibration tool to estimate real-world distances between points in the room using known reference objects (e.g., standard doors).
+* **Project & Timeline Management:** Groups generations into projects. Users can view their history, compare before/after results using an interactive slider, and branch off variations.
+
+### Technical Features
+* **Bring Your Own Key (BYOK):** Users can supply their own API keys (Gemini, Replicate, Groq) via client-side AES-encrypted storage to bypass platform limits.
+* **Real-time SSE Updates:** Uses Server-Sent Events (SSE) for zero-latency UI updates during background image generation, with automatic failover polling.
+* **Provider Fallback Chain:** Implements a robust registry pattern to seamlessly failover between AI providers (e.g., if the primary LLM is rate-limited).
+* **Progressive Web App (PWA):** Fully installable on mobile and desktop devices with offline caching for static assets.
 
 ---
 
-## Tech Stack
+## 🏗️ System Architecture
 
-| Layer    | Technology |
-|----------|------------|
-| API Core | Python 3.12 · FastAPI · Uvicorn |
-| Database | SQLite · SQLAlchemy 2.0 · WAL mode |
-| Analysis | Google Gemini (SDK: `google-genai`) |
-| Redesign | Replicate API (Model: `black-forest-labs/flux-kontext-pro`) |
+RoomCanvas operates on a decoupled client-server architecture:
 
----
-
-## API Reference
-
-### Core AI Pipeline
-* **`POST /api/analyze`**: Upload a room photo and get structured recommendations + the redesign prompt.
-  * **Payload**: `multipart/form-data` with `image` (file) and `style` (form field).
-  * **Response**: `AnalyzeResponse` containing structured metadata and `analysis_id`.
-* **`POST /api/generate`**: Turn an analysis into a redesigned image via a background task.
-  * **Payload**: JSON `{ "analysis_id": <int> }`.
-  * **Response**: `GenerationOut` with `status: "pending"`.
-* **`POST /api/refine`**: Edit an existing generation in-place with a natural language instruction.
-  * **Payload**: JSON `{ "generation_id": <int>, "instruction": <str> }`.
-  * **Response**: `GenerationOut` (new child generation row, `status: "pending"`).
-
-### History & Selections
-* **`GET /api/history`**: List past generations, ordered newest first.
-* **`GET /api/history/{id}`** or **`GET /api/generation/{id}`**: Fetch details of a single generation.
-* **`POST /api/history/{id}/select/{variation_id}`**: Register which design variation was chosen/saved.
-* **`DELETE /api/history/{id}`**: Delete a generation, its variations, and clean up their image files from disk.
-
-### Metadata & Configuration
-* **`GET /api/styles`**: Retrieve list of supported style templates and hints.
-* **`GET /api/providers`**: Check active status and configuration state of Gemini and Replicate.
-* **`GET /api/config`**: Fetch runtime configurations (allowed file types, max upload size).
-* **`GET /api/health`**: Basic server health check.
+1. **Client (React/Vite):** Manages local state (Zustand), server state (TanStack Query), and complex animations (Framer Motion). It securely uploads images directly or proxies them through the backend.
+2. **API (FastAPI):** Serves as the orchestration layer. It handles authentication verification, database transactions, background task scheduling, and secure communication with AI providers.
+3. **Data Layer:** Uses asynchronous SQLAlchemy with a relational database (SQLite for local, PostgreSQL for production) to track users, projects, generations, and variations.
+4. **Storage:** Relies on Supabase Storage for persistent image hosting (both original uploads and generated variations).
+5. **Cache:** Utilizes Redis (Upstash) for API rate limiting and aggressive caching of history/project timelines.
 
 ---
 
-## Project Structure
+## 🧠 AI Pipeline
 
-```
-backend/
-├── app/
-│   ├── ai/
-│   │   ├── prompts/
-│   │   │   ├── schemas.py              # Gemini JSON schemas
-│   │   │   └── style_hints.py          # Style definitions / templates
-│   │   ├── providers/
-│   │   │   ├── base_provider.py        # Abstract AI interfaces
-│   │   │   ├── gemini_provider.py      # Google GenAI integration
-│   │   │   ├── replicate_provider.py   # Flux-Kontext-Pro integration
-│   │   │   └── provider_registry.py    # Provider factory registry
-│   │   └── prompt_builder.py           # Sanitization and prompt wrapping
-│   ├── database/
-│   │   ├── models.py                   # SQLAlchemy ORM schemas
-│   │   └── session.py                  # Request & Background SQLite session managers
-│   ├── repositories/
-│   │   └── generation_repository.py     # Database CRUD operations
-│   ├── routers/
-│   │   └── (health, analyze, generate, refine, history, styles, providers, config).py
-│   ├── schemas/
-│   │   ├── common.py                   # Health schemas
-│   │   └── generation.py               # Pydantic schemas (Request / Response validation)
-│   ├── services/
-│   │   ├── analysis_service.py         # Room analysis orchestration
-│   │   ├── generation_service.py       # Async generation coordinator
-│   │   ├── refinement_service.py       # Async refinement coordinator
-│   │   └── storage_service.py          # Image upload, download, and file cleanup
-│   ├── utils/
-│   │   ├── exceptions.py               # Custom application exceptions
-│   │   ├── image_utils.py              # Pillow verification & resizing utilities
-│   │   └── request_id.py               # Request tracing middleware helper
-│   ├── config.py                       # App settings loader (Pydantic Settings)
-│   ├── logging_config.py               # Structured log formatting (UTF-8)
-│   └── main.py                         # FastAPI startup & lifecycle management
-├── tests/
-│   ├── integration/                    # Endpoint & workflow integration tests
-│   ├── unit/                           # Repository, image validation, & prompt builder tests
-│   └── conftest.py                     # Pytest DB, client, and provider stubs
-├── requirements.txt                    # Project package dependencies
-└── .env.example                        # Template environment configuration file
+The redesign process is a two-step orchestrated pipeline:
+
+### 1. Prompt Pipeline (Analysis)
+* **Providers:** Gemini (Vision) or Groq (Text fallback).
+* **Process:** The model receives the raw image and a strict JSON schema. It returns a structured breakdown of the room's architecture, existing furniture (classified as keep/replace), lighting direction, and spatial occupancy.
+* **Output:** A deterministic JSON payload used to construct the final layout-locking prompt.
+
+### 2. Generation Pipeline (Synthesis)
+* **Providers:** Replicate (Flux Kontext Pro / specialized architectural diffusion models).
+* **Process:** The backend merges the user's stylistic choices, advanced customizations (budget, color, constraints), and the structured analysis data into a complex prompt.
+* **Constraint Locking:** The prompt explicitly forbids the diffusion model from altering walls, windows, doors, or camera angles, enforcing verbs like "change" instead of "transform".
+* **Execution:** Runs as a FastAPI `BackgroundTask`. The UI streams the status via SSE until the webhook or polling confirms the image is ready.
+
+---
+
+## 💻 Technology Stack
+
+### Frontend
+* **Framework:** React 18, Vite, TypeScript
+* **Styling:** Tailwind CSS, Radix UI primitives, Framer Motion
+* **State Management:** Zustand (UI state), TanStack Query (Server state)
+* **Routing:** React Router v6
+* **Network:** Fetch API, `@microsoft/fetch-event-source` (for SSE)
+
+### Backend
+* **Framework:** FastAPI, Python 3.12, Uvicorn/Gunicorn
+* **Database:** SQLAlchemy 2.0 (Async), SQLite (Dev) / PostgreSQL (Prod)
+* **Authentication:** Firebase Admin SDK (JWT verification)
+* **Storage:** Supabase Storage (boto3 / REST)
+* **Caching & Rate Limiting:** Redis (Upstash)
+* **Cryptography:** Fernet (for BYOK encryption)
+
+---
+
+## 📂 Project Structure
+
+```text
+RoomCanvasAI/
+├── backend/                  # FastAPI Application
+│   ├── app/
+│   │   ├── ai/               # AI Provider integrations & Prompt builders
+│   │   ├── auth/             # Firebase auth & dependencies
+│   │   ├── cache/            # Redis cache invalidation logic
+│   │   ├── database/         # SQLAlchemy models & session
+│   │   ├── measurement/      # Image calibration & vanishing point math
+│   │   ├── middleware/       # Rate limiting & request tracking
+│   │   ├── repositories/     # Data Access Objects (DAOs)
+│   │   ├── routers/          # API endpoint controllers
+│   │   └── services/         # Core business logic (Generation, Storage)
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/                 # React Application
+│   ├── src/
+│   │   ├── api/              # API client and React Query hooks
+│   │   ├── components/       # Reusable UI components
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── pages/            # Route-level components
+│   │   ├── store/            # Zustand stores
+│   │   └── styles/           # Tailwind base & utilities
+│   ├── vite.config.ts
+│   └── package.json
+└── render.yaml               # Deployment configuration
 ```
 
 ---
 
-## Local Development Setup
+## 🚀 Installation & Setup
 
 ### Prerequisites
-- Python 3.12+
-- Gemini API Key
-- Replicate API Token
+* Node.js 20+
+* Python 3.12+
+* Supabase Account (for Storage)
+* Firebase Project (for Authentication)
+* API Keys (Gemini, Replicate, Upstash Redis)
 
-### Firebase Admin Setup
+### 1. Clone the Repository
+```bash
+git clone https://github.com/yourusername/RoomCanvasAI.git
+cd RoomCanvasAI
+```
 
-#### Local Development
-1. Download Firebase Admin SDK JSON from your Firebase Console.
-2. Place it inside:
-   `backend/credentials/firebase-admin.json`
-3. Ensure the folder remains ignored by Git (already configured in `.gitignore`).
+### 2. Backend Setup
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-#### Production (Render)
-1. Open Render Dashboard.
-2. Go to Environment Variables.
-3. Create:
-   `FIREBASE_SERVICE_ACCOUNT_JSON`
-4. Paste the ENTIRE Firebase Admin JSON file contents as the value.
-5. Remove any dependency on a physical credentials file in your Render build/start commands.
-
-### Setup
-1. **Initialize and Activate Virtual Environment**:
-   ```bash
-   cd backend
-   python -m venv venv
-   venv\Scripts\activate      # On Windows
-   # source venv/bin/activate # On macOS/Linux
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` and fill in your real API credentials:
-   ```bash
-   copy .env.example .env
-   ```
-
-4. **Start the FastAPI Development Server**:
-   ```bash
-   python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-   ```
-   Interactive API docs will be available at **http://127.0.0.1:8000/docs**.
-
-5. **Run the Test Suite**:
-   Verify everything is fully functional by running:
-   ```bash
-   python -m pytest
-   ```
+### 3. Frontend Setup
+```bash
+cd ../frontend
+npm install
+```
 
 ---
 
-## License
+## ⚙️ Environment Variables
 
-Private — all rights reserved.
+Create a `.env` file in the `backend/` directory. Use `.env.example` as a reference.
+
+```env
+# Application
+APP_NAME="RoomCanvas AI"
+DEBUG=true
+
+# Database (Use SQLite for local)
+DATABASE_URL=sqlite:///./storage/interior_ai.db
+
+# Security & CORS
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+FERNET_SECRET_KEY=your_generated_fernet_key # Generate via python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# AI Providers
+ACTIVE_ANALYSIS_PROVIDER=gemini
+ACTIVE_GENERATION_PROVIDER=replicate
+GEMINI_API_KEY=your_gemini_api_key
+REPLICATE_API_TOKEN=your_replicate_token
+
+# Redis Cache (Upstash)
+UPSTASH_REDIS_URL=your_upstash_redis_url
+UPSTASH_REDIS_TOKEN=your_upstash_redis_token
+
+# Supabase Storage
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_BUCKET=roomcanvas
+
+# Firebase Auth
+FIREBASE_SERVICE_ACCOUNT_JSON={"type": "service_account", ...}
+```
+
+---
+
+## 🏃 Running Locally
+
+You can use the provided batch script on Windows to start both servers, or run them manually.
+
+**Start Backend (Terminal 1):**
+```bash
+cd backend
+source venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+```
+
+**Start Frontend (Terminal 2):**
+```bash
+cd frontend
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173` and the backend API docs at `http://localhost:8000/docs`.
+
+---
+
+## ☁️ Deployment
+
+### Backend (Render)
+RoomCanvas is configured for deployment on [Render](https://render.com) using the included `render.yaml` blueprint.
+1. Connect your repository to Render.
+2. Select **New** > **Blueprint**.
+3. Render will automatically provision the Python web service based on `render.yaml`.
+4. Add your secrets (API keys, Supabase credentials, Firebase JSON) in the Render dashboard.
+
+### Frontend (Vercel / Netlify)
+1. Connect the `frontend/` directory to Vercel or Netlify.
+2. Set the build command to `npm run build` and output directory to `dist`.
+3. Set the environment variable `VITE_API_URL` to your deployed Render backend URL (e.g., `https://roomcanvas-backend.onrender.com`).
+
+---
+
+## 🔮 Future Improvements
+* **3D Mesh Extraction:** Integrating depth-map analysis to export basic 3D floor plans.
+* **E-Commerce Integration:** Matching generated furniture to real-world products via reverse image search.
+* **Multi-Angle Consistency:** Generating consistent room designs across different camera angles of the same space.
+
+---
+
+## 📄 License
+
+This project is proprietary. All rights reserved.

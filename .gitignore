@@ -56,6 +56,10 @@ frontend/build/
 # Vite
 .vite/
 
+# Next / Vercel (if applicable)
+.vercel/
+.next/
+
 # ── Environment files & Credentials ───────────────────────────────────────────
 .env
 .env.*
@@ -95,12 +99,19 @@ backend/storage/generated/
 # ── IDE & Editor ──────────────────────────────────────────────────────────────
 .vscode/*
 !.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
 
 # Kiro MCP configuration (user-specific)
-.kiro/settings/mcp.json
+.kiro/
+
+# AI Coding Assistants
+.aider*
+.cursor*
+.gemini/
 
 # ── OS generated ──────────────────────────────────────────────────────────────
 .DS_Store
@@ -119,6 +130,7 @@ ehthumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 .eslintcache
 .stylelintcache
 
@@ -133,14 +145,12 @@ logs/
 # Runtime
 *.pid
 
-# ── Export Reports ────────────────────────────────────────────────────────────
+# ── Export Reports & Artifacts ────────────────────────────────────────────────
 export_output.txt
 Frontend.txt
 Backend.txt
 code_export.txt
 full_audit_out.txt
-
-# Architecture review & planning docs (not project source)
 roomcanvas_architecture_review.md
 AI_Interior_Design_13Day_Plan_v2.md
 prompt5.md
