@@ -7,7 +7,7 @@ import logging
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.database.models import Generation
 from app.database.session import engine
-from app.ai.providers.provider_registry import get_generation_provider
+from app.ai.providers.provider_registry import get_image_provider
 from app.ai.prompt_builder import build_generation_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 class GenerationService:
     def __init__(self, repository: GenerationRepository):
         self.repository = repository
-        self.provider = get_generation_provider()
 
     async def prepare_generation(
         self,
@@ -59,6 +58,10 @@ class GenerationService:
             })
             return new_generation
 
+        if effective_style != generation.style:
+            generation.style = effective_style
+            await self.repository.session.commit()
+            
         updated_gen = await self.repository.update_status(generation.id, "pending")
         return updated_gen
 
@@ -105,7 +108,9 @@ class GenerationService:
                     f"Prompt: '{final_prompt}'"
                 )
                 logger.info(f"Background task: calling Replicate for Generation id={generation.id}…")
-                output_url, seed_used = await self.provider.generate(
+                
+                provider = await get_image_provider(session, generation.user_id)
+                output_url, seed_used = await provider.generate(
                     image_bytes=image_bytes,
                     mime_type="image/jpeg",
                     prompt=final_prompt,
@@ -132,9 +137,9 @@ class GenerationService:
                 # 7. Commit processing time + mark complete
                 elapsed = round(time.perf_counter() - t0, 2)
                 generation.processing_time_sec = elapsed
-                generation.provider = "replicate"
-                generation.provider_version = "replicate-python 1.0.0"
-                generation.model_used = "black-forest-labs/flux-kontext-pro"
+                generation.provider = provider.__class__.__name__.replace('Provider', '').lower()
+                generation.provider_version = getattr(provider, 'provider_version', "v1")
+                generation.model_used = getattr(provider, 'model', "unknown")
                 generation.model_version = "latest"
                 await session.commit()
                 await session.refresh(generation)

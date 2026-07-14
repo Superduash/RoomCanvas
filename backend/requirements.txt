@@ -19,3 +19,4 @@ sse-starlette>=2.0.0
 asyncpg>=0.28.0
 aiosqlite>=0.19.0
 supabase>=2.0.0
+cryptography>=41.0.0

@@ -19,7 +19,7 @@ from app.database.session import engine, Base
 import app.database.models  # Ensure models are loaded before create_all
 from app.ai.providers.provider_registry import init_providers
 from app.auth.firebase_admin_init import init_firebase_admin
-from app.routers import health, analyze, generate, refine, history, styles, providers, config, auth, measure
+from app.routers import health, analyze, generate, refine, history, styles, providers, config, auth, measure, user_keys
 from app.utils.exceptions import InteriorAIError
 
 logger = logging_config.logger
@@ -206,6 +206,7 @@ app.include_router(refine.router,   prefix="/api")
 app.include_router(history.router,  prefix="/api")
 app.include_router(auth.router,     prefix="/api")
 app.include_router(measure.router,  prefix="/api")
+app.include_router(user_keys.router,prefix="/api")
 
 
 # ── Global Exception Handlers ─────────────────────────────────────────────────

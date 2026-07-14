@@ -98,10 +98,22 @@ class Variation(Base):
     seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    # Relationships
     generation: Mapped["Generation"] = relationship(
         "Generation",
         back_populates="variations",
         foreign_keys=[generation_id],
         lazy="selectin"
     )
+
+class UserApiKeys(Base):
+    __tablename__ = "user_api_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String, nullable=False) # e.g. "gemini", "replicate", "groq"
+    encrypted_key: Mapped[str] = mapped_column(String, nullable=False)
+    preferred_model: Mapped[str | None] = mapped_column(String, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+

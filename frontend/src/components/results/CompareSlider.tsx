@@ -276,13 +276,16 @@ export function CompareSlider({
         fetchPriority="high"
         decoding="async"
         onLoad={() => setAfterLoaded(true)}
+        onError={(e) => {
+          e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' fill='%23f3f4f6'%3E%3Crect width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%239ca3af'%3EImage Unavailable%3C/text%3E%3C/svg%3E";
+        }}
       />
 
       {/* Before (original) — clipped to left side */}
       <div
         ref={beforeWrapperRef}
         className="absolute inset-0 overflow-hidden pointer-events-none"
-        style={{ clipPath: 'inset(0 50% 0 0)' }}
+        style={{ clipPath: `inset(0 ${100 - percent}% 0 0)` }}
       >
         <img
           src={beforeSrc}
@@ -292,6 +295,9 @@ export function CompareSlider({
           loading="eager"
           fetchPriority="high"
           decoding="async"
+          onError={(e) => {
+            e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' fill='%23f3f4f6'%3E%3Crect width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%239ca3af'%3EImage Unavailable%3C/text%3E%3C/svg%3E";
+          }}
         />
       </div>
 
@@ -300,7 +306,7 @@ export function CompareSlider({
         ref={sliderLineRef}
         className="absolute top-0 bottom-0 w-[2px] bg-white/95 shadow-[0_0_20px_rgba(0,0,0,0.4)] pointer-events-none z-10 transition-opacity duration-300"
         style={{
-          left: '50%',
+          left: `${percent}%`,
           transform: 'translateX(-50%)',
           willChange: 'left',
           opacity: isRevealing ? 0.3 : 1

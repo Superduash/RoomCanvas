@@ -11,6 +11,8 @@ import type { CustomizationOptions } from '../../api/types';
 import { useUIStore } from '../../store/uiStore';
 import { toast } from '../../lib/toast';
 import { getFriendlyApiError } from '../../utils/errors';
+import { useActiveProvider } from '../../api/queries';
+import { ProviderWarning } from '../common/ProviderWarning';
 
 const SUGGESTION_CHIPS = [
   'Change the wall color to sage green',
@@ -41,7 +43,11 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
   
   const refine = useRefineDesign();
   const generate = useGenerateDesign();
+  const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
+  
+  const hasProvider = activeProvider?.is_available ?? false;
   const isPending = refine.isPending || generate.isPending;
+  const isDisabled = disabled || (!hasProvider && !providerLoading);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [chipConfirm, setChipConfirm] = useState<string | null>(null);
@@ -144,6 +150,10 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
         </p>
       </div>
 
+      {!providerLoading && !hasProvider && (
+        <ProviderWarning />
+      )}
+
       <div className="space-y-3">
         <Textarea
           id="refinement-instruction"
@@ -151,7 +161,7 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
           value={refinementDraft}
           onChange={(e) => setRefinementDraft(e.target.value)}
           className="min-h-[100px] w-full text-sm resize-none"
-          disabled={disabled}
+          disabled={isDisabled}
           aria-label="Refinement instruction"
           error={error ?? undefined}
         />
@@ -162,7 +172,7 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
               key={chip}
               type="button"
               role="listitem"
-              disabled={disabled}
+              disabled={isDisabled}
               onClick={() => handleChipClick(chip)}
               className="rounded-full border border-border bg-surface-alt px-3 py-1.5 text-xs font-medium text-text-secondary hover:border-accent-subtle hover:bg-accent-subtle hover:text-accent transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -327,17 +337,24 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
         </AnimatePresence>
       </div>
 
-      <Button
-        variant="primary"
-        size="md"
-        className="mt-2 w-full justify-center shadow-md"
-        disabled={disabled}
-        loading={isPending}
-        icon={!isPending ? <Sparkles className="h-4 w-4" /> : undefined}
-        onClick={handleSubmit}
-      >
-        {isPending ? 'Applying Changes...' : 'Apply Changes'}
-      </Button>
+      <div className="flex flex-col gap-2 mt-2">
+        <Button
+          variant="primary"
+          size="md"
+          className="w-full justify-center shadow-md"
+          disabled={isDisabled}
+          loading={isPending || providerLoading}
+          icon={!isPending ? <Sparkles className="h-4 w-4" /> : undefined}
+          onClick={handleSubmit}
+        >
+          {isPending ? 'Applying Changes...' : 'Apply Changes'}
+        </Button>
+        {!providerLoading && hasProvider && !disabled && (
+          <p className="text-xs text-text-tertiary text-center font-medium">
+            Using: {activeProvider?.provider_name}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -16,15 +16,28 @@ from threading import Lock
 _in_memory_cache = {}
 _in_memory_lock = Lock()
 
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
+
 def cached_json(key: str, ttl_seconds: int, compute_fn):
     if redis:
-        cached = redis.get(key)
-        if cached:
-            if isinstance(cached, str):
-                return json.loads(cached)
-            return cached
+        try:
+            # Sync redis might block, but we catch exceptions
+            cached = redis.get(key)
+            if cached:
+                if isinstance(cached, str):
+                    return json.loads(cached)
+                return cached
+        except Exception as e:
+            logger.warning(f"Redis get failed for {key}: {e}")
+            
         value = compute_fn()
-        redis.set(key, json.dumps(value), ex=ttl_seconds)
+        try:
+            redis.set(key, json.dumps(value), ex=ttl_seconds)
+        except Exception as e:
+            logger.warning(f"Redis set failed for {key}: {e}")
         return value
 
     # Fallback to in-memory
@@ -40,13 +53,22 @@ def cached_json(key: str, ttl_seconds: int, compute_fn):
 
 async def cached_json_async(key: str, ttl_seconds: int, compute_fn):
     if async_redis:
-        cached = await async_redis.get(key)
-        if cached:
-            if isinstance(cached, str):
-                return json.loads(cached)
-            return cached
+        try:
+            cached = await asyncio.wait_for(async_redis.get(key), timeout=3.0)
+            if cached:
+                if isinstance(cached, str):
+                    return json.loads(cached)
+                return cached
+        except Exception as e:
+            logger.warning(f"Redis get failed or timed out for {key}: {e}")
+            
         value = await compute_fn()
-        await async_redis.set(key, json.dumps(value), ex=ttl_seconds)
+        try:
+            # fire and forget
+            asyncio.create_task(async_redis.set(key, json.dumps(value), ex=ttl_seconds))
+        except Exception as e:
+            logger.warning(f"Redis set failed for {key}: {e}")
+            
         return value
 
     # Fallback to in-memory

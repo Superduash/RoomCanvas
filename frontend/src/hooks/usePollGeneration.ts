@@ -33,6 +33,8 @@ export function usePollGeneration(id: number | null) {
     abortControllerRef.current = new AbortController();
     
     const connectSSE = async () => {
+      let retries = 0;
+      const MAX_RETRIES = 5;
       try {
         const headers = await getAuthHeader();
         await fetchEventSource(`${API_PREFIX}/generation/${id}/status`, {
@@ -40,6 +42,7 @@ export function usePollGeneration(id: number | null) {
           headers,
           signal: abortControllerRef.current?.signal,
           onmessage(msg) {
+            retries = 0; // reset on successful message
             if (msg.event === 'message') {
               const data = JSON.parse(msg.data) as GenerationOut;
               qc.setQueryData(['generation', id], data);
@@ -49,6 +52,11 @@ export function usePollGeneration(id: number | null) {
           },
           onerror(err) {
             logger.warn(`SSE error for generation ${id}:`, err);
+            retries += 1;
+            if (retries >= MAX_RETRIES) {
+              // Stop retrying — backup poll will handle status updates
+              throw err;
+            }
           },
           onclose() {
              logger.debug(`SSE closed for generation ${id}`);

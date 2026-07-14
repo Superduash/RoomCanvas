@@ -38,6 +38,8 @@ async function handleResponse<T>(res: Response, method: string, path: string, st
 
     throw new ApiError(detail, res.status);
   }
+  // 204 No Content — no body to parse
+  if (res.status === 204) return undefined as unknown as T;
   return res.json() as Promise<T>;
 }
 
@@ -92,6 +94,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
+    
+  put: <T>(path: string, body: unknown): Promise<T> =>
+    safeFetch<T>('PUT', path, {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
 
   postForm: <T>(path: string, formData: FormData): Promise<T> =>
     safeFetch<T>('POST', path, { body: formData }),
@@ -103,16 +111,5 @@ export const api = {
 // e.g. "uploads/xyz.jpg" → https://PROJECT.supabase.co/storage/v1/object/public/roomcanvas/uploads/xyz.jpg
 export function resolveImageUrl(key: string | null | undefined): string {
   if (!key) return '';
-  
-  // If it's already a full URL (backward compatibility), return as-is
-  if (key.startsWith('http://') || key.startsWith('https://')) {
-    return key;
-  }
-  
-  // Clean up any legacy "storage/" prefix
-  const cleaned = key.replace(/^storage[\\/]/, '').replace(/\\/g, '/');
-  
-  // Construct Supabase public URL
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://fiyobpuaxeihkvcklvai.supabase.co';
-  return `${supabaseUrl}/storage/v1/object/public/roomcanvas/${cleaned}`;
+  return key;
 }

@@ -18,10 +18,11 @@ def _is_transient(exc: Exception) -> bool:
     return False
 
 class ReplicateProvider(GenerationProvider):
-    def __init__(self):
-        if not settings.REPLICATE_API_TOKEN:
+    def __init__(self, api_token: str | None = None, model: str | None = None):
+        self.api_token = api_token or settings.REPLICATE_API_TOKEN
+        if not self.api_token:
             raise InferenceServiceError("REPLICATE_API_TOKEN is not configured", 500)
-        self.model = "black-forest-labs/flux-kontext-pro"
+        self.model = model or "black-forest-labs/flux-kontext-pro"
 
     @retry(
         stop=stop_after_attempt(3),
@@ -42,7 +43,7 @@ class ReplicateProvider(GenerationProvider):
             from replicate.client import Client
             import httpx
             client = Client(
-                api_token=settings.REPLICATE_API_TOKEN,
+                api_token=self.api_token,
                 timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
             )
             
@@ -90,7 +91,7 @@ class ReplicateProvider(GenerationProvider):
             from replicate.client import Client
             import httpx
             client = Client(
-                api_token=settings.REPLICATE_API_TOKEN,
+                api_token=self.api_token,
                 timeout=httpx.Timeout(settings.REPLICATE_TIMEOUT_SECONDS)
             )
             

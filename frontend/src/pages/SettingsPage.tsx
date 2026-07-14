@@ -4,8 +4,8 @@ import { useTheme } from '../hooks/useTheme';
 import { api } from '../api/client';
 import { type User } from '../api/types';
 import { Toggle } from '../components/primitives/Toggle';
-import { Select, SelectItem } from '../components/primitives/Select';
 import { SecuritySection } from '../components/settings/SecuritySection';
+import { ApiKeysSection } from '../components/settings/ApiKeysSection';
 import { toast } from '../lib/toast';
 import { getFriendlyApiError } from '../utils/errors';
 import { cn } from '../lib/utils';
@@ -15,8 +15,6 @@ export function SettingsPage() {
   
   const { themePreference: theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
-  const [budget, setBudget] = useState('mid-range');
-  const [lighting, setLighting] = useState('natural');
 
   useEffect(() => {
     if (profile) {
@@ -130,28 +128,6 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Section 3: AI Generation Defaults */}
-        <section className="flex flex-col md:flex-row gap-8 items-start border-b border-border pb-10">
-          <div className="w-full md:w-1/3">
-            <h3 className="text-[15px] font-semibold text-text-primary mb-1">AI Defaults</h3>
-            <p className="text-sm text-text-secondary mb-2">These are pre-filled on every new design.</p>
-          </div>
-          <div className="w-full md:w-2/3">
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select value={budget} onValueChange={setBudget} label="Default Budget Tier">
-                   <SelectItem value="budget">Budget-Friendly</SelectItem>
-                   <SelectItem value="mid-range">Mid-Range</SelectItem>
-                   <SelectItem value="premium">Premium / Luxury</SelectItem>
-                </Select>
-                <Select value={lighting} onValueChange={setLighting} label="Default Lighting">
-                   <SelectItem value="warm">Warm & Cozy</SelectItem>
-                   <SelectItem value="cool">Cool & Modern</SelectItem>
-                   <SelectItem value="natural">Natural Daylight</SelectItem>
-                </Select>
-             </div>
-          </div>
-        </section>
-
         {/* Section 4: Security */}
         <section className="flex flex-col md:flex-row gap-8 items-start border-b border-border pb-10">
           <div className="w-full md:w-1/3">
@@ -160,6 +136,17 @@ export function SettingsPage() {
           </div>
           <div className="w-full md:w-2/3">
              <SecuritySection />
+          </div>
+        </section>
+
+        {/* Section 5: API Keys */}
+        <section className="flex flex-col md:flex-row gap-8 items-start border-b border-border pb-10">
+          <div className="w-full md:w-1/3">
+            <h3 className="text-[15px] font-semibold text-text-primary mb-1">Bring Your Own Key</h3>
+            <p className="text-sm text-text-secondary">Provide your own API keys for Groq, Gemini, or Replicate to customize models and bypass platform limits.</p>
+          </div>
+          <div className="w-full md:w-2/3">
+             <ApiKeysSection />
           </div>
         </section>
 

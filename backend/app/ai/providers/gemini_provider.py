@@ -13,15 +13,22 @@ from app.ai.prompt_builder import get_analysis_prompt
 
 logger = logging.getLogger(__name__)
 
-class GeminiProvider(AnalysisProvider):
-    def __init__(self):
-        if not settings.GEMINI_API_KEY:
+class GeminiProvider(AnalysisProvider, GenerationProvider):
+    def __init__(self, api_key: str | None = None, model: str | None = None):
+        self.api_key = api_key or settings.GEMINI_API_KEY
+        if not self.api_key:
             raise AnalysisServiceError("GEMINI_API_KEY is not configured", 500)
         self.client = genai.Client(
-            api_key=settings.GEMINI_API_KEY,
+            api_key=self.api_key,
             http_options=types.HttpOptions(timeout=settings.GEMINI_TIMEOUT_SECONDS * 1000),
         )
-        self.model_name = "gemini-2.5-flash"
+        self.model_name = model or "gemini-2.5-flash"
+        
+    async def generate(self, image_bytes: bytes, mime_type: str, prompt: str, seed: int = None) -> tuple[str, int]:
+        raise NotImplementedError("Gemini Image Generation not yet fully implemented")
+        
+    async def refine(self, image_bytes: bytes, mime_type: str, instruction: str, seed: int = None) -> tuple[str, int]:
+        raise NotImplementedError("Gemini Image Generation not yet fully implemented")
 
     @staticmethod
     def _is_transient(exc: Exception) -> bool:

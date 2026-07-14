@@ -24,6 +24,7 @@ import {
   useSelectVariation, 
   useDeleteGeneration,
   useDeleteRefinement,
+  useActiveProvider
 } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { resolveImageUrl } from '../api/client';
@@ -48,6 +49,9 @@ export function ResultsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('compare');
   const [downloadDone, setDownloadDone] = useState(false);
   const [showMeasurement, setShowMeasurement] = useState(false);
+
+  const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
+  const hasProvider = activeProvider?.is_available ?? false;
 
   // Fetch the entire project timeline
   const { data: projectDetails, isLoading, isError } = useProjectTimeline(id);
@@ -131,16 +135,20 @@ export function ResultsPage() {
 
   const project = projectDetails.project;
   const timeline = projectDetails.timeline;
-  const variation = activeGeneration.variations[0];
+  
+  const isCompleted = activeGeneration.status === 'completed';
+  const isFailed = activeGeneration.status === 'failed' || activeGeneration.status === 'failed_analysis';
+  const isRefinement = activeGeneration.parent_generation_id !== null;
+  const isRootGeneration = activeGeneration.parent_generation_id === null;
+
+  // Use selected variation if set, otherwise fall back to first
+  const variation = activeGeneration.selected_variation_id
+    ? (activeGeneration.variations.find(v => v.id === activeGeneration.selected_variation_id) ?? activeGeneration.variations[0])
+    : activeGeneration.variations[0];
   
   // The original image for the compare slider is ALWAYS the root project's image
   const originalSrc = resolveImageUrl(project.original_image_path);
   const generatedSrc = variation ? resolveImageUrl(variation.image_path) : '';
-  
-  const isCompleted = activeGeneration.status === 'completed';
-  const isFailed = activeGeneration.status === 'failed' || activeGeneration.status === 'failed_analysis';
-  const isRefinement = isCompleted;
-  const isRootGeneration = activeGeneration.parent_generation_id === null;
   
   const alreadySaved = activeGeneration.selected_variation_id !== null && variation
     ? activeGeneration.selected_variation_id === variation.id
@@ -248,7 +256,9 @@ export function ResultsPage() {
               variant="secondary"
               size="sm"
               onClick={handleGenerateAgain}
-              loading={generateDesign.isPending}
+              loading={generateDesign.isPending || providerLoading}
+              disabled={!hasProvider && !providerLoading}
+              title={!hasProvider && !providerLoading ? "No generation provider available" : undefined}
               icon={<RefreshCw className="h-4 w-4" />}
             >
               Regenerate

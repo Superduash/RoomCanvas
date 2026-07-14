@@ -151,7 +151,7 @@ def build_full_prompt(base_prompt: str, customization=None, instruction: str | N
         if is_removal:
             parts.append(build_removal_clause(instruction))
         else:
-            parts.append(f"Additionally: {sanitize_prompt(instruction)}")
+            parts.append(f"CRITICAL USER INSTRUCTION (OVERRIDES ALL PREVIOUS STYLE AND LAYOUT GUIDANCE):\n{sanitize_prompt(instruction)}")
         
     final = "\n\n".join(p for p in parts if p)
     if estimate_tokens(final) > 480:

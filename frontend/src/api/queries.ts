@@ -89,9 +89,10 @@ export function useHistory(limit = 50, enabled = true) {
   return useQuery({
     queryKey: ['history', limit],
     queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
-    staleTime: 5 * 60000,
+    staleTime: 30000,
     gcTime: 15 * 60000,
     enabled,
+    refetchOnMount: true,
   });
 }
 
@@ -100,6 +101,8 @@ export function useProjectTimeline(projectId: number | null) {
     queryKey: ['project_timeline', projectId],
     queryFn: () => api.get<ProjectDetails>(`/projects/${projectId}`),
     enabled: projectId !== null,
+    staleTime: 30000,
+    refetchOnMount: true,
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return false;
@@ -208,3 +211,53 @@ export function useRenameGeneration() {
     },
   });
 }
+
+// ── User API Keys ─────────────────────────────────────────────────────────
+export interface UserKeyStatus {
+  provider: string;
+  preferred_model?: string;
+}
+
+export interface ActiveProviderStatus {
+  is_available: boolean;
+  provider_name?: string;
+  is_platform: boolean;
+}
+
+export function useActiveProvider() {
+  return useQuery({
+    queryKey: ['active_provider'],
+    queryFn: () => api.get<ActiveProviderStatus>('/settings/keys/active'),
+  });
+}
+
+export function useUserKeys() {
+  return useQuery({
+    queryKey: ['user_keys'],
+    queryFn: () => api.get<UserKeyStatus[]>('/settings/keys'),
+  });
+}
+
+export function useSaveUserKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { provider: string; api_key: string; preferred_model?: string }) =>
+      api.put<{ message: string }>('/settings/keys', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user_keys'] });
+      qc.invalidateQueries({ queryKey: ['active_provider'] });
+    },
+  });
+}
+
+export function useDeleteUserKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: string) => api.del<{ message: string }>(`/settings/keys/${provider}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user_keys'] });
+      qc.invalidateQueries({ queryKey: ['active_provider'] });
+    },
+  });
+}
+

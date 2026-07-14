@@ -5,7 +5,7 @@ import time
 import logging
 import json
 from fastapi.concurrency import run_in_threadpool
-from app.ai.providers.provider_registry import get_analysis_provider
+from app.ai.providers.provider_registry import get_text_provider
 from app.schemas.generation import AnalyzeResponse
 from app.repositories.generation_repository import GenerationRepository
 
@@ -29,7 +29,7 @@ def compute_budget_summary(furniture: list[dict]) -> dict:
 class AnalysisService:
     def __init__(self, repository: GenerationRepository):
         self.repository = repository
-        self.provider = get_analysis_provider()  # singleton — no construction cost
+        self.db = repository.session
 
     async def create_analysis(
         self,
@@ -46,7 +46,8 @@ class AnalysisService:
 
         # 1. Try to get analysis from AI Provider
         async def fetch_analysis():
-            res = await self.provider.analyze_room(image_bytes, mime_type, style_id)
+            provider = await get_text_provider(self.db, user_id)
+            res = await provider.analyze_room(image_bytes, mime_type, style_id)
             res["budget_summary"] = compute_budget_summary(res.get("furniture", []))
             res.pop("estimated_budget_range", None)
             # Validate response shape
@@ -92,6 +93,15 @@ class AnalysisService:
                     "items_to_buy_count": 0,
                     "items_kept_count": 1,
                 },
+                "space_occupancy": "mostly_empty",
+                "open_floor_area_pct": 100,
+                "architecture": {
+                    "walls": "keep as is",
+                    "windows": "keep as is",
+                    "doors": "keep as is",
+                    "ceiling_height": "keep as is",
+                    "lighting_direction": "keep original"
+                },
                 "style_explanation": "Unable to analyze style dynamically.",
                 "redesign_prompt": (
                     f"Fully redesign this room in {style_id.replace('_', ' ')} style. "
@@ -101,17 +111,28 @@ class AnalysisService:
             }
 
 
-        # 2. Save generation to DB
+        # Capture provider info from the cached analysis result
+        provider_name = "gemini"
+        model_used = "gemini-2.5-flash"
+        model_version = "latest"
+        try:
+            provider = await get_text_provider(self.db, user_id)
+            provider_name = provider.__class__.__name__.replace('Provider', '').lower()
+            model_used = getattr(provider, 'model_name', getattr(provider, 'model', "unknown"))
+            model_version = getattr(provider, 'model_version', "latest")
+        except Exception:
+            pass
+
         generation_data = {
             "original_image_path": original_image_path,
             "style": style_id,
             "redesign_prompt": analysis_dict.get("redesign_prompt", ""),
             "prompt_version": "v1",
             "analysis_json": json.dumps(analysis_dict),
-            "provider": self.provider.__class__.__name__.replace('Provider', '').lower(),
+            "provider": provider_name,
             "provider_version": "v1",
-            "model_used": getattr(self.provider, 'model_name', "unknown"),
-            "model_version": getattr(self.provider, 'model_version', "latest"),
+            "model_used": model_used,
+            "model_version": model_version,
             "status": status,
             "processing_time_sec": round(time.perf_counter() - t0, 2),
             "user_id": user_id,

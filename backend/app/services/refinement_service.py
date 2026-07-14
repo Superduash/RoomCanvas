@@ -6,7 +6,7 @@ import logging
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.database.models import Generation
 from app.database.session import engine
-from app.ai.providers.provider_registry import get_generation_provider
+from app.ai.providers.provider_registry import get_image_provider
 from app.ai.prompt_builder import build_refinement_prompt
 from app.repositories.generation_repository import GenerationRepository
 from app.services.storage_service import StorageService
@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 class RefinementService:
     def __init__(self, repository: GenerationRepository):
         self.repository = repository
-        self.provider = get_generation_provider()
 
     async def prepare_refinement(
         self,
@@ -51,10 +50,10 @@ class RefinementService:
             "prompt_version": parent_gen.prompt_version,
             "analysis_json": parent_gen.analysis_json,
             "parent_generation_id": parent_generation_id,
-            "provider": "replicate",
-            "provider_version": "replicate-python 1.0.0",
-            "model_used": "black-forest-labs/flux-kontext-pro",
-            "model_version": getattr(self.provider, 'model_version', "latest"),
+            "provider": "unknown",
+            "provider_version": "v1",
+            "model_used": "unknown",
+            "model_version": "latest",
             "status": "pending",
             "processing_time_sec": 0.0,
             "room_type_detected": parent_gen.room_type_detected,
@@ -97,7 +96,8 @@ class RefinementService:
                 final_prompt = build_refinement_prompt(instruction, customization, analysis_data)
 
                 logger.info(f"Background task: calling Replicate for Refinement id={generation.id} (parent={parent_id})…")
-                output_url, seed_used = await self.provider.refine(
+                provider = await get_image_provider(session, generation.user_id)
+                output_url, seed_used = await provider.refine(
                     image_bytes=image_bytes,
                     mime_type="image/jpeg",
                     instruction=final_prompt,
@@ -109,7 +109,8 @@ class RefinementService:
 
                 elapsed = round(time.perf_counter() - t0, 2)
                 generation.processing_time_sec = elapsed
-                generation.provider = "replicate"
+                generation.provider = provider.__class__.__name__.replace('Provider', '').lower()
+                generation.model_used = getattr(provider, 'model', "unknown")
                 generation.status = "completed"
                 await session.commit()
                 await session.refresh(generation)

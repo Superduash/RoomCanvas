@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 class VariationOut(BaseModel):
     id: int
@@ -9,6 +9,14 @@ class VariationOut(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("image_path")
+    @classmethod
+    def resolve_url(cls, v: str) -> str:
+        if not v or v.startswith("http"):
+            return v
+        from app.services.storage_service import StorageService
+        return StorageService.resolve_public_url(v)
 
 class GenerationOut(BaseModel):
     id: int
@@ -32,6 +40,14 @@ class GenerationOut(BaseModel):
     variations: list[VariationOut] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("original_image_path")
+    @classmethod
+    def resolve_url(cls, v: str) -> str:
+        if not v or v.startswith("http"):
+            return v
+        from app.services.storage_service import StorageService
+        return StorageService.resolve_public_url(v)
 
 class AnalyzeResponse(BaseModel):
     analysis_id: int

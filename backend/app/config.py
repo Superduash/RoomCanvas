@@ -36,10 +36,16 @@ class Settings(BaseSettings):
     # API Keys
     GEMINI_API_KEY: str = ""
     REPLICATE_API_TOKEN: str = ""
+    GROQ_API_KEY: str = ""
+    FERNET_SECRET_KEY: str = ""
     UPSTASH_REDIS_URL: str = ""
     UPSTASH_REDIS_TOKEN: str = ""
     FIREBASE_SERVICE_ACCOUNT_JSON: str | None = None
     FIREBASE_CREDENTIALS_PATH: str | None = None
+
+    # Model Defaults
+    GROQ_TEXT_MODEL_DEFAULT: str = "openai/gpt-oss-120b"
+    GEMINI_IMAGE_MODEL_DEFAULT: str = "gemini-3.1-flash-image"
 
     # Timeouts
     GEMINI_TIMEOUT_SECONDS: int = 60

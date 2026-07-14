@@ -1,24 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../components/primitives/Button';
 import { Dropzone } from '../components/upload/Dropzone';
+import { AdvancedOptions } from '../components/upload/AdvancedOptions';
 import { Card } from '../components/primitives/Card';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton } from '../components/primitives/Skeleton';
-import { useConfig, useStyles, useAnalyzeRoom } from '../api/queries';
+import { useConfig, useStyles, useAnalyzeRoom, useActiveProvider } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
 import { toast } from '../lib/toast';
 import { useRequireAuthAction } from '../auth/useRequireAuthAction';
 import { toHexColor, needsColorBorder, formatColorName } from '../utils/colorHelpers';
+import { ProviderWarning } from '../components/common/ProviderWarning';
 
 
 export function UploadPage() {
   const navigate = useNavigate();
   const { data: config } = useConfig();
   const { data: styles, isLoading: stylesLoading } = useStyles();
+  const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
 
 
   const pendingFile = useUIStore((s) => s.pendingFile);
@@ -29,11 +32,27 @@ export function UploadPage() {
   const clearUpload = useUIStore((s) => s.clearUpload);
 
   const analyze = useAnalyzeRoom();
-  const canSubmit = !!pendingFile && !!selectedStyleId;
+  const [customization, setCustomization] = useState<any>({});
+  
+  const hasProvider = activeProvider?.is_available ?? false;
+  const canSubmit = !!pendingFile && !!selectedStyleId && hasProvider;
   const selectedStyle = styles?.find((s) => s.id === selectedStyleId);
   const requireAuth = useRequireAuthAction();
 
-  // Resume pending action after sign in
+  // Define handleSubmit before the event listener so TypeScript sees it
+  const handleSubmit = async () => {
+    if (!pendingFile || !selectedStyleId) return;
+    try {
+      const result = await analyze.mutateAsync({ image: pendingFile, style: selectedStyleId });
+      clearUpload();
+      navigate(`/analysis/${result.analysis_id}`, { state: { analysis: result, customization } });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to analyze room';
+      toast.error(msg);
+    }
+  };
+
+  // Resume pending action after sign in — re-register whenever handleSubmit changes (i.e. file/style changes)
   useEffect(() => {
     const handleResume = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -43,7 +62,8 @@ export function UploadPage() {
     };
     window.addEventListener('roomcanvas:resume-action', handleResume);
     return () => window.removeEventListener('roomcanvas:resume-action', handleResume);
-  }, [pendingFile, selectedStyleId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleSubmit]);
 
   // Revoke object URL on unmount
   useEffect(() => {
@@ -61,18 +81,6 @@ export function UploadPage() {
   const handleRemove = () => {
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
     setPendingUpload(null, null);
-  };
-
-  const handleSubmit = async () => {
-    if (!pendingFile || !selectedStyleId) return;
-    try {
-      const result = await analyze.mutateAsync({ image: pendingFile, style: selectedStyleId });
-      clearUpload();
-      navigate(`/analysis/${result.analysis_id}`, { state: { analysis: result } });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to analyze room';
-      toast.error(msg);
-    }
   };
 
   const handleAnalyzeClick = () => {
@@ -223,21 +231,35 @@ export function UploadPage() {
             />
           </div>
 
+          <div className="mb-5">
+            <AdvancedOptions value={customization} onChange={setCustomization} />
+          </div>
+
           <div className="flex flex-col gap-3">
+            {!providerLoading && !hasProvider && (
+              <ProviderWarning className="mb-2" />
+            )}
+            
             <Button
               variant="primary"
               size="lg"
               className="w-full justify-center shadow-md py-4 text-base active:scale-[0.98] transition-transform touch-manipulation"
-              disabled={!canSubmit}
-              loading={analyze.isPending}
+              disabled={!canSubmit || providerLoading}
+              loading={analyze.isPending || providerLoading}
               iconRight={!analyze.isPending ? <ArrowRight className="h-5 w-5" /> : undefined}
               onClick={handleAnalyzeClick}
             >
               {analyze.isPending ? 'Analyzing Room...' : 'Start Redesign'}
             </Button>
 
+            {!providerLoading && hasProvider && (
+              <p className="text-xs text-text-tertiary text-center font-medium">
+                Using: {activeProvider?.provider_name}
+              </p>
+            )}
+
             <AnimatePresence>
-              {!canSubmit && !analyze.isPending && (
+              {!canSubmit && !analyze.isPending && hasProvider && (
                 <motion.p 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}

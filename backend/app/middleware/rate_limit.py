@@ -1,5 +1,6 @@
 from fastapi import Request, HTTPException
 from app.cache.redis_cache import redis
+import hashlib
 
 def RateLimiter(key_prefix: str, limit: int, window_seconds: int):
     async def _rate_limit_dependency(request: Request):
@@ -9,7 +10,7 @@ def RateLimiter(key_prefix: str, limit: int, window_seconds: int):
         # Use auth header as a proxy for user identity if present
         auth = request.headers.get("Authorization")
         if auth:
-            client_id = str(hash(auth))
+            client_id = hashlib.sha256(auth.encode()).hexdigest()[:16]
         else:
             client_id = request.client.host if request.client else "127.0.0.1"
             

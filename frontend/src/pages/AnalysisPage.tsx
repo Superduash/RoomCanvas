@@ -5,7 +5,8 @@ import { AlertTriangle, RefreshCw, ArrowLeft, Clock, Loader2, Sparkles, CheckCir
 import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
 import { Button } from '../components/primitives/Button';
 import { usePollGeneration } from '../hooks/usePollGeneration';
-import { useGenerateDesign } from '../api/queries';
+import { ProviderWarning } from '../components/common/ProviderWarning';
+import { useGenerateDesign, useActiveProvider } from '../api/queries';
 import type { AnalyzeResponse } from '../api/types';
 
 const STEPS = [
@@ -25,12 +26,14 @@ export function AnalysisPage() {
   const navigate = useNavigate();
 
   const analysis: AnalyzeResponse | null = location.state?.analysis ?? null;
+  const customization = location.state?.customization;
 
   const [currentStep, setCurrentStep] = useState(0);
   const [stepperDone, setStepperDone] = useState(false);
   const [generationId, setGenerationId] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
+  const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
   const generateDesign = useGenerateDesign();
   const { generation, isPending, isCompleted, isFailed, timedOut, resetTimeout } = usePollGeneration(generationId);
 
@@ -81,15 +84,22 @@ export function AnalysisPage() {
   // Fire generate once on mount
   useEffect(() => {
     if (hasStartedGenerate.current) return;
+    if (providerLoading) return;
+    
+    if (activeProvider && !activeProvider.is_available) {
+      // Don't auto-generate if no provider
+      return;
+    }
+
     hasStartedGenerate.current = true;
 
-    generateDesign.mutateAsync({ analysisId: analysis.analysis_id })
+    generateDesign.mutateAsync({ analysisId: analysis.analysis_id, customization })
       .then((gen) => setGenerationId(gen.id))
       .catch((err) => {
         setGenerateError(err instanceof Error ? err.message : 'Generation failed');
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [providerLoading, activeProvider]);
 
   // Navigate when BOTH stepper done AND generation completed
   useEffect(() => {
@@ -112,7 +122,7 @@ export function AnalysisPage() {
     setCurrentStep(0);
     setStepperDone(false);
 
-    generateDesign.mutateAsync({ analysisId: analysis.analysis_id })
+    generateDesign.mutateAsync({ analysisId: analysis.analysis_id, customization })
       .then((gen) => setGenerationId(gen.id))
       .catch((err) => setGenerateError(err instanceof Error ? err.message : 'Generation failed'));
   };
@@ -141,6 +151,15 @@ export function AnalysisPage() {
             </Button>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Missing provider state
+  if (activeProvider && !activeProvider.is_available) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center page-enter">
+        <ProviderWarning className="max-w-md mx-auto mb-6" />
       </div>
     );
   }
