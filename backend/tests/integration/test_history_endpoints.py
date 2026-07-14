@@ -1,6 +1,8 @@
+import pytest
 from app.repositories.generation_repository import GenerationRepository
 
-def test_history_endpoints_workflow(client, db):
+@pytest.mark.asyncio
+async def test_history_endpoints_workflow(client, db):
     from app.database.models import User
     # Explicitly create and commit the mock user so it exists before we create records or call endpoints
     user = User(
@@ -9,15 +11,15 @@ def test_history_endpoints_workflow(client, db):
         display_name="Test User"
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     
     repo = GenerationRepository(db, user_id=user.id)
 
 
     
     # 1. Populate DB
-    gen = repo.create_generation({
+    gen = await repo.create_generation({
         "original_image_path": "uploads/img1.jpg",
         "style": "bohemian",
         "redesign_prompt": "Redesign room",
@@ -25,7 +27,7 @@ def test_history_endpoints_workflow(client, db):
         "processing_time_sec": 12.3,
         "status": "completed"
     })
-    vars_added = repo.add_variations(gen.id, [{"image_path": "storage/generated/v1.png", "seed": 0}])
+    vars_added = await repo.add_variations(gen.id, [{"image_path": "storage/generated/v1.png", "seed": 0}])
     
     # 2. list history
     resp = client.get("/api/history")
@@ -54,4 +56,4 @@ def test_history_endpoints_workflow(client, db):
     assert resp.json() == {"deleted": True}
     
     # Verify DB is empty
-    assert len(repo.list_all()) == 0
+    assert len(await repo.list_all()) == 0

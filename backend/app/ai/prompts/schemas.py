@@ -6,8 +6,10 @@ ANALYSIS_RESPONSE_SCHEMA = {
     "type": "object",
     "required": ["room_type", "architecture", "furniture_placement", "furniture", "estimated_dimensions", "layout_notes",
                  "color_palette", "lighting_suggestions", "estimated_budget_range",
-                 "style_explanation", "redesign_prompt", "design_rationale"],
+                 "style_explanation", "redesign_prompt", "design_rationale", "space_occupancy", "open_floor_area_pct"],
     "properties": {
+        "space_occupancy": {"type": "string", "enum": ["mostly_empty", "partially_furnished", "densely_furnished"]},
+        "open_floor_area_pct": {"type": "number"},
         "room_type": {"type": "string"},
         "architecture": {
             "type": "object",

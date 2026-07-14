@@ -1,7 +1,9 @@
+import pytest
 import io
 from PIL import Image
 
-def test_analyze_room_success(client):
+@pytest.mark.asyncio
+async def test_analyze_room_success(client):
     # Construct a valid tiny JPEG image
     img = Image.new('RGB', (100, 100), color='blue')
     img_byte_arr = io.BytesIO()
@@ -21,7 +23,8 @@ def test_analyze_room_success(client):
     assert json_data["redesign_prompt"] == " Scandinavian redesign with beige sofa."
     assert "width_ft" in json_data["estimated_dimensions"]
 
-def test_analyze_room_validation_error(client):
+@pytest.mark.asyncio
+async def test_analyze_room_validation_error(client):
     response = client.post(
         "/api/analyze",
         data={"style": "scandinavian"},

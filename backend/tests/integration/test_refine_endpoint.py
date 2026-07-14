@@ -1,11 +1,13 @@
+import pytest
 import io
 from PIL import Image
 from app.repositories.generation_repository import GenerationRepository
 
-def test_refine_design_workflow(client, db):
+@pytest.mark.asyncio
+async def test_refine_design_workflow(client, db):
     # 1. Create a completed base generation with a mock variation image
     repo = GenerationRepository(db)
-    gen = repo.create_generation({
+    gen = await repo.create_generation({
         "original_image_path": "uploads/base.jpg",
         "style": "modern",
         "redesign_prompt": "Redesign room",
@@ -18,7 +20,7 @@ def test_refine_design_workflow(client, db):
     img = Image.new('RGB', (10, 10), color='green')
     img.save("storage/generated/mock.png")
     
-    repo.add_variations(gen.id, [{"image_path": "storage/generated/mock.png", "seed": 0}])
+    await repo.add_variations(gen.id, [{"image_path": "storage/generated/mock.png", "seed": 0}])
     
     # 2. POST /api/refine
     refine_resp = client.post(
@@ -30,7 +32,7 @@ def test_refine_design_workflow(client, db):
     refine_id = refine_resp.json()["id"]
     
     # 3. Retrieve child generation (Background tasks ran synchronously in TestClient)
-    db.commit() # release transaction boundary so we see background updates
+    await db.commit() # release transaction boundary so we see background updates
     history_resp = client.get(f"/api/history/{refine_id}")
     assert history_resp.status_code == 200
     json_data = history_resp.json()
@@ -40,7 +42,8 @@ def test_refine_design_workflow(client, db):
     assert len(json_data["variations"]) == 1
     assert json_data["variations"][0]["image_path"] is not None
 
-def test_refine_design_not_found(client):
+@pytest.mark.asyncio
+async def test_refine_design_not_found(client):
     response = client.post(
         "/api/refine",
         json={"generation_id": 9999, "instruction": "make sofa blue"}

@@ -1,6 +1,8 @@
+import pytest
 from app.ai.prompt_builder import sanitize_prompt, get_analysis_prompt, build_generation_prompt, build_refinement_prompt
 
-def test_sanitize_prompt():
+@pytest.mark.asyncio
+async def test_sanitize_prompt():
     # Long prompt truncation
     long_text = "a" * 2500
     sanitized = sanitize_prompt(long_text)
@@ -14,18 +16,21 @@ def test_sanitize_prompt():
     text_with_control = "hello\x00world\x1f!"
     assert sanitize_prompt(text_with_control) == "helloworld!"
 
-def test_get_analysis_prompt():
+@pytest.mark.asyncio
+async def test_get_analysis_prompt():
     prompt = get_analysis_prompt("bohemian")
     assert "bohemian" in prompt.lower()
     assert "interior designer" in prompt.lower()
 
-def test_build_generation_prompt():
+@pytest.mark.asyncio
+async def test_build_generation_prompt():
     prompt = build_generation_prompt("Redesign room")
     assert "Redesign room" in prompt
     assert "preserving the room's walls, windows, doors" in prompt
 
 
-def test_build_refinement_prompt():
+@pytest.mark.asyncio
+async def test_build_refinement_prompt():
     prompt = build_refinement_prompt("Make sofa blue")
     assert "Make sofa blue" in prompt
     assert "Apply this change only" in prompt

@@ -1,7 +1,9 @@
+import pytest
 import io
 from PIL import Image
 
-def test_generate_design_workflow(client, db):
+@pytest.mark.asyncio
+async def test_generate_design_workflow(client, db):
     # 1. First upload and analyze
     img = Image.new('RGB', (100, 100), color='green')
     img_byte_arr = io.BytesIO()
@@ -24,7 +26,7 @@ def test_generate_design_workflow(client, db):
     assert gen_resp.json()["status"] == "pending"
     
     # 3. Fetch generation from history (Background tasks run synchronously in TestClient)
-    db.commit() # release transaction snapshot so we see background updates
+    await db.commit() # release transaction snapshot so we see background updates
     history_resp = client.get(f"/api/history/{analysis_id}")
     assert history_resp.status_code == 200
     assert history_resp.json()["status"] == "completed"
@@ -33,7 +35,8 @@ def test_generate_design_workflow(client, db):
     assert len(history_resp.json()["variations"]) == 1
     assert history_resp.json()["variations"][0]["image_path"] is not None
 
-def test_generate_design_not_found(client):
+@pytest.mark.asyncio
+async def test_generate_design_not_found(client):
     response = client.post(
         "/api/generate",
         json={"analysis_id": 9999}

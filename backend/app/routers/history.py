@@ -4,9 +4,9 @@ Caches read operations; invalidates on every mutation.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy import select
-from app.database.session import get_db
+from app.database.session import get_db, engine
 from app.repositories.generation_repository import GenerationRepository
 from app.schemas.project import ProjectOut, ProjectDetailsOut
 from app.schemas.generation import GenerationOut
@@ -189,21 +189,24 @@ async def generation_status_sse(
     repo = GenerationRepository(db, user_id=current_user.id)
     
     async def event_generator():
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
         while True:
             if await request.is_disconnected():
                 break
                 
-            generation = await repo.get_by_id(generation_id)
-            if not generation:
-                yield {"event": "error", "data": "Not found"}
-                break
+            async with session_factory() as fresh_db:
+                fresh_repo = GenerationRepository(fresh_db, user_id=current_user.id)
+                generation = await fresh_repo.get_by_id(generation_id)
+                if not generation:
+                    yield {"event": "error", "data": "Not found"}
+                    break
+                    
+                serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
+                yield {"event": "message", "data": json.dumps(serialized)}
                 
-            serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
-            yield {"event": "message", "data": json.dumps(serialized)}
-            
-            if generation.status in ("completed", "failed", "failed_analysis"):
-                break
-                
+                if generation.status in ("completed", "failed", "failed_analysis"):
+                    break
+                    
             await asyncio.sleep(2)
 
     return EventSourceResponse(event_generator())

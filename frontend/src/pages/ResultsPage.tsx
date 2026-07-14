@@ -101,7 +101,8 @@ export function ResultsPage() {
   
   const isCompleted = activeGeneration.status === 'completed';
   const isFailed = activeGeneration.status === 'failed' || activeGeneration.status === 'failed_analysis';
-  const isRefinement = activeGeneration.parent_generation_id !== null;
+  const isRefinement = isCompleted;
+  const isRootGeneration = activeGeneration.parent_generation_id === null;
   
   const alreadySaved = activeGeneration.selected_variation_id !== null && variation
     ? activeGeneration.selected_variation_id === variation.id
@@ -266,7 +267,7 @@ export function ResultsPage() {
                 ) : isCompleted ? null : (
                   <Badge variant="danger" dot>Failed</Badge>
                 )}
-                {isRefinement && (
+                {!isRootGeneration && (
                   <Badge variant="accent" dot>Refinement</Badge>
                 )}
                 <Badge variant="outline">{formatStyleName(activeGeneration.style)}</Badge>

@@ -78,9 +78,9 @@ class GenerationRepository:
             completed_gens = [g for g in all_gens if g.status == "completed"]
             
             if not completed_gens:
-                latest = all_gens[-1]
-            else:
-                latest = max(completed_gens, key=lambda g: g.created_at)
+                continue
+                
+            latest = max(completed_gens, key=lambda g: g.created_at)
                 
             last_updated_at = max(g.created_at for g in all_gens)
             version_count = len(all_gens)

@@ -125,7 +125,7 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
       useUIStore.getState().setLastCustomization(projectId, opts);
       setRefinementDraft('');
       toast.success('Applying your changes...');
-      navigate(`/results/${result.id}`);
+      navigate(`/results/${projectId}?v=${result.id}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to apply changes';
       setError(msg);

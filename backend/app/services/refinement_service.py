@@ -87,7 +87,14 @@ class RefinementService:
                 image = await StorageService.download_image_as_pil(variation.image_path)
                 image_bytes = resize_for_upload(image)
 
-                final_prompt = build_refinement_prompt(instruction, customization)
+                import json
+                analysis_data = {}
+                if parent.analysis_json:
+                    try:
+                        analysis_data = json.loads(parent.analysis_json)
+                    except Exception:
+                        pass
+                final_prompt = build_refinement_prompt(instruction, customization, analysis_data)
 
                 logger.info(f"Background task: calling Replicate for Refinement id={generation.id} (parent={parent_id})…")
                 output_url, seed_used = await self.provider.refine(

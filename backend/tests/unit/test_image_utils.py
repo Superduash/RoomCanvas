@@ -1,11 +1,12 @@
-import io
 import pytest
+import io
 from PIL import Image
 from fastapi import UploadFile
 from app.utils.image_utils import validate_image_file, resize_for_upload
 from app.utils.exceptions import InvalidImageError
 
-def test_validate_image_file_valid():
+@pytest.mark.asyncio
+async def test_validate_image_file_valid():
     # Construct a valid tiny JPEG image in memory
     img = Image.new('RGB', (100, 100), color='red')
     img_byte_arr = io.BytesIO()
@@ -20,7 +21,8 @@ def test_validate_image_file_valid():
     # Should not raise exception
     validate_image_file(upload)
 
-def test_validate_image_file_invalid_type():
+@pytest.mark.asyncio
+async def test_validate_image_file_invalid_type():
     upload = UploadFile(
         filename="test.txt",
         file=io.BytesIO(b"not an image"),
@@ -30,7 +32,8 @@ def test_validate_image_file_invalid_type():
         validate_image_file(upload)
     assert "Unsupported file format" in str(exc.value)
 
-def test_validate_image_file_invalid_content_spoofed():
+@pytest.mark.asyncio
+async def test_validate_image_file_invalid_content_spoofed():
     # Spoofed content-type header, but body is plain text
     upload = UploadFile(
         filename="test.png",
@@ -41,7 +44,8 @@ def test_validate_image_file_invalid_content_spoofed():
         validate_image_file(upload)
     assert "not a valid image" in str(exc.value).lower()
 
-def test_resize_for_upload():
+@pytest.mark.asyncio
+async def test_resize_for_upload():
     img = Image.new('RGB', (3000, 2000), color='blue')
     resized_bytes = resize_for_upload(img, max_dimension=1000)
     

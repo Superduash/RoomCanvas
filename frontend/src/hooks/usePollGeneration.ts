@@ -61,7 +61,24 @@ export function usePollGeneration(id: number | null) {
     
     connectSSE();
     
+    const backupPollInterval = setInterval(async () => {
+      try {
+        const headers = await getAuthHeader();
+        const res = await fetch(`${API_PREFIX}/history/${id}`, { headers });
+        if (res.ok) {
+          const data = await res.json() as GenerationOut;
+          qc.setQueryData(['generation', id], data);
+          if (data.status === 'completed' || data.status === 'failed' || data.status === 'failed_analysis') {
+             clearInterval(backupPollInterval);
+          }
+        }
+      } catch (e) {
+        logger.warn(`Backup poll failed for generation ${id}:`, e);
+      }
+    }, 10000);
+
     return () => {
+      clearInterval(backupPollInterval);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }

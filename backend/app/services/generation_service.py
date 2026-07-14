@@ -55,6 +55,7 @@ class GenerationService:
                 "status": "pending",
                 "processing_time_sec": 0.0,
                 "user_id": user_id if user_id is not None else generation.user_id,
+                "parent_generation_id": generation.id if generation.parent_generation_id is None else generation.parent_generation_id,
             })
             return new_generation
 

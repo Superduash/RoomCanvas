@@ -52,7 +52,9 @@ class ReplicateProvider(GenerationProvider):
                 input={
                     "input_image": file_obj,
                     "prompt": prompt,
-                    "seed": seed
+                    "seed": seed,
+                    "aspect_ratio": "match_input_image",
+                    "output_format": "png"
                 }
             )
             
@@ -98,7 +100,9 @@ class ReplicateProvider(GenerationProvider):
                 input={
                     "input_image": file_obj,
                     "prompt": instruction,
-                    "seed": seed
+                    "seed": seed,
+                    "aspect_ratio": "match_input_image",
+                    "output_format": "png"
                 }
             )
             

@@ -55,10 +55,15 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
         ctx.fill();
       });
 
-      if (refPoints.length === 2) {
+      if (refPoints.length > 1) {
         ctx.beginPath();
         ctx.moveTo(refPoints[0].x, refPoints[0].y);
-        ctx.lineTo(refPoints[1].x, refPoints[1].y);
+        for (let i = 1; i < refPoints.length; i++) {
+          ctx.lineTo(refPoints[i].x, refPoints[i].y);
+        }
+        if (refPoints.length === 4) {
+          ctx.closePath();
+        }
         ctx.stroke();
       }
     }
@@ -98,10 +103,10 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
     const y = (e.clientY - rect.top) * scaleY;
     
     if (mode === 'reference') {
-      if (refPoints.length < 2) {
+      if (refPoints.length < 4) {
         const newPoints = [...refPoints, { x, y }];
         setRefPoints(newPoints);
-        if (newPoints.length === 2) {
+        if (newPoints.length === 4) {
           setMode('target');
         }
       }
@@ -128,7 +133,8 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
       const res = await api.post('/measure', {
         image_id: imageId,
         reference_object_type: referenceType,
-        reference_points: refs,
+        reference_corners: refs,
+        reference_edge: 'height',
         target_points: targets,
         custom_reference_length_cm
       });
@@ -166,7 +172,7 @@ export function MeasurementOverlay({ imageUrl, imageId, onClose, onMeasurementCo
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Measure Room Dimensions</h2>
           <p className="text-sm text-text-secondary">
-            {mode === 'reference' && 'Step 1: Tap two points to mark the reference object.'}
+            {mode === 'reference' && 'Step 1: Tap the 4 corners of the reference object (TL, TR, BR, BL).'}
             {mode === 'target' && 'Step 2: Tap two points to measure a distance.'}
             {mode === 'done' && 'Measurement complete.'}
           </p>
