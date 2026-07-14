@@ -291,14 +291,11 @@ async def delete_generation(
 
     files = []
     children = await repo.get_children(generation_id)
-    for child in children:
-        if child.original_image_path:
-            files.append(child.original_image_path)
-        for v in child.variations:
-            if v.image_path:
-                files.append(v.image_path)
-        await repo.delete(child.id)
-        asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, child.id, repo.user_id))
+    if children:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete a generation that has child refinements."
+        )
 
     if generation.original_image_path:
         files.append(generation.original_image_path)

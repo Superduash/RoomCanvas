@@ -37,6 +37,9 @@ def sanitize_prompt(text: str) -> str:
     text = re.sub(r'\s+', ' ', text)
     return text.strip()[:2000]
 
+def estimate_tokens(text: str) -> int:
+    return len(text.split()) * 1.3  # rough word-to-token estimate, good enough for a guardrail
+
 def get_analysis_prompt(style_id: str) -> str:
     style_info = STYLE_TEMPLATES.get(style_id)
     if style_info:
@@ -57,15 +60,8 @@ def pick_variation_descriptors(style_id: str) -> str:
 
 DESIGN_PRINCIPLES = """
 Apply professional interior design principles:
-- Balance: distribute visual weight evenly. If ceiling or wall light fixtures are used, space them symmetrically and evenly across the ceiling/wall — never asymmetric or unevenly clustered. Mirror furniture placement around a central axis where the room layout allows.
-- Scale and proportion: furniture must be sized appropriately for the room's real dimensions.
-- Rhythm: repeat 2-3 colors, materials, or shapes across the room.
-- Emphasis: establish exactly one clear focal point.
-- Contrast: pair at least one light surface against one dark surface, and one smooth material against one textured material.
-- Harmony: keep the full palette and material selection coherent with the requested style.
-- Details: include finishing touches appropriate to the style.
-If the room is already densely furnished with little open floor space, prioritize restyling existing pieces in place over achieving ideal furniture symmetry — do not force new large pieces into a tight space to satisfy balance/rhythm rules.
-Follow the 60-30-10 color rule: roughly 60% dominant wall/floor tone, 30% secondary furniture/textile tone, 10% accent color in small decor items. Keep furniture pulled slightly away from walls rather than pressed flat against them. If a rug is used, size it so at least the front legs of major seating rest on it. Hang any wall art so its visual center sits at roughly average eye level relative to the floor.
+- Balance & Symmetry: space fixtures symmetrically, mirror furniture where layout allows.
+- Harmony: keep palette coherent with the requested style.
 """
 
 QUALITY_SUFFIX = """
@@ -107,22 +103,86 @@ COMPOSITION_LOCK = """CRITICAL COMPOSITION RULES:
 1. Keep the EXACT same camera angle, framing, and perspective as the original photo.
 2. Do NOT reposition, resize, reflect, or rotate the room layout.
 3. Preserve all structural elements: walls, windows, doors, ceiling, floor, and their positions.
-4. CHANGE only: furniture style, materials, colors, decorations, lighting fixtures, and soft furnishings.
+4. CHANGE only what is explicitly instructed: furniture style, materials, colors, decorations,
+   lighting fixtures — and, when explicitly instructed, complete removal of a specific object
+   with the space behind it naturally reconstructed. Never change anything not explicitly requested.
 5. Use the verb "change" - not "transform" or "redesign" - to signal precise targeted edits."""
+
+REMOVAL_KEYWORDS = ["remove", "delete", "get rid of", "take out", "take away", "eliminate"]
+
+def is_removal_instruction(instruction: str) -> bool:
+    lowered = instruction.lower()
+    return any(kw in lowered for kw in REMOVAL_KEYWORDS)
+
+def build_removal_clause(instruction: str) -> str:
+    return f"""{sanitize_prompt(instruction)}
+Completely delete this object with no trace remaining — no outline, no shadow, no partial
+shape, no residual object. Reconstruct the space it occupied by naturally extending the
+surrounding floor, wall, and baseboard — matching the exact existing texture, tile pattern,
+grout lines, wall color, and lighting of the adjacent area exactly, as if the object was
+never there. Do not introduce any new object, furniture, or shape to fill the space unless
+explicitly instructed to."""
 
 def build_full_prompt(base_prompt: str, customization=None, instruction: str | None = None) -> str:
     parts = [base_prompt]
+    parts.append(QUALITY_SUFFIX)
     
     custom_clause = build_customization_clause(customization)
     if custom_clause:
         parts.append(custom_clause)
         
     if instruction:
-        parts.append(f"Additionally: {sanitize_prompt(instruction)}")
+        instruction_lower = instruction.lower()
+        is_removal = is_removal_instruction(instruction)
         
-    parts.append(QUALITY_SUFFIX)
-    return "\n".join(p for p in parts if p)
+        # Conflict detection
+        if customization:
+            import logging
+            logger = logging.getLogger(__name__)
+            if getattr(customization, "must_have_furniture", None):
+                for item in customization.must_have_furniture:
+                    if item.lower() in instruction_lower and is_removal:
+                        logger.warning(f"Prompt Conflict Detected: Instruction asks to remove, but '{item}' is in must_have_furniture.")
+            if getattr(customization, "avoid", None):
+                for item in customization.avoid:
+                    if item.lower() in instruction_lower and not is_removal:
+                        logger.warning(f"Prompt Conflict Detected: Instruction mentions '{item}', but it is in avoid list.")
 
+        if is_removal:
+            parts.append(build_removal_clause(instruction))
+        else:
+            parts.append(f"Additionally: {sanitize_prompt(instruction)}")
+        
+    final = "\n\n".join(p for p in parts if p)
+    if estimate_tokens(final) > 480:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Assembled prompt ~{estimate_tokens(final):.0f} tokens — near Kontext's 512 limit, may truncate.")
+    return final
+
+
+
+def get_space_guidance(analysis_data: dict = None) -> str:
+    occupancy = (analysis_data or {}).get("space_occupancy", "mostly_empty")
+    open_pct = (analysis_data or {}).get("open_floor_area_pct", 100)
+
+    if occupancy == "densely_furnished" or open_pct < 25:
+        return (
+            "This room has very little open floor space and is already densely furnished. "
+            "Do NOT add large new furniture (no new sofas, cupboards, wardrobes, dining sets, or beds). "
+            "Restyle what already exists in place: update colors, materials, and finishes on the existing "
+            "furniture pieces exactly where they currently sit. Where there is genuinely open space "
+            "(a corner, a windowsill, a small gap), you may add only small-footprint items — a side table, "
+            "a floor lamp, a small plant, an accent chair, wall art, a rug in the open area only. "
+            "Never overlap new objects with existing furniture or walkways."
+        )
+    elif occupancy == "partially_furnished" or open_pct < 60:
+        return (
+            "This room is partially furnished. Keep existing large furniture in its current position "
+            "and restyle it rather than replacing it outright unless the instructions say otherwise. "
+            "Use the remaining open space for appropriately-scaled additions only."
+        )
+    return ""
 
 def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = None, customization=None, is_regenerate=False, style_id=None, instruction: str | None = None) -> str:
     gemini_redesign_prompt = sanitize_prompt(gemini_redesign_prompt)
@@ -142,27 +202,7 @@ def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = N
             f"Preserve the original lighting direction ({arch.get('lighting_direction', 'keep original')}). "
         )
 
-    occupancy = (analysis_data or {}).get("space_occupancy", "mostly_empty")
-    open_pct = (analysis_data or {}).get("open_floor_area_pct", 100)
-
-    if occupancy == "densely_furnished" or open_pct < 25:
-        space_guidance = (
-            "This room has very little open floor space and is already densely furnished. "
-            "Do NOT add large new furniture (no new sofas, cupboards, wardrobes, dining sets, or beds). "
-            "Restyle what already exists in place: update colors, materials, and finishes on the existing "
-            "furniture pieces exactly where they currently sit. Where there is genuinely open space "
-            "(a corner, a windowsill, a small gap), you may add only small-footprint items — a side table, "
-            "a floor lamp, a small plant, an accent chair, wall art, a rug in the open area only. "
-            "Never overlap new objects with existing furniture or walkways."
-        )
-    elif occupancy == "partially_furnished" or open_pct < 60:
-        space_guidance = (
-            "This room is partially furnished. Keep existing large furniture in its current position "
-            "and restyle it rather than replacing it outright unless the instructions say otherwise. "
-            "Use the remaining open space for appropriately-scaled additions only."
-        )
-    else:
-        space_guidance = ""
+    space_guidance = get_space_guidance(analysis_data)
 
     base_prompt = f"""{COMPOSITION_LOCK}
 
@@ -182,27 +222,7 @@ Change the furniture, decor, and finishes while preserving the room's walls, win
     return build_full_prompt(base_prompt, customization, instruction)
 
 def build_refinement_prompt(user_instruction: str | None, customization=None, analysis_data: dict = None) -> str:
-    occupancy = (analysis_data or {}).get("space_occupancy", "mostly_empty")
-    open_pct = (analysis_data or {}).get("open_floor_area_pct", 100)
-
-    if occupancy == "densely_furnished" or open_pct < 25:
-        space_guidance = (
-            "This room has very little open floor space and is already densely furnished. "
-            "Do NOT add large new furniture (no new sofas, cupboards, wardrobes, dining sets, or beds). "
-            "Restyle what already exists in place: update colors, materials, and finishes on the existing "
-            "furniture pieces exactly where they currently sit. Where there is genuinely open space "
-            "(a corner, a windowsill, a small gap), you may add only small-footprint items — a side table, "
-            "a floor lamp, a small plant, an accent chair, wall art, a rug in the open area only. "
-            "Never overlap new objects with existing furniture or walkways."
-        )
-    elif occupancy == "partially_furnished" or open_pct < 60:
-        space_guidance = (
-            "This room is partially furnished. Keep existing large furniture in its current position "
-            "and restyle it rather than replacing it outright unless the instructions say otherwise. "
-            "Use the remaining open space for appropriately-scaled additions only."
-        )
-    else:
-        space_guidance = ""
+    space_guidance = get_space_guidance(analysis_data)
 
     base_prompt = f"""{COMPOSITION_LOCK}
 

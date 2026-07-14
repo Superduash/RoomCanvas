@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, Check, RefreshCw, Share2, ChevronLeft, AlertTriangle, Layers, Clock, Sparkles,
-  SplitSquareHorizontal, Image as ImageIcon, ArrowLeftRight
+  SplitSquareHorizontal, Image as ImageIcon, ArrowLeftRight, Trash2
 } from 'lucide-react';
+import { Dialog } from '../components/primitives/Dialog';
 import React, { Suspense } from 'react';
 import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
 import { CompareSliderSkeleton } from '../components/results/CompareSlider';
@@ -17,7 +18,7 @@ import { MeasurementOverlay } from '../components/measurement/MeasurementOverlay
 import { Button } from '../components/primitives/Button';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton, SkeletonText } from '../components/primitives/Skeleton';
-import { useProjectTimeline, useGenerateDesign, useSelectVariation } from '../api/queries';
+import { useProjectTimeline, useGenerateDesign, useSelectVariation, useDeleteGeneration } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { resolveImageUrl } from '../api/client';
 import { formatRelativeTime } from '../lib/utils';
@@ -61,8 +62,10 @@ export function ResultsPage() {
     return () => setActiveGenerationId(null);
   }, [activeGeneration, setActiveGenerationId]);
 
+  const navigate = useNavigate();
   const generateDesign = useGenerateDesign();
   const selectVariation = useSelectVariation();
+  const deleteGeneration = useDeleteGeneration();
 
   // Parse analysis JSON once for the active generation
   const analysisData = useMemo<AnalyzeResponse | null>(() => {
@@ -73,6 +76,29 @@ export function ResultsPage() {
       return null;
     }
   }, [activeGeneration?.id, activeGeneration?.analysis_json]);
+
+  const handleDeleteVersion = async (generationId: number) => {
+    if (!projectDetails) return;
+    try {
+      await deleteGeneration.mutateAsync(generationId);
+      toast.success('Version deleted.');
+      
+      // If we just deleted the active version, navigate away so we don't land on a dead page.
+      if (activeGeneration?.id === generationId) {
+        const remainingTimeline = projectDetails.timeline.filter(g => g.id !== generationId);
+        if (remainingTimeline.length > 0) {
+          // Go to the latest generation in the remaining timeline
+          const nextTarget = remainingTimeline[remainingTimeline.length - 1];
+          setSearchParams({ v: nextTarget.id.toString() }, { replace: true });
+        } else {
+          // Fallback to history if everything is somehow gone (shouldn't happen since root isn't deletable if it has children)
+          navigate('/history', { replace: true });
+        }
+      }
+    } catch (err) {
+      toast.error('Failed to delete version.');
+    }
+  };
 
   if (isLoading) {
     return <ResultsSkeleton />;
@@ -369,35 +395,23 @@ export function ResultsPage() {
               <div className="flex overflow-x-auto gap-3 pb-2 snap-x hide-scrollbar">
                 {timeline.map((g, index) => {
                   const isActive = g.id === activeGeneration.id;
-                  const thumb = g.variations[0]?.image_path ? resolveImageUrl(g.variations[0].image_path) : originalSrc;
                   const isRoot = g.parent_generation_id === null;
-                  
+                  const hasChildren = timeline.some(child => child.parent_generation_id === g.id);
+                  const isDeleteDisabled = isRoot && hasChildren;
+                  const thumb = g.variations[0]?.image_path ? resolveImageUrl(g.variations[0].image_path) : originalSrc;
+                  const label = isRoot ? 'Original Base' : `Refinement ${timeline.length - index - (timeline.some(x => x.parent_generation_id === null) ? 1 : 0)}`;
+
                   return (
-                    <button
+                    <VersionThumbnail 
                       key={g.id}
-                      onClick={() => setSearchParams({ v: g.id.toString() })}
-                      className={`relative flex-shrink-0 w-32 rounded-xl overflow-hidden snap-start transition-all duration-200 border-2 text-left ${
-                        isActive ? 'border-accent shadow-md scale-[1.02]' : 'border-transparent hover:border-border-strong opacity-80 hover:opacity-100'
-                      }`}
-                    >
-                      <div className="aspect-[4/3] w-full">
-                        <img src={thumb} className="w-full h-full object-cover" alt="Version thumbnail" />
-                      </div>
-                      <div className={`p-2 ${isActive ? 'bg-accent/5' : 'bg-surface-alt'}`}>
-                        <div className="text-[10px] font-medium text-text-tertiary mb-0.5 uppercase tracking-wide">
-                          {isRoot ? 'Original Base' : `Refinement ${timeline.length - index - (timeline.some(x => x.parent_generation_id === null) ? 1 : 0)}`}
-                        </div>
-                        <div className="text-xs font-medium text-text-primary truncate">
-                          {g.status === 'pending' || g.status === 'analyzed' ? 'Generating...' : formatRelativeTime(g.created_at)}
-                        </div>
-                      </div>
-                      
-                      {isActive && (
-                        <div className="absolute top-1 right-1 bg-accent rounded-full p-0.5">
-                          <Check className="h-2 w-2 text-white" strokeWidth={4} />
-                        </div>
-                      )}
-                    </button>
+                      generation={g}
+                      isActive={isActive}
+                      isDeleteDisabled={isDeleteDisabled}
+                      thumbUrl={thumb}
+                      label={label}
+                      onSelect={(id) => setSearchParams({ v: id.toString() })}
+                      onDelete={handleDeleteVersion}
+                    />
                   );
                 })}
               </div>
@@ -542,6 +556,76 @@ function RegeneratingState({ isCompleted, isFailed }: { isCompleted: boolean; is
       <div className="max-w-md w-full">
         <AnalysisStepper steps={REGEN_STEPS} currentIndex={currentStep} />
       </div>
+    </div>
+  );
+}
+
+interface VersionThumbnailProps {
+  generation: any;
+  isActive: boolean;
+  isDeleteDisabled: boolean;
+  thumbUrl: string;
+  label: string;
+  onSelect: (id: number) => void;
+  onDelete: (id: number) => void;
+}
+
+function VersionThumbnail({ generation, isActive, isDeleteDisabled, thumbUrl, label, onSelect, onDelete }: VersionThumbnailProps) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  return (
+    <div
+      className="relative group"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (!isDeleteDisabled) setShowMenu(true);
+      }}
+      title={isDeleteDisabled ? "Can't delete the original version while refinements exist" : undefined}
+    >
+      <button
+        onClick={() => onSelect(generation.id)}
+        className={`relative flex-shrink-0 w-32 rounded-xl overflow-hidden snap-start transition-all duration-200 border-2 text-left ${
+          isActive ? 'border-accent shadow-md scale-[1.02]' : 'border-transparent hover:border-border-strong opacity-80 hover:opacity-100'
+        }`}
+      >
+        <div className="aspect-[4/3] w-full">
+          <img src={thumbUrl} className="w-full h-full object-cover" alt="Version thumbnail" />
+        </div>
+        <div className={`p-2 ${isActive ? 'bg-accent/5' : 'bg-surface-alt'}`}>
+          <div className="text-[10px] font-medium text-text-tertiary mb-0.5 uppercase tracking-wide">
+            {label}
+          </div>
+          <div className="text-xs font-medium text-text-primary truncate">
+            {generation.status === 'pending' || generation.status === 'analyzed' ? 'Generating...' : formatRelativeTime(generation.created_at)}
+          </div>
+        </div>
+        
+        {isActive && (
+          <div className="absolute top-1 right-1 bg-accent rounded-full p-0.5">
+            <Check className="h-2 w-2 text-white" strokeWidth={4} />
+          </div>
+        )}
+      </button>
+
+      {!isDeleteDisabled && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowMenu(true); }}
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus:opacity-100 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center transition-opacity z-10"
+          aria-label="Delete this version"
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
+
+      {showMenu && (
+        <Dialog open={true} onClose={() => setShowMenu(false)} title="Delete this version?">
+          <p className="text-sm text-text-secondary mb-6">This design version will be permanently deleted. This can't be undone.</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setShowMenu(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => { onDelete(generation.id); setShowMenu(false); }}>Delete</Button>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }

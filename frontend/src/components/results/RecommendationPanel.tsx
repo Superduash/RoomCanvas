@@ -60,9 +60,11 @@ export function FurnitureList({ items }: FurnitureListProps) {
               )}
             </div>
             <div className="flex-shrink-0 mt-0.5">
-              <Badge variant="outline" className="text-[10px] uppercase tracking-wider px-2 py-0.5">
-                ${item.price_min}–${item.price_max}
-              </Badge>
+              {item.price_min != null && item.price_max != null ? (
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wider px-2 py-0.5">
+                  ${item.price_min}–${item.price_max}
+                </Badge>
+              ) : null}
             </div>
           </li>
         ))}
@@ -337,9 +339,11 @@ function BudgetSection({ title, items, total, badgeType, badgeLabel }: any) {
                 <p className="text-[11px] text-text-secondary line-clamp-2 leading-relaxed">{item.description}</p>
               </div>
               <div className="shrink-0 mt-0.5">
-                 <span className="text-[12px] font-medium text-text-primary whitespace-nowrap">
-                   ${item.price_min}–${item.price_max}
-                 </span>
+                {item.price_min != null && item.price_max != null ? (
+                  <span className="text-[12px] font-medium text-text-primary whitespace-nowrap">
+                    ${item.price_min}–${item.price_max}
+                  </span>
+                ) : null}
               </div>
             </li>
           ))}

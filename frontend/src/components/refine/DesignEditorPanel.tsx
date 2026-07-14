@@ -14,7 +14,7 @@ import { getFriendlyApiError } from '../../utils/errors';
 
 const SUGGESTION_CHIPS = [
   'Change the wall color to sage green',
-  'Replace the sofa with a leather one',
+  'Remove the black laptop on the table',
   'Add more indoor plants',
   'Make the lighting warmer',
 ];
@@ -147,7 +147,7 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
       <div className="space-y-3">
         <Textarea
           id="refinement-instruction"
-          placeholder="e.g. 'Make the walls a warm sage green' or 'Add a modern rug'"
+          placeholder="e.g. 'Make the walls a warm sage green' or 'Remove the black laptop'"
           value={refinementDraft}
           onChange={(e) => setRefinementDraft(e.target.value)}
           className="min-h-[100px] w-full text-sm resize-none"
