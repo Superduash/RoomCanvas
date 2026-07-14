@@ -14,7 +14,7 @@ RoomCanvas is a full-stack, AI-powered web application that allows users to uplo
 * **Project & Timeline Management:** Groups generations into projects. Users can view their history, compare before/after results using an interactive slider, and branch off variations.
 
 ### Technical Features
-* **Bring Your Own Key (BYOK):** Users can supply their own API keys (Gemini, Replicate, Groq) via client-side AES-encrypted storage to bypass platform limits.
+* **Bring Your Own Key (BYOK):** Users can supply their own API keys (Gemini, Replicate, Groq) via secure server-side Fernet-encrypted storage to bypass platform limits.
 * **Real-time SSE Updates:** Uses Server-Sent Events (SSE) for zero-latency UI updates during background image generation, with automatic failover polling.
 * **Provider Fallback Chain:** Implements a robust registry pattern to seamlessly failover between AI providers (e.g., if the primary LLM is rate-limited).
 * **Progressive Web App (PWA):** Fully installable on mobile and desktop devices with offline caching for static assets.

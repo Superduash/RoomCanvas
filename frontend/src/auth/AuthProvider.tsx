@@ -366,9 +366,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async (remember = true) => {
-    await withPersistence(remember);
+    // Start persistence in background. Do NOT await before signInWithPopup 
+    // to avoid strict popup blockers on mobile browsers (Safari/iOS).
+    const persistencePromise = withPersistence(remember);
     try {
       const cred = await signInWithPopup(firebaseAuth, googleProvider);
+      await persistencePromise; // Ensure persistence is applied
       // onAuthStateChanged will fire and trigger syncBackendUser automatically.
       // Do NOT navigate here — AppShell handles routing once profile loads.
       return cred.user;

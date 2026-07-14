@@ -138,7 +138,7 @@ export function ResultsPage() {
   
   const isCompleted = activeGeneration.status === 'completed';
   const isFailed = activeGeneration.status === 'failed' || activeGeneration.status === 'failed_analysis';
-  const isRefinement = activeGeneration.parent_generation_id !== null;
+  const isRefinement = isCompleted; // If completed, next action is a refinement of this image
   const isRootGeneration = activeGeneration.parent_generation_id === null;
 
   // Use selected variation if set, otherwise fall back to first
