@@ -97,8 +97,6 @@ export function MeasurementOverlay({ originalImageUrl, generatedImageUrl, imageI
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (mode === 'done') return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -117,15 +115,29 @@ export function MeasurementOverlay({ originalImageUrl, generatedImageUrl, imageI
           setMode('target');
         }
       }
-    } else if (mode === 'target') {
-      if (targetPoints.length < 2) {
-        const newPoints = [...targetPoints, { x, y }];
-        setTargetPoints(newPoints);
-        if (newPoints.length === 2) {
-          setMode('done');
-          measureDistance(refPoints, newPoints);
-        }
+    } else if (mode === 'target' || mode === 'done') {
+      let currentTargets = targetPoints;
+      if (currentTargets.length === 2) {
+        currentTargets = [];
+        setResult(null);
+        setMode('target');
       }
+      const newPoints = [...currentTargets, { x, y }];
+      setTargetPoints(newPoints);
+      if (newPoints.length === 2) {
+        setMode('done');
+        measureDistance(refPoints, newPoints);
+      }
+    }
+  };
+
+  const handleUndo = () => {
+    if (mode === 'reference' && refPoints.length > 0) {
+      setRefPoints(prev => prev.slice(0, -1));
+    } else if ((mode === 'target' || mode === 'done') && targetPoints.length > 0) {
+      setTargetPoints(prev => prev.slice(0, -1));
+      setResult(null);
+      setMode('target');
     }
   };
 
@@ -235,6 +247,13 @@ export function MeasurementOverlay({ originalImageUrl, generatedImageUrl, imageI
               )}
             </div>
           )}
+          <Button 
+            variant="secondary" 
+            onClick={handleUndo}
+            disabled={(mode === 'reference' && refPoints.length === 0) || (mode !== 'reference' && targetPoints.length === 0)}
+          >
+            Undo
+          </Button>
           <Button variant="secondary" onClick={handleReset}>Reset</Button>
           <Button variant="ghost" onClick={onClose}>Close</Button>
         </div>

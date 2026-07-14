@@ -24,6 +24,11 @@ Additionally assess and report:
 Design it with the following style hint in mind: {style_hint}
 
 Follow the requested JSON schema strictly. Ensure your redesign prompt describes exactly what to change in the image, using verbs like "change" rather than "transform".
+
+For each furniture item, classify "purchase_status": use "keep_existing" for furniture already
+visible in the original photo that the redesign keeps in place, "new_purchase" for anything the
+user needs to buy, and "optional_upgrade" for nice-to-have additions that aren't essential to the
+design. Give price_min and price_max as plain numbers in USD, not strings or ranges with symbols.
 """
 
 def sanitize_prompt(text: str) -> str:

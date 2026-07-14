@@ -41,7 +41,7 @@ class AnalyzeResponse(BaseModel):
     layout_notes: str
     color_palette: list[dict]
     lighting_suggestions: str
-    estimated_budget_range: str
+    budget_summary: dict
     style_explanation: str
     redesign_prompt: str
 

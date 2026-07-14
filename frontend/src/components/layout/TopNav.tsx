@@ -163,7 +163,7 @@ export function TopNav() {
                 </AnimatePresence>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Link to="/signin">
                   <Button variant="ghost" size="sm">Log in</Button>
                 </Link>

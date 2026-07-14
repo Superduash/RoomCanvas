@@ -244,7 +244,7 @@ export function HistoryPage() {
         title="Clear entire library?"
         description="This will permanently delete all your projects, refinements, and images. This action cannot be undone."
       >
-        <div className="flex gap-3 justify-end mt-4">
+        <div className="flex flex-wrap gap-3 justify-end mt-4">
           <Button variant="secondary" onClick={() => setClearOpen(false)}>
             Cancel
           </Button>

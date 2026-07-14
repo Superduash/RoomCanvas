@@ -280,7 +280,7 @@ export function ResultsPage() {
 
             {/* View mode toggle */}
             {isCompleted && (
-              <div className="flex rounded-lg border border-border bg-surface p-1 shadow-xs w-fit" role="group" aria-label="View mode">
+              <div className="flex flex-wrap rounded-lg border border-border bg-surface p-1 shadow-xs w-fit" role="group" aria-label="View mode">
                 <button
                   onClick={() => setViewMode('compare')}
                   className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold transition-all duration-fast rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
@@ -459,7 +459,7 @@ export function ResultsPage() {
                   confidence={analysisData.estimated_dimensions.confidence}
                   onMeasureClick={() => setShowMeasurement(true)}
                 />
-                <BudgetCard range={analysisData.estimated_budget_range} />
+                <BudgetCard summary={analysisData.budget_summary} />
                 <PaletteSwatches swatches={analysisData.color_palette} />
                 <FurnitureList items={analysisData.furniture} />
                 

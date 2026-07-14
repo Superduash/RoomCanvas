@@ -238,7 +238,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
         navigate('/upload', { state: { selectedStyle: item.styleId } });
         break;
       case 'project':
-        navigate(`/results/${item.id}`); // Navigating to /results/:latestGenerationId (using project ID as proxy for now, check route definition later if needed, assuming /results/:id works)
+        navigate(`/results/${item.id}`);
         break;
       case 'page':
         navigate(item.path);

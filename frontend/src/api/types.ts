@@ -76,7 +76,9 @@ export interface ProjectDetails {
 export interface FurnitureItem {
   item: string;
   description: string;
-  estimated_price_range: string;
+  price_min: number;
+  price_max: number;
+  purchase_status: 'new_purchase' | 'keep_existing' | 'optional_upgrade';
   dimensions?: string;
   confidence?: 'High' | 'Medium' | 'Low';
 }
@@ -94,7 +96,13 @@ export interface AnalyzeResponse {
   layout_notes: string;
   color_palette: ColorSwatch[];
   lighting_suggestions: string;
-  estimated_budget_range: string;
+  budget_summary: {
+    required_purchase_total: { min: number; max: number };
+    optional_upgrade_total: { min: number; max: number };
+    grand_total: { min: number; max: number };
+    items_to_buy_count: number;
+    items_kept_count: number;
+  };
   style_explanation: string;
   redesign_prompt: string;
   design_rationale?: {

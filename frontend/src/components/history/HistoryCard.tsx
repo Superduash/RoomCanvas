@@ -288,7 +288,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
         <p className="text-text-secondary text-sm mb-6">
           Are you sure you want to delete this project? This will permanently remove the original photo, all generated variations, and refinements.
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleteGen.isPending}>
             Cancel
           </Button>
@@ -320,7 +320,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
               required
             />
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} disabled={renameGen.isPending}>
               Cancel
             </Button>

@@ -44,7 +44,7 @@ export function VerificationBanner() {
             Please verify your email address to fully secure your account.
           </p>
         </div>
-        <div className="flex items-center gap-4 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-4 flex-shrink-0">
           <button
             onClick={handleResend}
             disabled={sending || sent}

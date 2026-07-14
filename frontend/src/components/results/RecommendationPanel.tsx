@@ -31,6 +31,21 @@ export function FurnitureList({ items }: FurnitureListProps) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-0.5">
                 <p className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors duration-fast">{item.item}</p>
+                {item.purchase_status === 'keep_existing' && (
+                  <Badge variant="success" className="text-[9px] px-1.5 py-0">
+                    Already have this
+                  </Badge>
+                )}
+                {item.purchase_status === 'optional_upgrade' && (
+                  <Badge variant="warning" className="text-[9px] px-1.5 py-0">
+                    Optional
+                  </Badge>
+                )}
+                {item.purchase_status === 'new_purchase' && (
+                  <Badge variant="info" className="text-[9px] px-1.5 py-0">
+                    New Purchase
+                  </Badge>
+                )}
                 {item.confidence && (
                   <Badge variant={confidenceBadgeMap[item.confidence] || 'info'} className="text-[9px] px-1.5 py-0">
                     {item.confidence} Conf.
@@ -44,7 +59,7 @@ export function FurnitureList({ items }: FurnitureListProps) {
             </div>
             <div className="flex-shrink-0 mt-0.5">
               <Badge variant="outline" className="text-[10px] uppercase tracking-wider px-2 py-0.5">
-                {item.estimated_price_range}
+                ${item.price_min}–${item.price_max}
               </Badge>
             </div>
           </li>
@@ -162,10 +177,16 @@ export function PaletteSwatches({ swatches }: PaletteSwatchesProps) {
 }
 
 interface BudgetCardProps {
-  range: string;
+  summary: {
+    required_purchase_total: { min: number; max: number };
+    optional_upgrade_total: { min: number; max: number };
+    grand_total: { min: number; max: number };
+    items_to_buy_count: number;
+    items_kept_count: number;
+  };
 }
 
-export function BudgetCard({ range }: BudgetCardProps) {
+export function BudgetCard({ summary }: BudgetCardProps) {
   return (
     <div className="rounded-xl border border-accent/20 bg-accent-subtle p-5">
       <div className="flex items-center gap-2 mb-2">
@@ -174,7 +195,15 @@ export function BudgetCard({ range }: BudgetCardProps) {
           Estimated Budget
         </h4>
       </div>
-      <p className="text-2xl font-semibold tracking-tight text-accent-hover mb-4">{range}</p>
+      <p className="text-2xl font-semibold tracking-tight text-accent-hover mb-2">
+        ${summary.grand_total.min}–${summary.grand_total.max}
+      </p>
+      
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-accent/80 mb-4">
+        <span>Required: ${summary.required_purchase_total.min}–${summary.required_purchase_total.max}</span>
+        <span>•</span>
+        <span>Optional: ${summary.optional_upgrade_total.min}–${summary.optional_upgrade_total.max}</span>
+      </div>
       
       {/* 40/20/25/15 distribution */}
       <div className="flex flex-col gap-2">

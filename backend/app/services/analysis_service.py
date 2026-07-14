@@ -11,6 +11,20 @@ from app.repositories.generation_repository import GenerationRepository
 
 logger = logging.getLogger(__name__)
 
+def compute_budget_summary(furniture: list[dict]) -> dict:
+    new_items = [f for f in furniture if f.get("purchase_status") == "new_purchase"]
+    optional_items = [f for f in furniture if f.get("purchase_status") == "optional_upgrade"]
+    required_min = sum(f.get("price_min", 0) for f in new_items)
+    required_max = sum(f.get("price_max", 0) for f in new_items)
+    optional_min = sum(f.get("price_min", 0) for f in optional_items)
+    optional_max = sum(f.get("price_max", 0) for f in optional_items)
+    return {
+        "required_purchase_total": {"min": required_min, "max": required_max},
+        "optional_upgrade_total": {"min": optional_min, "max": optional_max},
+        "grand_total": {"min": required_min + optional_min, "max": required_max + optional_max},
+        "items_to_buy_count": len(new_items),
+        "items_kept_count": len([f for f in furniture if f.get("purchase_status") == "keep_existing"]),
+    }
 
 class AnalysisService:
     def __init__(self, repository: GenerationRepository):
@@ -33,6 +47,8 @@ class AnalysisService:
         # 1. Try to get analysis from AI Provider
         async def fetch_analysis():
             res = await self.provider.analyze_room(image_bytes, mime_type, style_id)
+            res["budget_summary"] = compute_budget_summary(res.get("furniture", []))
+            res.pop("estimated_budget_range", None)
             # Validate response shape
             _ = AnalyzeResponse(analysis_id=0, **res)
             return res
@@ -55,7 +71,13 @@ class AnalysisService:
             analysis_dict = {
                 "room_type": "Unknown",
                 "furniture": [
-                    {"item": "Main structural elements", "description": "Unable to map detailed furniture", "estimated_price_range": "Pending"}
+                    {
+                        "item": "Main structural elements", 
+                        "description": "Unable to map detailed furniture", 
+                        "price_min": 0, 
+                        "price_max": 0, 
+                        "purchase_status": "keep_existing"
+                    }
                 ],
                 "estimated_dimensions": {"width_ft": 0.0, "length_ft": 0.0, "confidence": "low"},
                 "layout_notes": "Unable to analyze room layout dynamically. You can still generate a design manually by specifying options.",
@@ -63,7 +85,13 @@ class AnalysisService:
                     {"name": "Neutral Tone", "hex": "#808080"}
                 ],
                 "lighting_suggestions": "Unable to analyze lighting context.",
-                "estimated_budget_range": "Pending Design Choices",
+                "budget_summary": {
+                    "required_purchase_total": {"min": 0, "max": 0},
+                    "optional_upgrade_total": {"min": 0, "max": 0},
+                    "grand_total": {"min": 0, "max": 0},
+                    "items_to_buy_count": 0,
+                    "items_kept_count": 1,
+                },
                 "style_explanation": "Unable to analyze style dynamically.",
                 "redesign_prompt": (
                     f"Fully redesign this room in {style_id.replace('_', ' ')} style. "

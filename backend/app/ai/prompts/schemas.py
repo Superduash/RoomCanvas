@@ -5,7 +5,7 @@ JSON Schema definitions for Gemini structured outputs.
 ANALYSIS_RESPONSE_SCHEMA = {
     "type": "object",
     "required": ["room_type", "architecture", "furniture_placement", "furniture", "estimated_dimensions", "layout_notes",
-                 "color_palette", "lighting_suggestions", "estimated_budget_range",
+                 "color_palette", "lighting_suggestions",
                  "style_explanation", "redesign_prompt", "design_rationale", "space_occupancy", "open_floor_area_pct"],
     "properties": {
         "space_occupancy": {"type": "string", "enum": ["mostly_empty", "partially_furnished", "densely_furnished"]},
@@ -27,11 +27,13 @@ ANALYSIS_RESPONSE_SCHEMA = {
             "type": "array",
             "items": {
                 "type": "object",
-                "required": ["item", "description", "estimated_price_range"],
+                "required": ["item", "description", "price_min", "price_max", "purchase_status"],
                 "properties": {
                     "item": {"type": "string"},
                     "description": {"type": "string"},
-                    "estimated_price_range": {"type": "string"},
+                    "price_min": {"type": "number"},
+                    "price_max": {"type": "number"},
+                    "purchase_status": {"type": "string", "enum": ["new_purchase", "keep_existing", "optional_upgrade"]},
                     "dimensions": {"type": "string"},
                     "confidence": {"type": "string", "enum": ["Low", "Medium", "High"]}
                 }
@@ -56,7 +58,6 @@ ANALYSIS_RESPONSE_SCHEMA = {
             }
         },
         "lighting_suggestions": {"type": "string"},
-        "estimated_budget_range": {"type": "string"},
         "style_explanation": {"type": "string"},
         "redesign_prompt": {"type": "string"},
         "design_rationale": {
