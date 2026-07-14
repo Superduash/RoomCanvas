@@ -29,14 +29,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,https://roomcanvasai.vercel.app,https://roomcanvas.onrender.com"
     MAX_UPLOAD_SIZE_MB: int = 10
 
-    # ── AI Pipeline ───────────────────────────────────────────────────────────
-    ACTIVE_ANALYSIS_PROVIDER: str = "gemini"
-    ACTIVE_GENERATION_PROVIDER: str = "replicate"
-
     # API Keys
-    GEMINI_API_KEY: str = ""
-    REPLICATE_API_TOKEN: str = ""
-    GROQ_API_KEY: str = ""
     FERNET_SECRET_KEY: str = ""
     UPSTASH_REDIS_URL: str = ""
     UPSTASH_REDIS_TOKEN: str = ""

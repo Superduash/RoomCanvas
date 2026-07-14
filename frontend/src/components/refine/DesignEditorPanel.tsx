@@ -11,7 +11,7 @@ import type { CustomizationOptions } from '../../api/types';
 import { useUIStore } from '../../store/uiStore';
 import { toast } from '../../lib/toast';
 import { getFriendlyApiError } from '../../utils/errors';
-import { useActiveProvider } from '../../api/queries';
+import { useActiveProvider, useActiveTextProvider } from '../../api/queries';
 import { ProviderWarning } from '../common/ProviderWarning';
 
 const SUGGESTION_CHIPS = [
@@ -43,11 +43,16 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
   
   const refine = useRefineDesign();
   const generate = useGenerateDesign();
-  const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
+  const { data: activeImageProvider, isLoading: imageProviderLoading } = useActiveProvider();
+  const { data: activeTextProvider, isLoading: textProviderLoading } = useActiveTextProvider();
   
-  const hasProvider = activeProvider?.is_available ?? false;
+  const hasImageProvider = activeImageProvider?.is_available ?? false;
+  const hasTextProvider = activeTextProvider?.is_available ?? false;
+  const hasAllProviders = hasImageProvider && hasTextProvider;
+  const providersLoading = imageProviderLoading || textProviderLoading;
+  
   const isPending = refine.isPending || generate.isPending;
-  const isDisabled = disabled || (!hasProvider && !providerLoading);
+  const isDisabled = disabled || (!hasAllProviders && !providersLoading);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [chipConfirm, setChipConfirm] = useState<string | null>(null);
@@ -110,6 +115,11 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
         return;
     }
 
+    if (!hasAllProviders) {
+      setError("Please configure both text and image providers in Settings first.");
+      return;
+    }
+
     try {
       let result;
       // If we are refining an already completed generation
@@ -148,11 +158,12 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
             ? 'Wait for the current generation to finish.' 
             : 'Keep the room structure, but change the details. Use text instructions or select options.'}
         </p>
+        <div className="pt-2">
+          {!providersLoading && !hasAllProviders && (
+            <ProviderWarning className="mb-3" />
+          )}
+        </div>
       </div>
-
-      {!providerLoading && !hasProvider && (
-        <ProviderWarning />
-      )}
 
       <div className="space-y-3">
         <Textarea
@@ -343,15 +354,15 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
           size="md"
           className="w-full justify-center shadow-md"
           disabled={isDisabled}
-          loading={isPending || providerLoading}
+          loading={isPending || providersLoading}
           icon={!isPending ? <Sparkles className="h-4 w-4" /> : undefined}
           onClick={handleSubmit}
         >
           {isPending ? 'Applying Changes...' : 'Apply Changes'}
         </Button>
-        {!providerLoading && hasProvider && !disabled && (
+        {!providersLoading && hasAllProviders && !disabled && (
           <p className="text-xs text-text-tertiary text-center font-medium">
-            Using: {activeProvider?.provider_name}
+            Using: {activeTextProvider?.provider_name} & {activeImageProvider?.provider_name}
           </p>
         )}
       </div>

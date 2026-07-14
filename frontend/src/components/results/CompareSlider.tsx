@@ -245,7 +245,7 @@ export function CompareSlider({
     <div
       ref={containerRef}
       className={cn(
-        'relative w-full overflow-hidden bg-surface-alt select-none touch-none focus:outline-none',
+        'relative w-full aspect-[4/3] sm:aspect-[16/10] overflow-hidden bg-transparent select-none touch-none focus:outline-none',
         className
       )}
       tabIndex={0}
@@ -265,19 +265,26 @@ export function CompareSlider({
         willChange: 'auto'
       }}
     >
+      {/* Skeleton overlay while loading */}
+      {!afterLoaded && (
+        <div className="absolute inset-0 z-50 pointer-events-none">
+          <Skeleton className="w-full h-full rounded-none" />
+        </div>
+      )}
+
       {/* After (redesigned) — full width base layer */}
       <img
         ref={afterImgRef}
         src={afterSrc}
         alt={afterLabel}
-        className="block w-full h-auto pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
         draggable={false}
         loading="eager"
         fetchPriority="high"
         decoding="async"
         onLoad={() => setAfterLoaded(true)}
         onError={(e) => {
-          e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' fill='%23f3f4f6'%3E%3Crect width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%239ca3af'%3EImage Unavailable%3C/text%3E%3C/svg%3E";
+          e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' fill='transparent'%3E%3Crect width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%239ca3af'%3EImage Unavailable%3C/text%3E%3C/svg%3E";
         }}
       />
 
@@ -290,13 +297,13 @@ export function CompareSlider({
         <img
           src={beforeSrc}
           alt={beforeLabel}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
           draggable={false}
           loading="eager"
           fetchPriority="high"
           decoding="async"
           onError={(e) => {
-            e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' fill='%23f3f4f6'%3E%3Crect width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%239ca3af'%3EImage Unavailable%3C/text%3E%3C/svg%3E";
+            e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' fill='transparent'%3E%3Crect width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%239ca3af'%3EImage Unavailable%3C/text%3E%3C/svg%3E";
           }}
         />
       </div>
@@ -361,7 +368,7 @@ export function CompareSlider({
 
 export function CompareSliderSkeleton() {
   return (
-    <div className="w-full aspect-[16/10] overflow-hidden">
+    <div className="w-full aspect-[4/3] sm:aspect-[16/10] overflow-hidden">
       <Skeleton className="w-full h-full rounded-none" />
     </div>
   );

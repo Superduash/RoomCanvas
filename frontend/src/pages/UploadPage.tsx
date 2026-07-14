@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '../components/primitives/Button';
 import { Dropzone } from '../components/upload/Dropzone';
 import { AdvancedOptions } from '../components/upload/AdvancedOptions';
 import { Card } from '../components/primitives/Card';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton } from '../components/primitives/Skeleton';
-import { useConfig, useStyles, useAnalyzeRoom, useActiveProvider } from '../api/queries';
+import { useConfig, useStyles, useAnalyzeRoom, useActiveProvider, useActiveTextProvider } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
 import { toast } from '../lib/toast';
@@ -21,7 +20,14 @@ export function UploadPage() {
   const navigate = useNavigate();
   const { data: config } = useConfig();
   const { data: styles, isLoading: stylesLoading } = useStyles();
-  const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
+  const { data: activeImageProvider, isLoading: imageProviderLoading } = useActiveProvider();
+  const { data: activeTextProvider, isLoading: textProviderLoading } = useActiveTextProvider();
+
+  // Derived state
+  const hasImageProvider = activeImageProvider?.is_available ?? false;
+  const hasTextProvider = activeTextProvider?.is_available ?? false;
+  const providersLoading = imageProviderLoading || textProviderLoading;
+  const hasAllProviders = hasImageProvider && hasTextProvider;
 
 
   const pendingFile = useUIStore((s) => s.pendingFile);
@@ -34,8 +40,7 @@ export function UploadPage() {
   const analyze = useAnalyzeRoom();
   const [customization, setCustomization] = useState<any>({});
   
-  const hasProvider = activeProvider?.is_available ?? false;
-  const canSubmit = !!pendingFile && !!selectedStyleId && hasProvider;
+  const canSubmit = !!pendingFile && !!selectedStyleId && hasAllProviders;
   const selectedStyle = styles?.find((s) => s.id === selectedStyleId);
   const requireAuth = useRequireAuthAction();
 
@@ -235,31 +240,34 @@ export function UploadPage() {
             <AdvancedOptions value={customization} onChange={setCustomization} />
           </div>
 
-          <div className="flex flex-col gap-3">
-            {!providerLoading && !hasProvider && (
+          <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
+            {!providersLoading && !hasAllProviders && (
               <ProviderWarning className="mb-2" />
             )}
             
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full justify-center shadow-md py-4 text-base active:scale-[0.98] transition-transform touch-manipulation"
-              disabled={!canSubmit || providerLoading}
-              loading={analyze.isPending || providerLoading}
-              iconRight={!analyze.isPending ? <ArrowRight className="h-5 w-5" /> : undefined}
+            <button
               onClick={handleAnalyzeClick}
+              disabled={!canSubmit || providersLoading}
+              className="w-full flex justify-center items-center h-[52px] bg-text-primary text-background text-[15px] font-medium rounded-xl hover:bg-text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
-              {analyze.isPending ? 'Analyzing Room...' : 'Start Redesign'}
-            </Button>
+              {analyze.isPending || providersLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>{providersLoading ? 'Checking setup...' : 'Analyzing Room...'}</span>
+                </div>
+              ) : (
+                'Generate Design'
+              )}
+            </button>
 
-            {!providerLoading && hasProvider && (
-              <p className="text-xs text-text-tertiary text-center font-medium">
-                Using: {activeProvider?.provider_name}
+            {!providersLoading && hasAllProviders && (
+              <p className="text-center text-[11px] text-text-tertiary">
+                Using: {activeTextProvider?.provider_name} & {activeImageProvider?.provider_name}
               </p>
             )}
 
             <AnimatePresence>
-              {!canSubmit && !analyze.isPending && hasProvider && (
+              {!canSubmit && !analyze.isPending && hasAllProviders && (
                 <motion.p 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}

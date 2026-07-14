@@ -6,7 +6,7 @@ from app.auth.dependencies import get_current_user
 from app.database.models import User
 from app.services.key_service import KeyService
 import httpx
-from app.ai.providers.provider_registry import get_active_image_provider_info
+from app.ai.providers.provider_registry import get_active_image_provider_info, get_active_text_provider_info
 
 router = APIRouter(prefix="/settings/keys", tags=["User Keys"])
 
@@ -67,7 +67,15 @@ async def get_active_provider(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    # This is for image upload backwards compatibility
     return await get_active_image_provider_info(db, user.id)
+
+@router.get("/active-text", response_model=ActiveProviderResponse)
+async def get_active_text_provider(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_active_text_provider_info(db, user.id)
 
 @router.put("")
 async def set_key(

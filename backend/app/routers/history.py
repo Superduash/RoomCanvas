@@ -112,9 +112,25 @@ async def delete_all_history(
                 files.append(v.image_path)
     
     try:
-        from sqlalchemy import delete
-        await repo.db.execute(delete(Generation).where(Generation.parent_generation_id.isnot(None), Generation.user_id == repo.user_id))
-        await repo.db.execute(delete(Generation).where(Generation.parent_generation_id.is_(None), Generation.user_id == repo.user_id))
+        from sqlalchemy import delete, update
+        from app.database.models import Generation, Variation
+        
+        # Break cyclic FKs
+        await repo.db.execute(
+            update(Generation)
+            .where(Generation.user_id == repo.user_id)
+            .values(selected_variation_id=None, parent_generation_id=None)
+        )
+        await repo.db.flush()
+
+        gen_ids = [g.id for g in generations]
+        if gen_ids:
+            # Delete variations explicitly
+            await repo.db.execute(delete(Variation).where(Variation.generation_id.in_(gen_ids)))
+            await repo.db.flush()
+            
+        # Delete generations
+        await repo.db.execute(delete(Generation).where(Generation.user_id == repo.user_id))
         await repo.db.commit()
     except Exception as ex:
         await repo.db.rollback()
@@ -281,7 +297,7 @@ async def _collect_and_prepare_delete(repo: GenerationRepository, generation) ->
     for child in children:
         child.parent_generation_id = generation.parent_generation_id
     if children:
-        await repo.db.commit()
+        await repo.db.flush()
 
     files = []
     if generation.original_image_path:
@@ -315,11 +331,22 @@ async def delete_generation(
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Generation {generation_id} not found.")
 
-    files = await _collect_and_prepare_delete(repo, generation)
-
     try:
+        files = await _collect_and_prepare_delete(repo, generation)
+        
+        # Break cyclic FKs for this generation before deletion
+        from sqlalchemy import update
+        from app.database.models import Generation
+        await repo.db.execute(
+            update(Generation)
+            .where(Generation.id == generation_id)
+            .values(selected_variation_id=None, parent_generation_id=None)
+        )
+        await repo.db.flush()
+        
         await repo.delete(generation_id)
     except Exception as ex:
+        await repo.db.rollback()
         logger.error(f"Failed to delete generation {generation_id}: {ex}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while deleting this design.")
 
@@ -353,11 +380,22 @@ async def delete_refinement(
             detail="Cannot delete a root generation via this endpoint. Use DELETE /api/history/{id}"
         )
     
-    files = await _collect_and_prepare_delete(repo, generation)
-    
     try:
+        files = await _collect_and_prepare_delete(repo, generation)
+        
+        # Break cyclic FKs for this generation before deletion
+        from sqlalchemy import update
+        from app.database.models import Generation
+        await repo.db.execute(
+            update(Generation)
+            .where(Generation.id == generation_id)
+            .values(selected_variation_id=None, parent_generation_id=None)
+        )
+        await repo.db.flush()
+        
         await repo.delete(generation_id)
     except Exception as ex:
+        await repo.db.rollback()
         logger.error(f"Failed to delete refinement {generation_id}: {ex}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -401,20 +439,24 @@ async def delete_project(
                 files.append(variation.image_path)
 
     try:
-        from sqlalchemy import delete
+        from sqlalchemy import delete, update
         from app.database.models import Generation, Variation
         gen_ids = [g.id for g in timeline]
         
-        # Variations have ON DELETE CASCADE usually, but explicit deletion is safe
+        # Break cyclic FKs for this project
+        await repo.db.execute(
+            update(Generation)
+            .where(Generation.id.in_(gen_ids))
+            .values(selected_variation_id=None, parent_generation_id=None)
+        )
+        await repo.db.flush()
+        
+        # Delete variations explicitly
         await repo.db.execute(delete(Variation).where(Variation.generation_id.in_(gen_ids)))
+        await repo.db.flush()
         
-        # Delete children bottom-up to avoid self-referential FK constraint violations
-        for gen in reversed(timeline):
-            if gen.id != project_id:
-                await repo.db.execute(delete(Generation).where(Generation.id == gen.id))
-        
-        # Finally delete root
-        await repo.db.execute(delete(Generation).where(Generation.id == project_id))
+        # Delete generations
+        await repo.db.execute(delete(Generation).where(Generation.id.in_(gen_ids)))
         await repo.db.commit()
     except Exception as ex:
         await repo.db.rollback()

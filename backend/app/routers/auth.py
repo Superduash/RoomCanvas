@@ -25,6 +25,8 @@ class UserOut(BaseModel):
     theme_preference: str
     email_notifications: bool
     profile_completed: bool
+    active_text_provider: str | None
+    active_image_provider: str | None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -35,10 +37,14 @@ class UserUpdate(BaseModel):
     photo_url: str | None = None
     theme_preference: str | None = None
     profile_completed: bool | None = None
+    active_text_provider: str | None = None
+    active_image_provider: str | None = None
 
 class SettingsUpdate(BaseModel):
     theme_preference: str | None = None
     email_notifications: bool | None = None
+    active_text_provider: str | None = None
+    active_image_provider: str | None = None
 
 class SyncRequest(BaseModel):
     display_name: str | None = None
@@ -108,6 +114,10 @@ async def update_settings(updates: SettingsUpdate, user: User = Depends(get_curr
         user.theme_preference = updates.theme_preference
     if updates.email_notifications is not None:
         user.email_notifications = updates.email_notifications
+    if updates.active_text_provider is not None:
+        user.active_text_provider = updates.active_text_provider
+    if updates.active_image_provider is not None:
+        user.active_image_provider = updates.active_image_provider
     await db.commit()
     await db.refresh(user)
     return user

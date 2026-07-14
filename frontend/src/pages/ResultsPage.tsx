@@ -47,6 +47,7 @@ export function ResultsPage() {
   const setActiveGenerationId = useUIStore((s) => s.setActiveGenerationId);
   const lastCustomizationMap = useUIStore((s) => s.lastCustomization);
   const [viewMode, setViewMode] = useState<ViewMode>('compare');
+  const [showMenuForId, setShowMenuForId] = useState<number | null>(null);
   const [downloadDone, setDownloadDone] = useState(false);
   const [showMeasurement, setShowMeasurement] = useState(false);
 
@@ -429,10 +430,14 @@ export function ResultsPage() {
                       generation={g}
                       isActive={isActive}
                       isDeleteDisabled={isDeleteDisabled}
+                      isDeleting={(deleteGeneration.isPending || deleteRefinement.isPending) && showMenuForId === g.id}
                       thumbUrl={thumb}
                       label={label}
                       onSelect={(id) => setSearchParams({ v: id.toString() })}
-                      onDelete={handleDeleteVersion}
+                      onDelete={async (id) => {
+                        await handleDeleteVersion(id);
+                      }}
+                      onMenuOpen={(isOpen) => setShowMenuForId(isOpen ? g.id : null)}
                     />
                   );
                 })}
@@ -586,14 +591,20 @@ interface VersionThumbnailProps {
   generation: any;
   isActive: boolean;
   isDeleteDisabled: boolean;
+  isDeleting: boolean;
   thumbUrl: string;
   label: string;
   onSelect: (id: number) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: number) => Promise<void>;
+  onMenuOpen: (isOpen: boolean) => void;
 }
 
-function VersionThumbnail({ generation, isActive, isDeleteDisabled, thumbUrl, label, onSelect, onDelete }: VersionThumbnailProps) {
+function VersionThumbnail({ generation, isActive, isDeleteDisabled, isDeleting, thumbUrl, label, onSelect, onDelete, onMenuOpen }: VersionThumbnailProps) {
   const [showMenu, setShowMenu] = useState(false);
+  
+  useEffect(() => {
+    onMenuOpen(showMenu);
+  }, [showMenu, onMenuOpen]);
 
   return (
     <div
@@ -643,8 +654,11 @@ function VersionThumbnail({ generation, isActive, isDeleteDisabled, thumbUrl, la
         <Dialog open={true} onClose={() => setShowMenu(false)} title="Delete this version?">
           <p className="text-sm text-text-secondary mb-6">This design version will be permanently deleted. This can't be undone.</p>
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setShowMenu(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => { onDelete(generation.id); setShowMenu(false); }}>Delete</Button>
+            <Button variant="ghost" onClick={() => setShowMenu(false)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="destructive" loading={isDeleting} onClick={async () => { 
+              await onDelete(generation.id); 
+              setShowMenu(false); 
+            }}>Delete</Button>
           </div>
         </Dialog>
       )}

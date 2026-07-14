@@ -33,4 +33,4 @@ class RefinementServiceError(InteriorAIError):
 class ProviderUnavailableError(InteriorAIError):
     """Raised when an AI provider is unavailable or not configured."""
     def __init__(self, message: str):
-        super().__init__(message, status_code=503)
+        super().__init__(message, status_code=400)

@@ -8,6 +8,8 @@ export interface User {
   theme_preference: string;
   email_notifications: boolean;
   profile_completed: boolean;
+  active_text_provider: string | null;
+  active_image_provider: string | null;
   created_at: string;
 }
 
@@ -18,6 +20,8 @@ export interface UserUpdate {
   photo_url?: string | null;
   theme_preference?: string | null;
   profile_completed?: boolean | null;
+  active_text_provider?: string | null;
+  active_image_provider?: string | null;
 }
 
 export interface SettingsUpdate {

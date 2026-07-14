@@ -231,6 +231,13 @@ export function useActiveProvider() {
   });
 }
 
+export function useActiveTextProvider() {
+  return useQuery({
+    queryKey: ['active_text_provider'],
+    queryFn: () => api.get<ActiveProviderStatus>('/settings/keys/active-text'),
+  });
+}
+
 export function useUserKeys() {
   return useQuery({
     queryKey: ['user_keys'],
@@ -246,6 +253,7 @@ export function useSaveUserKey() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user_keys'] });
       qc.invalidateQueries({ queryKey: ['active_provider'] });
+      qc.invalidateQueries({ queryKey: ['active_text_provider'] });
     },
   });
 }
@@ -257,6 +265,7 @@ export function useDeleteUserKey() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user_keys'] });
       qc.invalidateQueries({ queryKey: ['active_provider'] });
+      qc.invalidateQueries({ queryKey: ['active_text_provider'] });
     },
   });
 }
