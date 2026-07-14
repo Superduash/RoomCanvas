@@ -250,10 +250,10 @@ export function AnalysisPage() {
                   </motion.div>
                 )}
                 
-                {currentStep >= 4 && analysis.estimated_budget_range && (
+                {currentStep >= 4 && analysis.budget_summary && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">
                     <p className="text-xs text-text-tertiary mb-1">Estimated Renovation Budget</p>
-                    <p className="text-sm font-medium text-text-primary">{analysis.estimated_budget_range}</p>
+                    <p className="text-sm font-medium text-text-primary">${analysis.budget_summary.grand_total.min}–${analysis.budget_summary.grand_total.max}</p>
                   </motion.div>
                 )}
               </div>
