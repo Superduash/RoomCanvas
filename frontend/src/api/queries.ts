@@ -56,7 +56,10 @@ export function useGenerateDesign() {
   return useMutation({
     mutationFn: ({ analysisId, forceNew, customization, instruction }: { analysisId: number; forceNew?: boolean; customization?: any; instruction?: string }) =>
       api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false, customization, instruction }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
+    },
   });
 }
 
@@ -66,7 +69,10 @@ export function useRefineDesign() {
   return useMutation({
     mutationFn: ({ generation_id, instruction, customization }: { generation_id: number; instruction?: string; customization?: any }) =>
       api.post<GenerationOut>('/refine', { generation_id, instruction, customization }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['history'], exact: false }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
+    },
   });
 }
 
@@ -111,6 +117,7 @@ export function useSelectVariation() {
     onSuccess: (data) => {
       qc.setQueryData(['generation', data.id], data);
       qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
     },
   });
 }
@@ -123,6 +130,7 @@ export function useDeleteGeneration() {
       // Remove from individual cache instantly
       qc.removeQueries({ queryKey: ['generation', id] });
       qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
     },
     onError: (err) => {
       const detail = err instanceof ApiError ? err.message : 'Unknown error';
@@ -142,6 +150,7 @@ export function useDeleteAllHistory() {
     onSuccess: () => {
       qc.setQueryData(['history', 50], []);
       qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
     },
     onError: (err) => {
       const detail = err instanceof ApiError ? err.message : 'Unknown error';
@@ -160,6 +169,7 @@ export function useRenameGeneration() {
       // Optimistically update the individual generation cache
       qc.setQueryData(['generation', data.id], data);
       qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
     },
     onError: (err) => {
       const detail = err instanceof ApiError ? err.message : 'Unknown error';

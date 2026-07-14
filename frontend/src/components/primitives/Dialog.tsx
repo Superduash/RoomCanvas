@@ -17,15 +17,19 @@ export function Dialog({ open, onClose, title, description, children, className 
     <RadixDialog.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4">
           <RadixDialog.Content
             className={cn(
-              'relative z-50 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl',
-              'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-top-[10%] data-[state=open]:slide-in-from-top-[10%]',
+              'relative z-50 w-full sm:max-w-md bg-surface shadow-xl flex flex-col',
+              'rounded-t-2xl sm:rounded-2xl border-t sm:border border-border p-5 sm:p-6',
+              'max-h-[95vh] sm:max-h-[85vh]',
+              'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+              'data-[state=closed]:slide-out-to-bottom-[100%] data-[state=open]:slide-in-from-bottom-[100%]',
+              'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-top-[10%] sm:data-[state=open]:slide-in-from-top-[10%]',
               className
             )}
           >
-            <div className="flex items-start justify-between mb-5">
+            <div className="flex items-start justify-between mb-5 shrink-0">
               <div>
                 <RadixDialog.Title className="text-[17px] font-semibold tracking-tight text-text-primary">
                   {title}
@@ -45,7 +49,9 @@ export function Dialog({ open, onClose, title, description, children, className 
                 </button>
               </RadixDialog.Close>
             </div>
-            {children}
+            <div className="flex-1 overflow-y-auto -mx-5 px-5 sm:-mx-6 sm:px-6">
+              {children}
+            </div>
           </RadixDialog.Content>
         </div>
       </RadixDialog.Portal>

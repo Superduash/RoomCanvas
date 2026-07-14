@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { type FurnitureItem, type ColorSwatch } from '../../api/types';
 import { Badge } from '../primitives/Badge';
-import { Ruler, Palette, TrendingUp, Grid3x3, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Dialog } from '../primitives/Dialog';
+import { Ruler, Palette, TrendingUp, Grid3x3, CheckCircle2, Sparkles, AlertTriangle, Maximize2 } from 'lucide-react';
 import { toast } from '../../lib/toast';
 import { needsColorBorder } from '../../utils/colorHelpers';
 
@@ -184,12 +186,28 @@ interface BudgetCardProps {
     items_to_buy_count: number;
     items_kept_count: number;
   };
+  items: FurnitureItem[];
 }
 
-export function BudgetCard({ summary }: BudgetCardProps) {
+export function BudgetCard({ summary, items }: BudgetCardProps) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const requiredItems = items.filter(i => i.purchase_status === 'new_purchase');
+  const optionalItems = items.filter(i => i.purchase_status === 'optional_upgrade');
+  const existingItems = items.filter(i => i.purchase_status === 'keep_existing');
+
   return (
-    <div className="rounded-xl border border-accent/20 bg-accent-subtle p-5">
-      <div className="flex items-center gap-2 mb-2">
+    <>
+    <div className="rounded-xl border border-accent/20 bg-accent-subtle p-5 relative group">
+      <button 
+        onClick={() => setShowDetails(true)}
+        className="absolute top-4 right-4 p-1.5 text-accent/60 hover:text-accent bg-surface/50 hover:bg-surface rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        title="View Itemized Details"
+        aria-label="View itemized budget details"
+      >
+        <Maximize2 className="h-4 w-4" />
+      </button>
+      <div className="flex items-center gap-2 mb-2 pr-8">
         <TrendingUp className="h-4 w-4 text-accent" aria-hidden="true" />
         <h4 className="text-xs font-semibold uppercase tracking-widest text-accent">
           Estimated Budget
@@ -220,6 +238,87 @@ export function BudgetCard({ summary }: BudgetCardProps) {
           <span>Acc. 15%</span>
         </div>
       </div>
+    </div>
+
+    <Dialog 
+      open={showDetails} 
+      onClose={() => setShowDetails(false)} 
+      title="Itemized Budget Breakdown"
+    >
+      <BudgetSection 
+        title="Required Purchases" 
+        items={requiredItems} 
+        total={summary.required_purchase_total} 
+        badgeType="info" 
+        badgeLabel="New Purchase"
+      />
+      <BudgetSection 
+        title="Optional Upgrades" 
+        items={optionalItems} 
+        total={summary.optional_upgrade_total} 
+        badgeType="warning" 
+        badgeLabel="Optional"
+      />
+      <BudgetSection 
+        title="Already Have" 
+        items={existingItems} 
+        total={{min: 0, max: 0}} 
+        badgeType="success" 
+        badgeLabel="Have it"
+      />
+      
+      <div className="pt-4 border-t border-border flex justify-between items-center mt-2 sticky bottom-0 bg-surface">
+        <span className="font-semibold text-text-primary text-[15px]">Grand Total</span>
+        <span className="text-xl font-bold tracking-tight text-accent-hover">${summary.grand_total.min}–${summary.grand_total.max}</span>
+      </div>
+    </Dialog>
+    </>
+  );
+}
+
+function BudgetSection({ title, items, total, badgeType, badgeLabel }: any) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  if (!items.length) return null;
+  return (
+    <div className="mb-8 last:mb-2">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between mb-4 border-b border-border/50 pb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm"
+        aria-expanded={isOpen}
+      >
+        <h4 className="text-[13px] font-semibold text-text-primary">{title}</h4>
+        <div className="flex items-center gap-3">
+          {total.max > 0 && <span className="text-sm font-medium text-text-secondary">${total.min}–${total.max}</span>}
+          <div className={`text-text-tertiary transition-transform duration-200 ${isOpen ? '' : 'rotate-180'}`}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </button>
+      {isOpen && (
+        <ul className="space-y-4">
+          {items.map((item: FurnitureItem, i: number) => (
+            <li key={i} className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-[13px] font-semibold text-text-primary truncate">{item.item}</p>
+                  <Badge variant={badgeType} className="text-[9px] px-1.5 py-0 shrink-0">
+                    {badgeLabel}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-text-secondary line-clamp-2 leading-relaxed">{item.description}</p>
+              </div>
+              <div className="shrink-0 mt-0.5">
+                 <span className="text-[12px] font-medium text-text-primary whitespace-nowrap">
+                   ${item.price_min}–${item.price_max}
+                 </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
