@@ -459,7 +459,11 @@ export function ResultsPage() {
                   confidence={analysisData.estimated_dimensions.confidence}
                   onMeasureClick={() => setShowMeasurement(true)}
                 />
-                <BudgetCard summary={analysisData.budget_summary} items={analysisData.furniture} />
+                <BudgetCard 
+                  summary={analysisData.budget_summary} 
+                  items={analysisData.furniture} 
+                  fallbackEstimate={(analysisData as any).estimated_budget_range}
+                />
                 <PaletteSwatches swatches={analysisData.color_palette} />
                 <FurnitureList items={analysisData.furniture} />
                 

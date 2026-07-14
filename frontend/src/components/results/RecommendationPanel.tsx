@@ -179,7 +179,7 @@ export function PaletteSwatches({ swatches }: PaletteSwatchesProps) {
 }
 
 interface BudgetCardProps {
-  summary: {
+  summary?: {
     required_purchase_total: { min: number; max: number };
     optional_upgrade_total: { min: number; max: number };
     grand_total: { min: number; max: number };
@@ -187,14 +187,32 @@ interface BudgetCardProps {
     items_kept_count: number;
   };
   items: FurnitureItem[];
+  fallbackEstimate?: string;
 }
 
-export function BudgetCard({ summary, items }: BudgetCardProps) {
+export function BudgetCard({ summary, items, fallbackEstimate }: BudgetCardProps) {
   const [showDetails, setShowDetails] = useState(false);
 
   const requiredItems = items.filter(i => i.purchase_status === 'new_purchase');
   const optionalItems = items.filter(i => i.purchase_status === 'optional_upgrade');
   const existingItems = items.filter(i => i.purchase_status === 'keep_existing');
+
+  if (!summary) {
+    return (
+      <div className="rounded-xl border border-accent/20 bg-accent-subtle p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="h-4 w-4 text-accent" aria-hidden="true" />
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-accent">
+            Estimated Budget
+          </h4>
+        </div>
+        <p className="text-xl font-semibold tracking-tight text-accent-hover mb-2">
+          {fallbackEstimate || 'Budget details unavailable'}
+        </p>
+        <p className="text-sm text-accent/80">Itemized details are not available for this older design.</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -245,32 +263,40 @@ export function BudgetCard({ summary, items }: BudgetCardProps) {
       onClose={() => setShowDetails(false)} 
       title="Itemized Budget Breakdown"
     >
-      <BudgetSection 
-        title="Required Purchases" 
-        items={requiredItems} 
-        total={summary.required_purchase_total} 
-        badgeType="info" 
-        badgeLabel="New Purchase"
-      />
-      <BudgetSection 
-        title="Optional Upgrades" 
-        items={optionalItems} 
-        total={summary.optional_upgrade_total} 
-        badgeType="warning" 
-        badgeLabel="Optional"
-      />
-      <BudgetSection 
-        title="Already Have" 
-        items={existingItems} 
-        total={{min: 0, max: 0}} 
-        badgeType="success" 
-        badgeLabel="Have it"
-      />
-      
-      <div className="pt-4 border-t border-border flex justify-between items-center mt-2 sticky bottom-0 bg-surface">
-        <span className="font-semibold text-text-primary text-[15px]">Grand Total</span>
-        <span className="text-xl font-bold tracking-tight text-accent-hover">${summary.grand_total.min}–${summary.grand_total.max}</span>
-      </div>
+      {summary ? (
+        <>
+          <BudgetSection 
+            title="Required Purchases" 
+            items={requiredItems} 
+            total={summary.required_purchase_total} 
+            badgeType="info" 
+            badgeLabel="New Purchase"
+          />
+          <BudgetSection 
+            title="Optional Upgrades" 
+            items={optionalItems} 
+            total={summary.optional_upgrade_total} 
+            badgeType="warning" 
+            badgeLabel="Optional"
+          />
+          <BudgetSection 
+            title="Already Have" 
+            items={existingItems} 
+            total={{min: 0, max: 0}} 
+            badgeType="success" 
+            badgeLabel="Have it"
+          />
+          
+          <div className="pt-4 border-t border-border flex justify-between items-center mt-2 sticky bottom-0 bg-surface">
+            <span className="font-semibold text-text-primary text-[15px]">Grand Total</span>
+            <span className="text-xl font-bold tracking-tight text-accent-hover">${summary.grand_total.min}–${summary.grand_total.max}</span>
+          </div>
+        </>
+      ) : (
+        <div className="py-8 text-center text-text-secondary">
+          <p>Itemized details are unavailable for this design.</p>
+        </div>
+      )}
     </Dialog>
     </>
   );

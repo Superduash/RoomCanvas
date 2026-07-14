@@ -68,7 +68,19 @@ function RouterErrorBoundary() {
       <p className="max-w-sm text-sm text-text-secondary">
         We just pushed a new update to RoomCanvas. Please refresh the page to continue.
       </p>
-      <Button onClick={() => window.location.assign('/')}>Refresh Page</Button>
+      <Button onClick={async () => {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        window.location.href = '/';
+      }}>
+        Refresh Page
+      </Button>
     </div>
   );
 }
