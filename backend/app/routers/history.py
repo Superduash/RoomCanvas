@@ -274,6 +274,33 @@ async def rename_generation(
     return generation
 
 
+async def _collect_and_prepare_delete(repo: GenerationRepository, generation) -> list[str]:
+    """Re-parents children and returns the list of storage files safe to delete
+    (i.e. not still referenced by any other generation). Does NOT delete the DB row itself."""
+    children = await repo.get_children(generation.id)
+    for child in children:
+        child.parent_generation_id = generation.parent_generation_id
+    if children:
+        await repo.db.commit()
+
+    files = []
+    if generation.original_image_path:
+        still_referenced = await repo.count_generations_referencing_path(generation.original_image_path)
+        if still_referenced <= 1:
+            files.append(generation.original_image_path)
+        else:
+            logger.info(f"Keeping original_image_path {generation.original_image_path} — still used by {still_referenced - 1} other generation(s)")
+
+    for v in generation.variations:
+        if v.image_path:
+            still_referenced = await repo.count_generations_referencing_path(v.image_path)
+            if still_referenced > 1:
+                logger.warning(f"Skipped deleting {v.image_path} — still referenced by {still_referenced - 1} other generation(s)")
+            else:
+                files.append(v.image_path)
+    return files
+
+
 # ── DELETE /api/history/{id} ──────────────────────────────────────────────────
 @router.delete(
     "/history/{generation_id}",
@@ -286,32 +313,22 @@ async def delete_generation(
 ):
     generation = await repo.get_by_id(generation_id)
     if not generation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Generation {generation_id} not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Generation {generation_id} not found.")
 
-    files = []
-    children = await repo.get_children(generation_id)
-    if children:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete a generation that has child refinements."
-        )
+    files = await _collect_and_prepare_delete(repo, generation)
 
-    if generation.original_image_path:
-        files.append(generation.original_image_path)
-    for v in generation.variations:
-        if v.image_path:
-            files.append(v.image_path)
+    try:
+        await repo.delete(generation_id)
+    except Exception as ex:
+        logger.error(f"Failed to delete generation {generation_id}: {ex}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while deleting this design.")
 
-    await repo.delete(generation_id)
     asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, generation_id, repo.user_id))
+    if generation.parent_generation_id:
+        asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, generation.parent_generation_id, repo.user_id))
 
     from app.services.storage_service import StorageService
-    def _delete_files():
-        for f in files:
-            StorageService.delete_file_if_exists(f)
-
-    background_tasks.add_task(_delete_files)
+    background_tasks.add_task(lambda: [StorageService.delete_file_if_exists(f) for f in files])
 
     return {"deleted": True}
 
@@ -336,11 +353,7 @@ async def delete_refinement(
             detail="Cannot delete a root generation via this endpoint. Use DELETE /api/history/{id}"
         )
     
-    parent_id = generation.parent_generation_id
-    files = []
-    for v in generation.variations:
-        if v.image_path:
-            files.append(v.image_path)
+    files = await _collect_and_prepare_delete(repo, generation)
     
     try:
         await repo.delete(generation_id)
@@ -351,12 +364,79 @@ async def delete_refinement(
             detail="An unexpected error occurred while deleting the refinement."
         )
     
-    asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, parent_id, repo.user_id))
+    asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, generation.parent_generation_id, repo.user_id))
     
+    from app.services.storage_service import StorageService
+    background_tasks.add_task(lambda: [StorageService.delete_file_if_exists(f) for f in files])
+    
+    return {"deleted": True}
+
+
+# ── DELETE /api/projects/{project_id} ─────────────────────────────────────────
+@router.delete(
+    "/projects/{project_id}",
+    tags=["History"],
+)
+async def delete_project(
+    project_id: int,
+    background_tasks: BackgroundTasks,
+    repo: GenerationRepository = Depends(get_repo),
+):
+    # Fetch the root and all its children
+    timeline = await repo.get_project_timeline(project_id)
+    if not timeline:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    root = timeline[0]
+    if root.id != project_id or root.parent_generation_id is not None:
+        raise HTTPException(status_code=400, detail="Provided ID is not a project root.")
+
+    files = []
+    # Collect all associated files for this entire project
+    for generation in timeline:
+        if generation.original_image_path and generation.original_image_path not in files:
+            files.append(generation.original_image_path)
+        for variation in generation.variations:
+            if variation.image_path:
+                files.append(variation.image_path)
+
+    try:
+        from sqlalchemy import delete
+        from app.database.models import Generation, Variation
+        gen_ids = [g.id for g in timeline]
+        
+        # Variations have ON DELETE CASCADE usually, but explicit deletion is safe
+        await repo.db.execute(delete(Variation).where(Variation.generation_id.in_(gen_ids)))
+        
+        # Delete children bottom-up to avoid self-referential FK constraint violations
+        for gen in reversed(timeline):
+            if gen.id != project_id:
+                await repo.db.execute(delete(Generation).where(Generation.id == gen.id))
+        
+        # Finally delete root
+        await repo.db.execute(delete(Generation).where(Generation.id == project_id))
+        await repo.db.commit()
+    except Exception as ex:
+        await repo.db.rollback()
+        logger.error(f"Failed to delete project {project_id}: {ex}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while deleting the project."
+        )
+
+    # Invalidate cache
+    asyncio.create_task(asyncio.to_thread(invalidate_history_cache, repo.user_id))
+    for g_id in gen_ids:
+        asyncio.create_task(asyncio.to_thread(invalidate_generation_cache, g_id, repo.user_id))
+
+    # Background task to clean up storage
     from app.services.storage_service import StorageService
     def _delete_files():
         for f in files:
+            # Final sanity check just in case some other project is using the original_image (shouldn't happen but safe)
+            # Actually since we delete the whole timeline synchronously above, count_generations_referencing_path would return 0 now.
             StorageService.delete_file_if_exists(f)
+
     background_tasks.add_task(_delete_files)
-    
+
     return {"deleted": True}

@@ -18,7 +18,13 @@ import { MeasurementOverlay } from '../components/measurement/MeasurementOverlay
 import { Button } from '../components/primitives/Button';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton, SkeletonText } from '../components/primitives/Skeleton';
-import { useProjectTimeline, useGenerateDesign, useSelectVariation, useDeleteGeneration } from '../api/queries';
+import { 
+  useProjectTimeline, 
+  useGenerateDesign, 
+  useSelectVariation, 
+  useDeleteGeneration,
+  useDeleteRefinement,
+} from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { resolveImageUrl } from '../api/client';
 import { formatRelativeTime } from '../lib/utils';
@@ -66,6 +72,7 @@ export function ResultsPage() {
   const generateDesign = useGenerateDesign();
   const selectVariation = useSelectVariation();
   const deleteGeneration = useDeleteGeneration();
+  const deleteRefinement = useDeleteRefinement();
 
   // Parse analysis JSON once for the active generation
   const analysisData = useMemo<AnalyzeResponse | null>(() => {
@@ -80,7 +87,12 @@ export function ResultsPage() {
   const handleDeleteVersion = async (generationId: number) => {
     if (!projectDetails) return;
     try {
-      await deleteGeneration.mutateAsync(generationId);
+      const isRoot = projectDetails.timeline.find(g => g.id === generationId)?.parent_generation_id === null;
+      if (isRoot) {
+        await deleteGeneration.mutateAsync(generationId);
+      } else {
+        await deleteRefinement.mutateAsync(generationId);
+      }
       toast.success('Version deleted.');
       
       // If we just deleted the active version, navigate away so we don't land on a dead page.

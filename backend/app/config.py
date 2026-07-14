@@ -17,9 +17,7 @@ class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────────────────────
     DATABASE_URL: str = "sqlite:///./storage/interior_ai.db"
 
-    # ── Storage Directories (deprecated - now using Supabase) ────────────────
-    UPLOAD_DIR: str = "./storage/uploads"
-    GENERATED_DIR: str = "./storage/generated"
+
 
     # ── Supabase Storage ──────────────────────────────────────────────────────
     SUPABASE_URL: str = ""

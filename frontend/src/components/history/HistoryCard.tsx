@@ -4,7 +4,7 @@ import { Trash2, ImagePlus, MoreVertical, Edit2, Download, Eye } from 'lucide-re
 import { motion, AnimatePresence } from 'framer-motion';
 import { type Project } from '../../api/types';
 import { resolveImageUrl } from '../../api/client';
-import { useDeleteGeneration, useRenameGeneration } from '../../api/queries';
+import { useDeleteProject, useRenameGeneration } from '../../api/queries';
 import { Badge } from '../primitives/Badge';
 import { Button } from '../primitives/Button';
 import { Dialog } from '../primitives/Dialog';
@@ -27,7 +27,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
   const [renameTitle, setRenameTitle] = useState(p.room_type_detected || '');
   const [isHovering, setIsHovering] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const deleteGen = useDeleteGeneration();
+  const deleteProject = useDeleteProject();
   const renameGen = useRenameGeneration();
   
   const g = p.latest_generation;
@@ -38,7 +38,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
 
   const handleDelete = async () => {
     try {
-      await deleteGen.mutateAsync(p.id);
+      await deleteProject.mutateAsync(p.id);
       setDeleteOpen(false);
       toast.success('Project deleted');
     } catch (err) {
@@ -281,7 +281,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
       {/* Delete Project Dialog */}
       <Dialog
         open={deleteOpen}
-        onClose={() => !deleteGen.isPending && setDeleteOpen(false)}
+        onClose={() => !deleteProject.isPending && setDeleteOpen(false)}
         title="Delete Project?"
         description="This will permanently delete this project and all of its refinements. This action cannot be undone."
       >
@@ -289,11 +289,11 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
           Are you sure you want to delete this project? This will permanently remove the original photo, all generated variations, and refinements.
         </p>
         <div className="flex flex-wrap justify-end gap-3">
-          <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleteGen.isPending}>
+          <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleteProject.isPending}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={deleteGen.isPending}>
-            {deleteGen.isPending ? 'Deleting...' : 'Delete'}
+          <Button variant="destructive" onClick={handleDelete} disabled={deleteProject.isPending}>
+            {deleteProject.isPending ? 'Deleting...' : 'Delete'}
           </Button>
         </div>
       </Dialog>

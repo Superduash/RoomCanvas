@@ -71,13 +71,7 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error(f"Failed to initialise database schema: {exc}", exc_info=True)
 
-    # Ensure required storage subdirectories exist (for local dev/testing only - production uses Supabase)
-    if settings.DEBUG:
-        for directory in [settings.UPLOAD_DIR, settings.GENERATED_DIR]:
-            try:
-                Path(directory).mkdir(parents=True, exist_ok=True)
-            except Exception as exc:
-                logger.error(f"Failed to create directory {directory}: {exc}")
+
 
     # Warm static caches so first requests are instant
     try:

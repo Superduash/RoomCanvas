@@ -127,7 +127,6 @@ export function useDeleteGeneration() {
   return useMutation({
     mutationFn: (id: number) => api.del<{ deleted: boolean }>(`/history/${id}`),
     onSuccess: (_data, id) => {
-      // Remove from individual cache instantly
       qc.removeQueries({ queryKey: ['generation', id] });
       qc.invalidateQueries({ queryKey: ['history'], exact: false });
       qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
@@ -135,6 +134,38 @@ export function useDeleteGeneration() {
     onError: (err) => {
       const detail = err instanceof ApiError ? err.message : 'Unknown error';
       logger.error(`[useDeleteGeneration] Failed: ${detail}`, err);
+    },
+  });
+}
+
+export function useDeleteRefinement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.del<{ deleted: boolean }>(`/history/refinement/${id}`),
+    onSuccess: (_data, id) => {
+      qc.removeQueries({ queryKey: ['generation', id] });
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
+    },
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.message : 'Unknown error';
+      logger.error(`[useDeleteRefinement] Failed: ${detail}`, err);
+    },
+  });
+}
+
+export function useDeleteProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.del<{ deleted: boolean }>(`/projects/${id}`),
+    onSuccess: (_data, id) => {
+      qc.removeQueries({ queryKey: ['project_timeline', id] });
+      qc.invalidateQueries({ queryKey: ['history'], exact: false });
+      qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
+    },
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.message : 'Unknown error';
+      logger.error(`[useDeleteProject] Failed: ${detail}`, err);
     },
   });
 }

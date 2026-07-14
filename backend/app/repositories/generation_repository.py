@@ -171,3 +171,18 @@ class GenerationRepository:
         await self.db.commit()
         logger.info(f"Deleted Generation id={generation_id}")
         return True
+
+    async def count_generations_referencing_path(self, path: str) -> int:
+        from sqlalchemy import func, or_
+        query = select(func.count(Generation.id)).where(
+            or_(
+                Generation.original_image_path == path,
+                Generation.id.in_(
+                    select(Variation.generation_id).where(Variation.image_path == path)
+                )
+            )
+        )
+        if self.user_id is not None:
+            query = query.where(Generation.user_id == self.user_id)
+        result = await self.db.execute(query)
+        return result.scalar()
