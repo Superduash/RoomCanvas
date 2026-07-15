@@ -28,6 +28,8 @@ export function Select({ value, onValueChange, placeholder, label, hint, error, 
           'hover:border-border-strong',
           error ? 'border-danger' : 'border-border',
           '[&[data-placeholder]]:text-text-tertiary/60',
+          // Hide model badges in the closed trigger — they only show in the open list
+          '[&_.select-badges]:hidden',
         )}>
           <span className="truncate min-w-0 flex-1 text-left">
             <RadixSelect.Value placeholder={placeholder} />
@@ -73,3 +75,4 @@ export function SelectItem({ value, children }: { value: string; children: React
     </RadixSelect.Item>
   );
 }
+

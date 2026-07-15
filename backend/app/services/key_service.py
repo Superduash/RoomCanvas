@@ -122,34 +122,47 @@ class KeyService:
     async def save_key(self, provider: str, api_key: str | None = None, preferred_text_model: str | None = None, preferred_image_model: str | None = None) -> None:
         if not self.user_id:
             raise ValueError("User ID required to save key")
-            
+
+        # Normalise: treat empty/whitespace-only strings the same as None
+        if api_key is not None and not api_key.strip():
+            api_key = None
+
         query = select(UserApiKeys).where(
             UserApiKeys.user_id == self.user_id,
             UserApiKeys.provider == provider
         )
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
-        
-        if record:
-            if api_key:
-                record.encrypted_key = self._encrypt(api_key)
-            if preferred_text_model is not None:
-                record.preferred_text_model = preferred_text_model
-            if preferred_image_model is not None:
-                record.preferred_image_model = preferred_image_model
-        else:
-            if not api_key:
-                raise ValueError("API key is required for first-time setup")
-            record = UserApiKeys(
-                user_id=self.user_id,
-                provider=provider,
-                encrypted_key=self._encrypt(api_key),
-                preferred_text_model=preferred_text_model,
-                preferred_image_model=preferred_image_model
-            )
-            self.db.add(record)
-            
-        await self.db.commit()
+
+        try:
+            if record:
+                # Only touch the encrypted key when a real value was provided
+                if api_key:
+                    record.encrypted_key = self._encrypt(api_key)
+                if preferred_text_model is not None:
+                    record.preferred_text_model = preferred_text_model
+                if preferred_image_model is not None:
+                    record.preferred_image_model = preferred_image_model
+            else:
+                if not api_key:
+                    raise ValueError("API key is required for first-time setup")
+                record = UserApiKeys(
+                    user_id=self.user_id,
+                    provider=provider,
+                    encrypted_key=self._encrypt(api_key),
+                    preferred_text_model=preferred_text_model,
+                    preferred_image_model=preferred_image_model
+                )
+                self.db.add(record)
+
+            await self.db.commit()
+        except ValueError:
+            raise  # propagate our own domain errors unchanged
+        except Exception as e:
+            await self.db.rollback()
+            logger.exception(f"Database error saving key for user {self.user_id} provider {provider}: {e}")
+            raise ValueError(f"Failed to persist API key: {e}") from e
+
 
     async def delete_key(self, provider: str) -> bool:
         if not self.user_id:

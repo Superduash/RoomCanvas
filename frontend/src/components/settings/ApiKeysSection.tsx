@@ -20,7 +20,7 @@ const BADGE_STYLES: Record<BadgeKind, string> = {
 };
 
 const BADGE_LABELS: Record<BadgeKind, string> = {
-  recommended: 'Recommended',
+  recommended: 'Default',
   free:        'Free',
   paid:        'Paid',
   default:     'Default',
@@ -37,22 +37,8 @@ function parseBadge(badge: string): BadgeKind[] {
   return kinds.length > 0 ? kinds : ['free'];
 }
 
-function ModelBadge({ badge }: { badge: string }) {
-  const kinds = parseBadge(badge);
-  return (
-    <span className="flex-shrink-0 flex items-center gap-1">
-      {kinds.map(kind => (
-        <span
-          key={kind}
-          className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider leading-none whitespace-nowrap ${BADGE_STYLES[kind]}`}
-        >
-          {BADGE_LABELS[kind]}
-        </span>
-      ))}
-    </span>
-  );
-}
-// ─────────────────────────────────────────────────────────────────────────────
+
+
 
 export function ApiKeysSection() {
   const { profile, setProfile } = useAuth();
@@ -341,15 +327,22 @@ export function ApiKeysSection() {
                     >
                       {config.textModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
-                            <span className="truncate min-w-0 text-sm">
+                          <span className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
+                            <span className="truncate min-w-0">
                               {m.label}
                               {configuredTextModel(prov) === m.id && (
                                 <span className="ml-1.5 text-text-tertiary text-[10px]">(Saved)</span>
                               )}
                             </span>
-                            <ModelBadge badge={m.badge} />
-                          </div>
+                            {/* Badges outside ItemText — only visible in dropdown, not in trigger */}
+                            <span className="flex-shrink-0 flex items-center gap-1 select-badges">
+                              {parseBadge(m.badge).map(kind => (
+                                <span key={kind} className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider leading-none whitespace-nowrap ${BADGE_STYLES[kind]}`}>
+                                  {BADGE_LABELS[kind]}
+                                </span>
+                              ))}
+                            </span>
+                          </span>
                         </SelectItem>
                       ))}
                     </Select>
@@ -366,15 +359,22 @@ export function ApiKeysSection() {
                     >
                       {config.imageModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
-                            <span className="truncate min-w-0 text-sm">
+                          <span className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
+                            <span className="truncate min-w-0">
                               {m.label}
                               {configuredImageModel(prov) === m.id && (
                                 <span className="ml-1.5 text-text-tertiary text-[10px]">(Saved)</span>
                               )}
                             </span>
-                            <ModelBadge badge={m.badge} />
-                          </div>
+                            {/* Badges outside ItemText — only visible in dropdown, not in trigger */}
+                            <span className="flex-shrink-0 flex items-center gap-1 select-badges">
+                              {parseBadge(m.badge).map(kind => (
+                                <span key={kind} className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider leading-none whitespace-nowrap ${BADGE_STYLES[kind]}`}>
+                                  {BADGE_LABELS[kind]}
+                                </span>
+                              ))}
+                            </span>
+                          </span>
                         </SelectItem>
                       ))}
                     </Select>

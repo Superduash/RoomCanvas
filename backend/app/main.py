@@ -165,31 +165,56 @@ async def access_log_middleware(request: Request, call_next):
     from app.utils.request_id import set_request_id
     req_id = request.headers.get("X-Request-ID")
     req_id = set_request_id(req_id)
-    
+
     start = time.perf_counter()
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.exception(
+            f"Unhandled exception in middleware for {request.method} {request.url.path} "
+            f"(req_id={req_id}, {elapsed_ms:.0f}ms): {exc}"
+        )
+        from app.utils.request_id import get_request_id
+        from datetime import datetime, timezone
+        content = {
+            "code": "INTERNAL_SERVER_ERROR",
+            "message": "An unexpected server error occurred. Please try again.",
+            "request_id": get_request_id(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        err_response = JSONResponse(status_code=500, content=content)
+        err_response.headers["X-Request-ID"] = req_id
+        err_response.headers["X-Process-Time"] = f"{elapsed_ms:.1f}ms"
+        # Inject CORS so the frontend can read the JSON error body
+        origin = request.headers.get("origin")
+        if origin and (origin in _origins or "*" in _origins):
+            err_response.headers["Access-Control-Allow-Origin"] = origin
+            err_response.headers["Access-Control-Allow-Credentials"] = "true"
+        return err_response
+
     elapsed_ms = (time.perf_counter() - start) * 1000
-    
+
     response.headers["X-Process-Time"] = f"{elapsed_ms:.1f}ms"
     response.headers["X-Request-ID"] = req_id
-    
+
     if request.url.path.startswith("/api"):
         # Format: GET    /api/history      200   18ms
         method = f"{request.method: <6}"
         path = f"{request.url.path: <20}"
         logger.info(f"{method} {path} {response.status_code}   {elapsed_ms:.0f}ms")
-    
+
     # Security Headers
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    
+
     # Rate limit headers
     if hasattr(request.state, "rate_limit_headers"):
         for key, value in request.state.rate_limit_headers.items():
             response.headers[key] = value
-            
+
     return response
 
 # ── CORS ──────────────────────────────────────────────────────────────────────

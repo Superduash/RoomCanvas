@@ -92,22 +92,37 @@ async def set_key(
     db: AsyncSession = Depends(get_db)
 ):
     key_service = KeyService(db, user.id)
-    
-    if req.api_key:
+
+    # Validate the new key against the provider if one was supplied
+    if req.api_key:  # treats None and "" identically — both skip validation
         try:
             await validate_api_key(req.provider, req.api_key)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:
+        # Model-only update: existing key must already be on file
         existing_key, _, _ = await key_service.get_user_key(req.provider)
         if not existing_key:
-            raise HTTPException(status_code=400, detail="No API key saved yet for this provider")
-            
+            raise HTTPException(status_code=400, detail="No API key saved yet for this provider. Please enter your key first.")
+
     try:
-        await key_service.save_key(req.provider, req.api_key, req.preferred_text_model, req.preferred_image_model)
+        await key_service.save_key(
+            req.provider,
+            req.api_key or None,  # normalise empty string to None
+            req.preferred_text_model,
+            req.preferred_image_model
+        )
+    except HTTPException:
+        raise  # pass through intentional 4xx from save_key
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"Failed to save key for provider '{req.provider}' (user {user.id}): {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not save your API key. Please try again."
+        )
+
     return {"message": "Key saved successfully"}
 
 @router.delete("/{provider}")
