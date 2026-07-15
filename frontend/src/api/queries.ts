@@ -120,6 +120,12 @@ export function useProjectTimeline(projectId: number | null) {
       const isGenerating = data.timeline.some(g => g.status === 'pending' || g.status === 'analyzed');
       return isGenerating ? 2500 : false;
     },
+    retry: (failureCount, error) => {
+      // Allow retries for transient errors, but not for 404s
+      if ((error as any)?.response?.status === 404) return false;
+      return failureCount < 2;
+    },
+    retryDelay: 800, // Short delay to give just-committed writes time to settle
   });
 }
 

@@ -67,6 +67,9 @@ export function AnalysisPage() {
       queryFn: () => api.get(`/history/${gen.id}`)
     });
     
+    // Small buffer to avoid a race with eventual-consistency on the just-completed write
+    await new Promise((r) => setTimeout(r, 400));
+    
     setWorkflowState('COMPLETE');
     // Important: Route to the project ID, not the generation ID!
     navigate(`/results/${gen.project_id}`, { replace: true });
@@ -320,12 +323,15 @@ export function AnalysisPage() {
                   </div>
                 )}
                 
-                {currentStep >= 3 && analysis?.furniture && analysis.furniture.length > 0 && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <p className="text-xs text-text-tertiary mb-1">Identified Objects</p>
-                    <p className="text-sm font-medium text-text-primary">{analysis.furniture.length} components mapped</p>
-                  </motion.div>
-                )}
+                {currentStep >= 3 && (() => {
+                  const objectCount = (analysis?.movable_objects?.length ?? 0) + (analysis?.built_in_objects?.length ?? 0);
+                  return objectCount > 0 && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <p className="text-xs text-text-tertiary mb-1">Identified Objects</p>
+                      <p className="text-sm font-medium text-text-primary">{objectCount} components mapped</p>
+                    </motion.div>
+                  );
+                })()}
                 
                 {currentStep >= 4 && analysis?.budget_summary && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">

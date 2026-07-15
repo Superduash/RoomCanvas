@@ -43,7 +43,7 @@ class Settings(BaseSettings):
 
     # Model Defaults
     GROQ_TEXT_MODEL_DEFAULT: str = "openai/gpt-oss-120b"
-    GEMINI_TEXT_MODEL_DEFAULT: str = "gemini-2.5-flash"
+    GEMINI_TEXT_MODEL_DEFAULT: str = "gemini-3-flash"
     GEMINI_IMAGE_MODEL_DEFAULT: str = "gemini-3.1-flash-image"
     REPLICATE_IMAGE_MODEL_DEFAULT: str = "black-forest-labs/flux-kontext-pro"
 

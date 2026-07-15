@@ -112,24 +112,17 @@ def build_customization_clause(c) -> str:
     return " ".join(parts)
 
 COMPOSITION_LOCK_V1 = """CRITICAL COMPOSITION RULES:
-You are NOT decorating an existing room. You are performing a complete interior renovation.
+You are redesigning this room's furniture, decor, materials, and finishes — you are NOT performing a full renovation from an empty shell.
 
-OBJECT REMOVAL PHASE
 1. Keep the EXACT same camera angle, framing, and perspective as the original photo.
-2. Preserve all structural elements: walls, windows, doors, ceiling, floor, and their positions.
-3. Delete every movable object.
-4. Repair every occluded wall.
-5. Repair every hidden floor region.
-6. Repair lighting, shadows, and reflections.
-7. Only permanent architecture remains.
-
-DESIGN PHASE
-1. Design the room from scratch.
-2. Completely replace furniture.
-3. Do not reuse existing furniture (unless built-in or explicitly requested).
-4. Do not preserve clutter.
-5. Do not blend new furniture with old furniture.
-6. The final image should appear as if the original furniture never existed."""
+2. Preserve all structural elements exactly: walls, windows, doors, ceiling, and floor positions.
+3. Do not alter the room's architecture, layout, or dimensions in any way.
+4. Replace or restyle furniture and decor according to the redesign brief below — follow the
+   space-usage guidance to decide whether to replace items outright or restyle them in place.
+5. Repair only the specific floor/wall areas exposed by removing an object that is being replaced —
+   do not reconstruct areas that are not being changed.
+6. Preserve the original lighting direction, shadows, and reflections unless the redesign brief
+   explicitly calls for a lighting change."""
 
 REMOVAL_KEYWORDS = ["remove", "delete", "get rid of", "take out", "take away", "eliminate"]
 
@@ -247,11 +240,6 @@ def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = N
     space_guidance = get_space_guidance(analysis_data)
 
     GENERATION_PROMPT_V1 = f"""{COMPOSITION_LOCK_V1}
-
-Before generating the redesign:
-FIRST completely remove every movable object.
-Reconstruct the floor, wall, lighting, and background naturally.
-Only after the room is completely empty, design the room from scratch.
 
 {gemini_redesign_prompt}
 

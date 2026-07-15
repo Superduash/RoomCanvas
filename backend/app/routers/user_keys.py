@@ -29,7 +29,7 @@ class ActiveProviderResponse(BaseModel):
     provider_name: str | None = None
     is_platform: bool = False
 
-async def validate_api_key(provider: str, api_key: str) -> None:
+async def validate_api_key(provider: str, api_key: str, model_to_validate: str | None = None) -> None:
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             if provider == "groq":
@@ -41,12 +41,18 @@ async def validate_api_key(provider: str, api_key: str) -> None:
                     logger.warning(f"Groq API validation failed: {resp.text}")
                     raise ValueError("That API key was rejected by Groq. Double-check it and try again.")
             elif provider == "gemini":
-                # Quick generateContent to test
+                # Use the user's selected model for validation, not a hardcoded one
+                from app.config import settings
+                test_model = model_to_validate or settings.GEMINI_TEXT_MODEL_DEFAULT
                 resp = await client.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}",
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{test_model}:generateContent?key={api_key}",
                     json={"contents": [{"parts": [{"text": "Hello"}]}]}
                 )
-                if resp.status_code != 200:
+                if resp.status_code == 404:
+                    # Model deprecated - provide helpful error
+                    logger.warning(f"Gemini API validation failed - model {test_model} deprecated: {resp.text}")
+                    raise ValueError(f"Model '{test_model}' is no longer available. Please select gemini-3-flash or gemini-3.1-flash-lite from the model dropdown.")
+                elif resp.status_code != 200:
                     logger.warning(f"Gemini API validation failed: {resp.text}")
                     raise ValueError("That API key was rejected by Gemini. Double-check it and try again.")
             elif provider == "replicate":
@@ -96,7 +102,9 @@ async def set_key(
     # Validate the new key against the provider if one was supplied
     if req.api_key:  # treats None and "" identically — both skip validation
         try:
-            await validate_api_key(req.provider, req.api_key)
+            # Pass the user's selected model to validate against it
+            model_to_validate = req.preferred_text_model or req.preferred_image_model
+            await validate_api_key(req.provider, req.api_key, model_to_validate)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:

@@ -169,10 +169,15 @@ class GenerationService:
                 generation.provider_version = getattr(provider, 'provider_version', "v1")
                 generation.model_used = getattr(provider, 'model', "unknown")
                 generation.model_version = "latest"
+                
+                # Critical: commit the Variation row first
                 await session.commit()
                 await session.refresh(generation)
+                
+                # Then update status to completed and commit again
                 await repo.update_status(generation.id, "completed")
-
+                
+                # Only after both commits are done, log completion (SSE polls will see the completed status)
                 logger.info(f"Background task: Generation id={generation.id} done ({elapsed}s)")
 
             except Exception as e:

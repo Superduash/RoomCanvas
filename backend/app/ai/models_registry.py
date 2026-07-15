@@ -1,17 +1,14 @@
 SUPPORTED_MODELS = {
     "gemini": {
         "text": [
-            {"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash", "badge": "Recommended • Free"},
-            {"id": "gemini-3-flash", "label": "Gemini 3 Flash", "badge": "Free"},
+            {"id": "gemini-3-flash", "label": "Gemini 3 Flash", "badge": "Recommended • Free"},
             {"id": "gemini-3.1-flash-lite", "label": "Gemini 3.1 Flash Lite", "badge": "Free"},
-            {"id": "gemini-2.5-flash-lite", "label": "Gemini 2.5 Flash Lite", "badge": "Free"},
             {"id": "gemini-3.1-pro", "label": "Gemini 3.1 Pro", "badge": "Paid"},
             {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro", "badge": "Paid"}
         ],
         "image": [
             {"id": "gemini-3.1-flash-image", "label": "Gemini 3.1 Flash Image", "badge": "Recommended • Free"},
             {"id": "gemini-3.1-flash-lite-image", "label": "Gemini 3.1 Flash Lite Image", "badge": "Free"},
-            {"id": "gemini-2.5-flash-image", "label": "Gemini 2.5 Flash Image", "badge": "Free"},
             {"id": "gemini-3-pro-image", "label": "Gemini 3 Pro Image", "badge": "Paid"}
         ]
     },

@@ -136,7 +136,7 @@ class AnalysisService:
 
         # Capture provider info from the cached analysis result
         provider_name = "gemini"
-        model_used = "gemini-2.5-flash"
+        model_used = settings.GEMINI_TEXT_MODEL_DEFAULT
         model_version = "latest"
         try:
             provider = await get_text_provider(self.db, user_id)

@@ -540,7 +540,7 @@ export function ResultsPage() {
                   {caps.budget ? (
                     <BudgetCard 
                       summary={analysisData.budget_summary} 
-                      items={analysisData.furniture || []} 
+                      items={[...(analysisData.movable_objects || []), ...(analysisData.built_in_objects || [])]} 
                       fallbackEstimate={(analysisData as any).estimated_budget_range}
                     />
                   ) : null}
@@ -549,9 +549,12 @@ export function ResultsPage() {
                     <PaletteSwatches swatches={analysisData.color_palette} />
                   )}
                   
-                  {caps.furniture && analysisData.furniture && analysisData.furniture.length > 0 && (
-                    <FurnitureList items={analysisData.furniture} />
-                  )}
+                  {caps.furniture && (() => {
+                    const allObjects = [...(analysisData.movable_objects || []), ...(analysisData.built_in_objects || [])];
+                    return allObjects.length > 0 && (
+                      <FurnitureList items={allObjects} />
+                    );
+                  })()}
                   
                   {caps.lighting ? (
                     analysisData.lighting_suggestions && (
