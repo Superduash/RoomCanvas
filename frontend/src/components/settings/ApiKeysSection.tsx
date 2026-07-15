@@ -32,7 +32,7 @@ export function ApiKeysSection() {
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const res = await api.get('/config/models');
+        const res = await api.get('/config/models') as any;
         const data = res.data;
         setSupportedModels(data);
         
@@ -163,7 +163,7 @@ export function ApiKeysSection() {
   const configuredTextModel = (prov: string) => keys?.find(k => k.provider === prov)?.preferred_text_model;
   const configuredImageModel = (prov: string) => keys?.find(k => k.provider === prov)?.preferred_image_model;
 
-  if (keysLoading || !profile) {
+  if (keysLoading || !profile || modelsLoading) {
     return (
       <div className="p-5 border border-border rounded-xl bg-surface flex justify-center">
         <Loader2 className="w-5 h-5 animate-spin text-text-secondary" />
