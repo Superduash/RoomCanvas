@@ -34,20 +34,22 @@ export function ApiKeysSection() {
       try {
         const res = await api.get('/config/models') as any;
         const data = res.data;
-        setSupportedModels(data);
+        if (data && typeof data === 'object') {
+          setSupportedModels(data);
+        }
         
         // Initialize default forms for providers if empty
         setProviderForms(prev => {
           const next = { ...prev };
-          if (data.gemini) {
-            if (!next.gemini.textModel && data.gemini.text.length > 0) next.gemini.textModel = data.gemini.text[0].id;
-            if (!next.gemini.imageModel && data.gemini.image.length > 0) next.gemini.imageModel = data.gemini.image[0].id;
+          if (data.gemini && next.gemini) {
+            if (!next.gemini.textModel && data.gemini.text?.length > 0) next.gemini.textModel = data.gemini.text[0].id;
+            if (!next.gemini.imageModel && data.gemini.image?.length > 0) next.gemini.imageModel = data.gemini.image[0].id;
           }
-          if (data.replicate) {
-            if (!next.replicate.imageModel && data.replicate.image.length > 0) next.replicate.imageModel = data.replicate.image[0].id;
+          if (data.replicate && next.replicate) {
+            if (!next.replicate.imageModel && data.replicate.image?.length > 0) next.replicate.imageModel = data.replicate.image[0].id;
           }
-          if (data.groq) {
-            if (!next.groq.textModel && data.groq.text.length > 0) next.groq.textModel = data.groq.text[0].id;
+          if (data.groq && next.groq) {
+            if (!next.groq.textModel && data.groq.text?.length > 0) next.groq.textModel = data.groq.text[0].id;
           }
           return next;
         });
