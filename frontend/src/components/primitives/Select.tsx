@@ -20,7 +20,7 @@ export function Select({ value, onValueChange, placeholder, label, hint, error, 
       {label && <label className="text-sm font-medium text-text-primary">{label}</label>}
       <RadixSelect.Root value={value} onValueChange={onValueChange} disabled={disabled}>
         <RadixSelect.Trigger className={cn(
-          'flex h-11 w-full items-center justify-between rounded-xl border bg-surface-raised px-4',
+          'flex h-11 w-full min-w-0 items-center justify-between rounded-xl border bg-surface-raised px-4',
           'text-[15px] text-text-primary shadow-xs cursor-pointer',
           'transition-all duration-base ease-out',
           'focus:outline-none focus:border-accent focus:shadow-focus',
@@ -29,8 +29,10 @@ export function Select({ value, onValueChange, placeholder, label, hint, error, 
           error ? 'border-danger' : 'border-border',
           '[&[data-placeholder]]:text-text-tertiary/60',
         )}>
-          <RadixSelect.Value placeholder={placeholder} />
-          <RadixSelect.Icon>
+          <span className="truncate min-w-0 flex-1 text-left">
+            <RadixSelect.Value placeholder={placeholder} />
+          </span>
+          <RadixSelect.Icon className="flex-shrink-0 ml-2">
             <ChevronDown className="h-4 w-4 text-text-tertiary" />
           </RadixSelect.Icon>
         </RadixSelect.Trigger>
@@ -42,7 +44,7 @@ export function Select({ value, onValueChange, placeholder, label, hint, error, 
             'bg-surface-raised shadow-lg',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-            'max-h-[200px] w-[var(--radix-select-trigger-width)]'
+            'max-h-[200px] w-[var(--radix-select-trigger-width)] min-w-[200px]'
           )}>
             <RadixSelect.Viewport className="p-1.5 max-h-[190px] overflow-y-auto">
               {children}

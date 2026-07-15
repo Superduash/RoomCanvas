@@ -167,8 +167,8 @@ export function ApiKeysSection() {
           RoomCanvas relies entirely on your personal API keys. You must configure and select which provider to use for Analysis (Text) and Generation (Image).
         </p>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-6">
+          <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
             <label className="text-xs font-medium text-text-primary">Active Analysis Provider (Text)</label>
             <Select 
               value={profile.active_text_provider || ''} 
@@ -182,7 +182,7 @@ export function ApiKeysSection() {
             {!profile.active_text_provider && <span className="text-[11px] text-red-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> Required for redesign</span>}
           </div>
           
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
             <label className="text-xs font-medium text-text-primary">Active Generation Provider (Image)</label>
             <Select 
               value={profile.active_image_provider || ''} 
@@ -206,7 +206,6 @@ export function ApiKeysSection() {
           const configured = isConfigured(prov);
           const hasText = !!config.textModels;
           const hasImage = !!config.imageModels;
-          const hasBoth = hasText && hasImage;
           
           const isButtonDisabled = !providerForms[prov].apiKey && (!configured || (
             (hasText && providerForms[prov].textModel === configuredTextModel(prov)) &&
@@ -241,8 +240,8 @@ export function ApiKeysSection() {
                 )}
               </div>
               
-              <div className={`grid grid-cols-1 sm:grid-cols-12 gap-3 items-end`}>
-                <div className={`${hasBoth ? 'sm:col-span-12 lg:col-span-4' : 'sm:col-span-5'} flex flex-col gap-1.5`}>
+              <div className="flex flex-col md:flex-row flex-wrap gap-3 items-end">
+                <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
                   <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide truncate">
                     {configured ? 'Overwrite API Key' : 'API Key'}
                   </label>
@@ -256,7 +255,7 @@ export function ApiKeysSection() {
                 </div>
                 
                 {hasText && (
-                  <div className={`${hasBoth ? 'sm:col-span-6 lg:col-span-3' : 'sm:col-span-5'} flex flex-col gap-1.5`}>
+                  <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
                     <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide truncate">
                       Text Model
                     </label>
@@ -266,7 +265,7 @@ export function ApiKeysSection() {
                     >
                       {config.textModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center justify-between w-full gap-2">
+                          <div className="flex items-center justify-between w-full min-w-0 gap-2">
                             <span className="truncate">{m.label} {configuredTextModel(prov) === m.id ? '(Saved)' : ''}</span>
                             <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
                               m.badge === 'Free' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
@@ -281,7 +280,7 @@ export function ApiKeysSection() {
                 )}
                 
                 {hasImage && (
-                  <div className={`${hasBoth ? 'sm:col-span-6 lg:col-span-3' : 'sm:col-span-5'} flex flex-col gap-1.5`}>
+                  <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
                     <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide truncate">
                       Image Model
                     </label>
@@ -291,7 +290,7 @@ export function ApiKeysSection() {
                     >
                       {config.imageModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center justify-between w-full gap-2">
+                          <div className="flex items-center justify-between w-full min-w-0 gap-2">
                             <span className="truncate">{m.label} {configuredImageModel(prov) === m.id ? '(Saved)' : ''}</span>
                             <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
                               m.badge === 'Free' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
@@ -305,7 +304,7 @@ export function ApiKeysSection() {
                   </div>
                 )}
                 
-                <div className={`${hasBoth ? 'sm:col-span-12 lg:col-span-2' : 'sm:col-span-2'}`}>
+                <div className="w-full md:w-auto min-w-[100px] flex-none">
                   <Button
                     type="button"
                     variant="primary"

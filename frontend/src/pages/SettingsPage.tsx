@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useTheme } from '../hooks/useTheme';
 import { api } from '../api/client';
@@ -12,6 +13,7 @@ import { cn } from '../lib/utils';
 
 export function SettingsPage() {
   const { profile, setProfile } = useAuth();
+  const location = useLocation();
   
   const { themePreference: theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
@@ -22,6 +24,17 @@ export function SettingsPage() {
       setNotifications(profile.email_notifications);
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (location.hash === '#api-keys') {
+      const el = document.getElementById('api-keys');
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100); // small delay to ensure DOM is fully rendered
+      }
+    }
+  }, [location.hash, profile]);
 
   const handleSave = async (updates: Partial<User>) => {
     try {
@@ -140,7 +153,7 @@ export function SettingsPage() {
         </section>
 
         {/* Section 5: API Keys */}
-        <section className="flex flex-col md:flex-row gap-8 items-start border-b border-border pb-10">
+        <section id="api-keys" className="flex flex-col md:flex-row gap-8 items-start border-b border-border pb-10 scroll-mt-24">
           <div className="w-full md:w-1/3">
             <h3 className="text-[15px] font-semibold text-text-primary mb-1">Bring Your Own Key</h3>
             <p className="text-sm text-text-secondary">Provide your own API keys for Groq, Gemini, or Replicate to customize models and bypass platform limits.</p>

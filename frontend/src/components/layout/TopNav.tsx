@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
 import { useAuth } from '../../auth/AuthProvider';
-import { useHealth } from '../../api/queries';
+import { useUserKeys } from '../../api/queries';
 import { useTheme } from '../../hooks/useTheme';
 import { GlobalSearch } from './GlobalSearch';
 import { Skeleton } from '../primitives/Skeleton';
@@ -29,10 +29,67 @@ export function TopNav() {
   }, [mobileOpen]);
 
   const { user, profile, signOut, isLoading, syncError } = useAuth();
-  const { data: health } = useHealth();
+  const { data: keys, isLoading: keysLoading } = useUserKeys();
   const { activeTheme: theme, toggleTheme } = useTheme();
 
-  const hasProviderDown = health && (!health.providers.gemini || !health.providers.replicate);
+  const getMissingConfig = () => {
+    if (!profile) return null;
+    const activeText = profile.active_text_provider;
+    const activeImage = profile.active_image_provider;
+
+    if (!activeText && !activeImage) {
+      return (
+        <div className="flex flex-col gap-1 items-center max-w-lg mx-auto">
+          <p className="font-semibold text-sm">⚠️ Complete AI Setup Required</p>
+          <p className="text-xs mb-1">To start generating designs, please:</p>
+          <ol className="text-left text-xs list-decimal list-inside space-y-0.5">
+            <li>Add your API key(s) in <strong>Provider Keys & Models</strong></li>
+            <li>Select an <strong>Active Analysis Provider (Text)</strong></li>
+            <li>Select an <strong>Active Generation Provider (Image)</strong></li>
+          </ol>
+          <Link to="/settings#api-keys" className="mt-2 inline-flex items-center justify-center h-7 px-3 text-xs font-semibold rounded bg-white text-orange-700 hover:bg-orange-50 transition-colors shadow-sm">
+            Go to Settings
+          </Link>
+        </div>
+      );
+    }
+
+    if (!activeText) {
+      return (
+        <div className="flex items-center justify-center gap-3">
+          <p>Please configure and select an Analysis (Text) provider.</p>
+          <Link to="/settings#api-keys" className="inline-flex items-center justify-center h-6 px-2 text-[11px] font-semibold rounded bg-white text-orange-700 hover:bg-orange-50 transition-colors shadow-sm">Go to Settings</Link>
+        </div>
+      );
+    }
+    
+    if (!activeImage) {
+      return (
+        <div className="flex items-center justify-center gap-3">
+          <p>Please configure and select a Generation (Image) provider.</p>
+          <Link to="/settings#api-keys" className="inline-flex items-center justify-center h-6 px-2 text-[11px] font-semibold rounded bg-white text-orange-700 hover:bg-orange-50 transition-colors shadow-sm">Go to Settings</Link>
+        </div>
+      );
+    }
+
+    if (keys && !keysLoading) {
+      const hasTextKey = keys.some(k => k.provider === activeText);
+      const hasImageKey = keys.some(k => k.provider === activeImage);
+      
+      if (!hasTextKey || !hasImageKey) {
+        return (
+          <div className="flex items-center justify-center gap-3">
+            <p>Please enter a valid API key for your selected provider.</p>
+            <Link to="/settings#api-keys" className="inline-flex items-center justify-center h-6 px-2 text-[11px] font-semibold rounded bg-white text-orange-700 hover:bg-orange-50 transition-colors shadow-sm">Go to Settings</Link>
+          </div>
+        );
+      }
+    }
+    
+    return null;
+  };
+
+  const missingConfigMessage = getMissingConfig();
 
   const avatarMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(avatarMenuRef as React.RefObject<HTMLElement>, () => setAvatarMenuOpen(false));
@@ -49,13 +106,9 @@ export function TopNav() {
   return (
     <>
       {/* Provider status banner */}
-      {hasProviderDown && (
-        <div className="bg-warning-subtle border-b border-warning/20 px-4 py-2 text-center text-xs text-warning font-medium">
-          {!health.providers.gemini && !health.providers.replicate
-            ? 'AI services are currently unavailable — some features may not work.'
-            : !health.providers.gemini
-            ? 'Room analysis is temporarily unavailable.'
-            : 'Image generation is temporarily unavailable.'}
+      {missingConfigMessage && (
+        <div className="bg-orange-100 dark:bg-orange-950/40 border-b border-orange-200 dark:border-orange-900/50 px-4 py-3 text-center text-xs text-orange-800 dark:text-orange-300 font-medium w-full">
+          {missingConfigMessage}
         </div>
       )}
       
