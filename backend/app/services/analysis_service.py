@@ -29,7 +29,7 @@ def compute_budget_summary(furniture: list[dict]) -> dict:
 class AnalysisService:
     def __init__(self, repository: GenerationRepository):
         self.repository = repository
-        self.db = repository.session
+        self.db = repository.db
 
     async def create_analysis(
         self,

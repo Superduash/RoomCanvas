@@ -60,7 +60,7 @@ class GenerationService:
 
         if effective_style != generation.style:
             generation.style = effective_style
-            await self.repository.session.commit()
+            await self.repository.db.commit()
             
         updated_gen = await self.repository.update_status(generation.id, "pending")
         return updated_gen
