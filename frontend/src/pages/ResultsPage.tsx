@@ -486,7 +486,7 @@ export function ResultsPage() {
           <div className="border-t border-border" />
 
           {/* AI Analysis Recommendations */}
-          {analysisData && (() => {
+          {analysisData && activeGeneration.status !== 'failed_analysis' && (() => {
             const textProviderName = activeTextProvider?.provider_name?.toLowerCase() || '';
             const isGroq = textProviderName.includes('groq');
             

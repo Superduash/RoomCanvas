@@ -259,7 +259,7 @@ Change the furniture, decor, and finishes while preserving the room's walls, win
 def build_refinement_prompt(user_instruction: str | None, customization=None, analysis_data: dict = None) -> str:
     space_guidance = get_space_guidance(analysis_data)
 
-    base_prompt = f"""{COMPOSITION_LOCK}
+    base_prompt = f"""{COMPOSITION_LOCK_V1}
 
 {space_guidance}
 Apply this change only. Keep everything else in the image exactly as it is — same furniture placement, same room structure, same lighting direction, same camera angle — unless the instruction explicitly says otherwise."""

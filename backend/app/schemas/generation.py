@@ -53,7 +53,7 @@ class AnalyzeResponse(BaseModel):
     analysis_id: int
     analysis_confidence: float
     room_type: str
-    furniture: list[dict]
+    furniture: list[dict] = []
     movable_objects: list[dict] | None = None
     built_in_objects: list[dict] | None = None
     estimated_dimensions: dict
