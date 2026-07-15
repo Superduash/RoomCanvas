@@ -7,14 +7,16 @@ router = APIRouter(prefix="/providers", tags=["Providers"])
 
 def get_cached_providers_data():
     def compute_fn():
+        gemini_key = getattr(settings, "GEMINI_API_KEY", None)
+        replicate_key = getattr(settings, "REPLICATE_API_TOKEN", None)
         return {
             "analysis": {
-                "active": settings.ACTIVE_ANALYSIS_PROVIDER,
-                "configured": bool(settings.GEMINI_API_KEY)
+                "active": getattr(settings, "ACTIVE_ANALYSIS_PROVIDER", "gemini"),
+                "configured": bool(gemini_key)
             },
             "generation": {
-                "active": settings.ACTIVE_GENERATION_PROVIDER,
-                "configured": bool(settings.REPLICATE_API_TOKEN)
+                "active": getattr(settings, "ACTIVE_GENERATION_PROVIDER", "replicate"),
+                "configured": bool(replicate_key)
             }
         }
     return cached_json("providers:v1", 3600, compute_fn)

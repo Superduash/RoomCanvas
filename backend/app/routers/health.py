@@ -15,7 +15,7 @@ from app.auth.firebase_admin_init import is_firebase_available
 router = APIRouter()
 
 async def _probe_gemini() -> bool:
-    if not settings.GEMINI_API_KEY:
+    if not getattr(settings, "GEMINI_API_KEY", None):
         return False
     try:
         await asyncio.wait_for(asyncio.to_thread(socket.getaddrinfo, "generativelanguage.googleapis.com", 443), timeout=3)
@@ -24,7 +24,7 @@ async def _probe_gemini() -> bool:
         return False
 
 async def _probe_replicate() -> bool:
-    if not settings.REPLICATE_API_TOKEN:
+    if not getattr(settings, "REPLICATE_API_TOKEN", None):
         return False
     try:
         await asyncio.wait_for(asyncio.to_thread(socket.getaddrinfo, "api.replicate.com", 443), timeout=3)

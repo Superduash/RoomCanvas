@@ -19,9 +19,9 @@ def _is_transient(exc: Exception) -> bool:
 
 class ReplicateProvider(GenerationProvider):
     def __init__(self, api_token: str | None = None, model: str | None = None):
-        self.api_token = api_token or settings.REPLICATE_API_TOKEN
+        self.api_token = api_token or getattr(settings, "REPLICATE_API_TOKEN", None)
         if not self.api_token:
-            raise InferenceServiceError("REPLICATE_API_TOKEN is not configured", 500)
+            raise InferenceServiceError("REPLICATE_API_TOKEN is not configured and no user key provided.", 500)
         self.model = model or "black-forest-labs/flux-kontext-pro"
 
     @retry(

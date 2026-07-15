@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 class GeminiProvider(AnalysisProvider, GenerationProvider):
     def __init__(self, api_key: str | None = None, model: str | None = None):
-        self.api_key = api_key or settings.GEMINI_API_KEY
+        self.api_key = api_key or getattr(settings, "GEMINI_API_KEY", None)
         if not self.api_key:
-            raise AnalysisServiceError("GEMINI_API_KEY is not configured", 500)
+            raise AnalysisServiceError("GEMINI_API_KEY is not configured and no user key provided.", 500)
         self.client = genai.Client(
             api_key=self.api_key,
             http_options=types.HttpOptions(timeout=settings.GEMINI_TIMEOUT_SECONDS * 1000),
