@@ -31,30 +31,37 @@ export function ApiKeysSection() {
 
   useEffect(() => {
     const fetchModels = async () => {
+      const EMPTY_MODELS = {
+        gemini: { text: [], image: [] },
+        replicate: { text: [], image: [] },
+        groq: { text: [], image: [] },
+      };
       try {
         const res = await api.get('/config/models') as any;
-        const data = res.data;
-        if (data && typeof data === 'object') {
-          setSupportedModels(data);
-        }
-        
-        // Initialize default forms for providers if empty
+        const raw = res.data || {};
+        const safeData = {
+          gemini: raw.gemini || { text: [], image: [] },
+          replicate: raw.replicate || { text: [], image: [] },
+          groq: raw.groq || { text: [], image: [] },
+        };
+        setSupportedModels(safeData);
+
+        // Initialize default model selections if not yet set
         setProviderForms(prev => {
           const next = { ...prev };
-          if (data.gemini && next.gemini) {
-            if (!next.gemini.textModel && data.gemini.text?.length > 0) next.gemini.textModel = data.gemini.text[0].id;
-            if (!next.gemini.imageModel && data.gemini.image?.length > 0) next.gemini.imageModel = data.gemini.image[0].id;
-          }
-          if (data.replicate && next.replicate) {
-            if (!next.replicate.imageModel && data.replicate.image?.length > 0) next.replicate.imageModel = data.replicate.image[0].id;
-          }
-          if (data.groq && next.groq) {
-            if (!next.groq.textModel && data.groq.text?.length > 0) next.groq.textModel = data.groq.text[0].id;
-          }
+          if (safeData.gemini.text.length > 0 && next.gemini && !next.gemini.textModel)
+            next.gemini = { ...next.gemini, textModel: safeData.gemini.text[0].id };
+          if (safeData.gemini.image.length > 0 && next.gemini && !next.gemini.imageModel)
+            next.gemini = { ...next.gemini, imageModel: safeData.gemini.image[0].id };
+          if (safeData.replicate.image.length > 0 && next.replicate && !next.replicate.imageModel)
+            next.replicate = { ...next.replicate, imageModel: safeData.replicate.image[0].id };
+          if (safeData.groq.text.length > 0 && next.groq && !next.groq.textModel)
+            next.groq = { ...next.groq, textModel: safeData.groq.text[0].id };
           return next;
         });
       } catch (err) {
         console.error('Failed to fetch supported models:', err);
+        setSupportedModels(EMPTY_MODELS);
       } finally {
         setModelsLoading(false);
       }

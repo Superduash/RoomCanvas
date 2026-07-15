@@ -2,10 +2,13 @@
 config.py — GET /api/config
 Non-secret runtime config for the frontend. Cached in-memory + HTTP headers.
 """
+import logging
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.cache import get_cached_config
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/config", tags=["Config"])
 
@@ -19,7 +22,16 @@ def get_config():
 
 @router.get("/models", status_code=200)
 def get_supported_models():
-    from app.ai.models_registry import SUPPORTED_MODELS
-    response = JSONResponse(content=SUPPORTED_MODELS)
-    response.headers["Cache-Control"] = "public, max-age=600, stale-while-revalidate=3600"
-    return response
+    try:
+        from app.ai.models_registry import SUPPORTED_MODELS
+        response = JSONResponse(content=SUPPORTED_MODELS)
+        response.headers["Cache-Control"] = "public, max-age=600, stale-while-revalidate=3600"
+        return response
+    except Exception as e:
+        logger.error(f"Failed to load SUPPORTED_MODELS: {e}")
+        empty = {
+            "gemini": {"text": [], "image": []},
+            "replicate": {"text": [], "image": []},
+            "groq": {"text": [], "image": []},
+        }
+        return JSONResponse(content=empty, status_code=200)
