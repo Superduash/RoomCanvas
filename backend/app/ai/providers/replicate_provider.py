@@ -14,7 +14,7 @@ def _is_transient(exc: Exception) -> bool:
         return True
     exc_str = str(exc)
     if "429" in exc_str or "throttled" in exc_str.lower():
-        return True
+        return False # Fail fast on rate limits
     return False
 
 class ReplicateProvider(GenerationProvider):
@@ -79,7 +79,7 @@ class ReplicateProvider(GenerationProvider):
                     err_msg = f"Model {self.model} is invalid or not accessible with your API key."
                     status_code = 400
                 elif code == 429:
-                    err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                    err_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
                     status_code = 429
                 elif code in (401, 403):
                     err_msg = "Invalid API key or quota exceeded. Please check your Replicate dashboard."
@@ -141,7 +141,7 @@ class ReplicateProvider(GenerationProvider):
                     err_msg = f"Model {self.model} is invalid or not accessible with your API key."
                     status_code = 400
                 elif code == 429:
-                    err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                    err_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
                     status_code = 429
                 elif code in (401, 403):
                     err_msg = "Invalid API key or quota exceeded. Please check your Replicate dashboard."

@@ -16,8 +16,8 @@ class User(Base):
     photo_url: Mapped[str | None] = mapped_column(String, nullable=True)
     username: Mapped[str | None] = mapped_column(String, unique=True, nullable=True, index=True)
     bio: Mapped[str | None] = mapped_column(String, nullable=True)
-    active_text_provider: Mapped[str | None] = mapped_column(String, nullable=True)
-    active_image_provider: Mapped[str | None] = mapped_column(String, nullable=True)
+    active_text_provider: Mapped[str | None] = mapped_column(String, nullable=True, default="gemini")
+    active_image_provider: Mapped[str | None] = mapped_column(String, nullable=True, default="replicate")
     theme_preference: Mapped[str] = mapped_column(String, default="system", nullable=False)
     email_notifications: Mapped[bool] = mapped_column(Integer, default=1, nullable=False) # SQLite uses Integer for boolean
     profile_completed: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
@@ -43,6 +43,7 @@ class Generation(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     original_image_path: Mapped[str] = mapped_column(String, nullable=False)
+    image_hash: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
     room_type_detected: Mapped[str | None] = mapped_column(String, nullable=True)
     room_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     style: Mapped[str] = mapped_column(String, nullable=False)

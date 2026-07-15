@@ -69,7 +69,7 @@ class GroqProvider(AnalysisProvider):
                 friendly_msg = f"Model {self.model_name} is invalid or not accessible with your API key."
                 status_code = 400
             elif status_code == 429:
-                friendly_msg = "Rate limit exceeded. Please wait a moment and try again."
+                friendly_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
             elif status_code in (401, 403):
                 friendly_msg = "Invalid API key or quota exceeded. Please check your Groq console."
                 

@@ -54,6 +54,21 @@ class GenerationRepository:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_cached_analysis_by_hash(self, image_hash: str, style: str) -> Generation | None:
+        query = (
+            select(Generation)
+            .where(Generation.image_hash == image_hash)
+            .where(Generation.style == style)
+            .where(Generation.analysis_json.is_not(None))
+            .where(Generation.parent_generation_id.is_(None)) # Ensure it's a root analysis
+            .order_by(desc(Generation.created_at))
+            .limit(1)
+        )
+        if self.user_id is not None:
+            query = query.where(Generation.user_id == self.user_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
     async def list_all(self, limit: int = 50) -> list[Generation]:
         query = select(Generation).order_by(desc(Generation.created_at))
         if self.user_id is not None:

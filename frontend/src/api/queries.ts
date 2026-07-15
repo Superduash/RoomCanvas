@@ -107,7 +107,7 @@ export function useProjectTimeline(projectId: number | null) {
       const data = query.state.data;
       if (!data) return false;
       const isGenerating = data.timeline.some(g => g.status === 'pending' || g.status === 'analyzed');
-      return isGenerating ? 2000 : false;
+      return isGenerating ? 2500 : false;
     },
   });
 }

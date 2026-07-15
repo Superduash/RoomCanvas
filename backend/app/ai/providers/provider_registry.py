@@ -94,5 +94,37 @@ async def get_active_text_provider_info(db: AsyncSession, user_id: int | None = 
         
     return {"is_available": False, "provider_name": None, "is_platform": False}
 
+async def get_fallback_text_provider(db: AsyncSession, user_id: int, current_prov: str) -> tuple[AnalysisProvider | None, str | None]:
+    """Returns an alternative text provider if the user has keys for it."""
+    key_service = KeyService(db, user_id)
+    providers = ["groq", "gemini"]
+    for p in providers:
+        if p != current_prov:
+            api_key, preferred_model, _ = await key_service.get_user_key(p)
+            if api_key:
+                if p == "groq":
+                    from app.ai.providers.groq_provider import GroqProvider
+                    return GroqProvider(api_key=api_key, model=preferred_model or settings.GROQ_TEXT_MODEL_DEFAULT), p
+                elif p == "gemini":
+                    from app.ai.providers.gemini_provider import GeminiProvider
+                    return GeminiProvider(api_key=api_key, model=preferred_model or settings.GEMINI_TEXT_MODEL_DEFAULT), p
+    return None, None
+
+async def get_fallback_image_provider(db: AsyncSession, user_id: int, current_prov: str) -> tuple[GenerationProvider | None, str | None]:
+    """Returns an alternative image provider if the user has keys for it."""
+    key_service = KeyService(db, user_id)
+    providers = ["replicate", "gemini"]
+    for p in providers:
+        if p != current_prov:
+            api_key, _, preferred_model = await key_service.get_user_key(p)
+            if api_key:
+                if p == "replicate":
+                    from app.ai.providers.replicate_provider import ReplicateProvider
+                    return ReplicateProvider(api_token=api_key, model=preferred_model or settings.REPLICATE_IMAGE_MODEL_DEFAULT), p
+                elif p == "gemini":
+                    from app.ai.providers.gemini_provider import GeminiProvider
+                    return GeminiProvider(api_key=api_key, model=preferred_model or settings.GEMINI_IMAGE_MODEL_DEFAULT), p
+    return None, None
+
 def init_providers() -> None:
     pass

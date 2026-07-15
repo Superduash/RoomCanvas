@@ -44,28 +44,59 @@ class AnalysisService:
         error_msg = None
         status = "analyzed"
 
-        # 1. Try to get analysis from AI Provider
-        async def fetch_analysis():
-            provider = await get_text_provider(self.db, user_id)
-            res = await provider.analyze_room(image_bytes, mime_type, style_id)
-            res["budget_summary"] = compute_budget_summary(res.get("furniture", []))
-            res.pop("estimated_budget_range", None)
-            # Validate response shape
-            _ = AnalyzeResponse(analysis_id=0, **res)
-            return res
+        import hashlib
+        
+        h = hashlib.sha256()
+        h.update(image_bytes)
+        image_hash = h.hexdigest()
 
-        try:
-            import hashlib
-            from app.cache.redis_cache import cached_json_async
-            
-            h = hashlib.sha256()
-            h.update(image_bytes)
-            h.update(style_id.encode('utf-8'))
-            cache_key = f"analysis:{h.hexdigest()}"
-            
-            # Cache for 2 hours
-            analysis_dict = await cached_json_async(cache_key, 7200, fetch_analysis)
-        except Exception as e:
+        # 0. Check DB Cache First
+        cached_gen = await self.repository.get_cached_analysis_by_hash(image_hash, style_id)
+        if cached_gen and cached_gen.analysis_json:
+            import json
+            try:
+                analysis_dict = json.loads(cached_gen.analysis_json)
+                logger.info(f"DB cache hit for analysis (hash={image_hash[:8]}...)")
+            except Exception:
+                pass
+
+        # 1. Try to get analysis from AI Provider if not in DB cache
+        if not analysis_dict:
+            async def fetch_analysis():
+                provider = await get_text_provider(self.db, user_id)
+                current_prov = getattr(provider, '__class__', type(provider)).__name__.replace('Provider', '').lower()
+                
+                try:
+                    res = await provider.analyze_room(image_bytes, mime_type, style_id)
+                except Exception as e:
+                    status_code = getattr(e, 'status_code', 500)
+                    if status_code == 429:
+                        from app.ai.providers.provider_registry import get_fallback_text_provider
+                        logger.warning(f"Text provider {current_prov} hit rate limit (429). Attempting fallback...")
+                        fallback_provider, fallback_name = await get_fallback_text_provider(self.db, user_id, current_prov)
+                        if fallback_provider:
+                            logger.info(f"Fallback to {fallback_name} text provider successful.")
+                            res = await fallback_provider.analyze_room(image_bytes, mime_type, style_id)
+                        else:
+                            raise e
+                    else:
+                        raise e
+                        
+                res["budget_summary"] = compute_budget_summary(res.get("furniture", []))
+                res.pop("estimated_budget_range", None)
+                # Validate response shape
+                _ = AnalyzeResponse(analysis_id=0, **res)
+                return res
+
+            try:
+                from app.cache.redis_cache import cached_json_async
+                
+                # We can reuse the same hash for Redis
+                cache_key = f"analysis:{image_hash}:{style_id}"
+                
+                # Cache for 2 hours
+                analysis_dict = await cached_json_async(cache_key, 7200, fetch_analysis)
+            except Exception as e:
             logger.error(f"Analysis provider failed: {e}. Falling back to default skeleton.")
             error_msg = f"Provider failed: {str(e)}"
             status = "failed_analysis"
@@ -136,6 +167,7 @@ class AnalysisService:
             "status": status,
             "processing_time_sec": round(time.perf_counter() - t0, 2),
             "user_id": user_id,
+            "image_hash": image_hash,
         }
         if error_msg:
             generation_data["error"] = error_msg

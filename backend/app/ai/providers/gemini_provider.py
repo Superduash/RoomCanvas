@@ -86,7 +86,7 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                             err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible with your API key."
                             status_code = 400
                         elif e.code == 429:
-                            err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                            err_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
                             status_code = 429
                         elif e.code in (401, 403):
                             err_msg = "Invalid API key or quota exceeded. Please check your Google AI Studio dashboard."
@@ -150,7 +150,7 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                             err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible with your API key."
                             status_code = 400
                         elif e.code == 429:
-                            err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                            err_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
                             status_code = 429
                         elif e.code in (401, 403):
                             err_msg = "Invalid API key or quota exceeded. Please check your Google AI Studio dashboard."

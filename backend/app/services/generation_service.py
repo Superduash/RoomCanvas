@@ -41,6 +41,13 @@ class GenerationService:
             effective_style = customization.style_override
 
         if generation.status == "completed" and force_new:
+            # Prevent duplicate requests: check if a pending child already exists
+            children = await self.repository.get_children(generation.id)
+            pending_child = next((c for c in children if c.status in ("pending", "analyzed")), None)
+            if pending_child:
+                logger.info(f"Generation id={analysis_id} already has a pending child ({pending_child.id}) — returning it to prevent duplicates")
+                return pending_child
+
             new_generation = await self.repository.create_generation({
                 "original_image_path": generation.original_image_path,
                 "style": effective_style,
@@ -110,11 +117,32 @@ class GenerationService:
                 logger.info(f"Background task: calling Replicate for Generation id={generation.id}…")
                 
                 provider = await get_image_provider(session, generation.user_id)
-                output_url, seed_used = await provider.generate(
-                    image_bytes=image_bytes,
-                    mime_type="image/jpeg",
-                    prompt=final_prompt,
-                )
+                current_prov = getattr(provider, '__class__', type(provider)).__name__.replace('Provider', '').lower()
+                
+                try:
+                    output_url, seed_used = await provider.generate(
+                        image_bytes=image_bytes,
+                        mime_type="image/jpeg",
+                        prompt=final_prompt,
+                    )
+                except Exception as e:
+                    status_code = getattr(e, 'status_code', getattr(e, 'status', 500))
+                    if status_code == 429:
+                        from app.ai.providers.provider_registry import get_fallback_image_provider
+                        logger.warning(f"Image provider {current_prov} hit rate limit (429). Attempting fallback...")
+                        fallback_provider, fallback_name = await get_fallback_image_provider(session, generation.user_id, current_prov)
+                        if fallback_provider:
+                            logger.info(f"Fallback to {fallback_name} image provider successful.")
+                            provider = fallback_provider
+                            output_url, seed_used = await provider.generate(
+                                image_bytes=image_bytes,
+                                mime_type="image/jpeg",
+                                prompt=final_prompt,
+                            )
+                        else:
+                            raise e
+                    else:
+                        raise e
                 t2 = time.perf_counter()
                 logger.info(f"Generation id={generation.id}: replicate call took {t2-t1:.1f}s")
 
