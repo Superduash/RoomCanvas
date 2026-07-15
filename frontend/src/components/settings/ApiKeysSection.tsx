@@ -35,7 +35,7 @@ export function ApiKeysSection() {
     gemini: {
       name: 'Gemini',
       textModels: [
-        { id: 'gemini-3-flash', label: 'Gemini 3 Flash', badge: 'Free' },
+        { id: 'gemini-3-flash', label: 'Gemini 3 Flash', badge: 'Default' },
         { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badge: 'Free' },
         { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', badge: 'Free' },
         { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', badge: 'Free' },
@@ -43,7 +43,7 @@ export function ApiKeysSection() {
         { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', badge: 'Paid' },
       ],
       imageModels: [
-        { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image', badge: 'Free' },
+        { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image', badge: 'Default' },
         { id: 'gemini-3.1-flash-lite-image', label: 'Gemini 3.1 Flash Lite Image', badge: 'Free' },
         { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image', badge: 'Free' },
         { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image', badge: 'Paid' },
@@ -53,7 +53,7 @@ export function ApiKeysSection() {
     replicate: {
       name: 'Replicate',
       imageModels: [
-        { id: 'black-forest-labs/flux-kontext-pro', label: 'Flux Kontext Pro', badge: 'Recommended' },
+        { id: 'black-forest-labs/flux-kontext-pro', label: 'Flux Kontext Pro', badge: 'Default' },
         { id: 'black-forest-labs/flux-schnell', label: 'Flux Schnell (Fast)', badge: 'Free' },
         { id: 'black-forest-labs/flux-kontext-max', label: 'Flux Kontext Max', badge: 'Paid' },
         { id: 'black-forest-labs/flux-2-pro', label: 'Flux 2 Pro', badge: 'Paid' },
@@ -63,7 +63,7 @@ export function ApiKeysSection() {
     groq: {
       name: 'Groq',
       textModels: [
-        { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', badge: 'Free' },
+        { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', badge: 'Default' },
         { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', badge: 'Free' },
         { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', badge: 'Free' },
       ],
@@ -265,11 +265,11 @@ export function ApiKeysSection() {
                     >
                       {config.textModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center justify-between w-full min-w-0 gap-2">
+                          <div className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
                             <span className="truncate">{m.label} {configuredTextModel(prov) === m.id ? '(Saved)' : ''}</span>
                             <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
-                              m.badge === 'Free' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              m.badge === 'Recommended' ? 'bg-accent/10 text-accent' :
+                              m.badge === 'Free' ? 'bg-[#E6F4EA] text-[#137333] dark:bg-green-900/30 dark:text-green-400' :
+                              (m.badge === 'Recommended' || m.badge === 'Default') ? 'bg-accent/10 text-accent' :
                               'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                             }`}>{m.badge}</span>
                           </div>
@@ -290,11 +290,11 @@ export function ApiKeysSection() {
                     >
                       {config.imageModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center justify-between w-full min-w-0 gap-2">
+                          <div className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
                             <span className="truncate">{m.label} {configuredImageModel(prov) === m.id ? '(Saved)' : ''}</span>
                             <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
-                              m.badge === 'Free' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              m.badge === 'Recommended' ? 'bg-accent/10 text-accent' :
+                              m.badge === 'Free' ? 'bg-[#E6F4EA] text-[#137333] dark:bg-green-900/30 dark:text-green-400' :
+                              (m.badge === 'Recommended' || m.badge === 'Default') ? 'bg-accent/10 text-accent' :
                               'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                             }`}>{m.badge}</span>
                           </div>
