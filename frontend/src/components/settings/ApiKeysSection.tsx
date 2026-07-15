@@ -38,7 +38,7 @@ export function ApiKeysSection() {
       };
       try {
         const res = await api.get('/config/models') as any;
-        const raw = res.data || {};
+        const raw = (res && typeof res === 'object' && !Array.isArray(res)) ? res : {};
         const safeData = {
           gemini: raw.gemini || { text: [], image: [] },
           replicate: raw.replicate || { text: [], image: [] },
