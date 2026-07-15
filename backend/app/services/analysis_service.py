@@ -97,49 +97,49 @@ class AnalysisService:
                 # Cache for 2 hours
                 analysis_dict = await cached_json_async(cache_key, 7200, fetch_analysis)
             except Exception as e:
-            logger.error(f"Analysis provider failed: {e}. Falling back to default skeleton.")
-            error_msg = f"Provider failed: {str(e)}"
-            status = "failed_analysis"
-            analysis_dict = {
-                "room_type": "Unknown",
-                "furniture": [
-                    {
-                        "item": "Main structural elements", 
-                        "description": "Unable to map detailed furniture", 
-                        "price_min": 0, 
-                        "price_max": 0, 
-                        "purchase_status": "keep_existing"
-                    }
-                ],
-                "estimated_dimensions": {"width_ft": 0.0, "length_ft": 0.0, "confidence": "low"},
-                "layout_notes": "Unable to analyze room layout dynamically. You can still generate a design manually by specifying options.",
-                "color_palette": [
-                    {"name": "Neutral Tone", "hex": "#808080"}
-                ],
-                "lighting_suggestions": "Unable to analyze lighting context.",
-                "budget_summary": {
-                    "required_purchase_total": {"min": 0, "max": 0},
-                    "optional_upgrade_total": {"min": 0, "max": 0},
-                    "grand_total": {"min": 0, "max": 0},
-                    "items_to_buy_count": 0,
-                    "items_kept_count": 1,
-                },
-                "space_occupancy": "mostly_empty",
-                "open_floor_area_pct": 100,
-                "architecture": {
-                    "walls": "keep as is",
-                    "windows": "keep as is",
-                    "doors": "keep as is",
-                    "ceiling_height": "keep as is",
-                    "lighting_direction": "keep original"
-                },
-                "style_explanation": "Unable to analyze style dynamically.",
-                "redesign_prompt": (
-                    f"Fully redesign this room in {style_id.replace('_', ' ')} style. "
-                    f"Add appropriate furniture, decor, and lighting fixtures for a {style_id.replace('_', ' ')} "
-                    f"living space — this room should look furnished and complete, not empty."
-                )
-            }
+                logger.error(f"Analysis provider failed: {e}. Falling back to default skeleton.")
+                error_msg = f"Provider failed: {str(e)}"
+                status = "failed_analysis"
+                analysis_dict = {
+                    "room_type": "Unknown",
+                    "furniture": [
+                        {
+                            "item": "Main structural elements", 
+                            "description": "Unable to map detailed furniture", 
+                            "price_min": 0, 
+                            "price_max": 0, 
+                            "purchase_status": "keep_existing"
+                        }
+                    ],
+                    "estimated_dimensions": {"width_ft": 0.0, "length_ft": 0.0, "confidence": "low"},
+                    "layout_notes": "Unable to analyze room layout dynamically. You can still generate a design manually by specifying options.",
+                    "color_palette": [
+                        {"name": "Neutral Tone", "hex": "#808080"}
+                    ],
+                    "lighting_suggestions": "Unable to analyze lighting context.",
+                    "budget_summary": {
+                        "required_purchase_total": {"min": 0, "max": 0},
+                        "optional_upgrade_total": {"min": 0, "max": 0},
+                        "grand_total": {"min": 0, "max": 0},
+                        "items_to_buy_count": 0,
+                        "items_kept_count": 1,
+                    },
+                    "space_occupancy": "mostly_empty",
+                    "open_floor_area_pct": 100,
+                    "architecture": {
+                        "walls": "keep as is",
+                        "windows": "keep as is",
+                        "doors": "keep as is",
+                        "ceiling_height": "keep as is",
+                        "lighting_direction": "keep original"
+                    },
+                    "style_explanation": "Unable to analyze style dynamically.",
+                    "redesign_prompt": (
+                        f"Fully redesign this room in {style_id.replace('_', ' ')} style. "
+                        f"Add appropriate furniture, decor, and lighting fixtures for a {style_id.replace('_', ' ')} "
+                        f"living space — this room should look furnished and complete, not empty."
+                    )
+                }
 
 
         # Capture provider info from the cached analysis result
