@@ -248,7 +248,7 @@ export function UploadPage() {
             <button
               onClick={handleAnalyzeClick}
               disabled={!canSubmit || providersLoading}
-              className="w-full flex justify-center items-center h-[52px] bg-text-primary text-background text-[15px] font-medium rounded-xl hover:bg-text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+              className="w-full flex justify-center items-center h-[52px] bg-accent text-white text-[15px] font-medium rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
               {analyze.isPending || providersLoading ? (
                 <div className="flex items-center gap-2">
