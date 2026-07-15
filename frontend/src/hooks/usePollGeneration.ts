@@ -8,7 +8,7 @@ import { type GenerationOut } from '../api/types';
 
 const TIMEOUT_MS = 150_000; // 150 seconds
 
-export function usePollGeneration(id: number | null) {
+export function usePollGeneration(id: number | null, onComplete?: (gen: GenerationOut) => void) {
   const query = useGeneration(id);
   const qc = useQueryClient();
   const [timedOut, setTimedOut] = useState(false);
@@ -48,6 +48,10 @@ export function usePollGeneration(id: number | null) {
               qc.setQueryData(['generation', id], data);
               // Invalidate history to keep sidebar fresh
               qc.invalidateQueries({ queryKey: ['history'], exact: false });
+              
+              if (data.status === 'completed' && onComplete) {
+                 onComplete(data);
+              }
             }
           },
           onerror(err) {
@@ -78,6 +82,9 @@ export function usePollGeneration(id: number | null) {
           qc.setQueryData(['generation', id], data);
           if (data.status === 'completed' || data.status === 'failed' || data.status === 'failed_analysis') {
              clearInterval(backupPollInterval);
+             if (data.status === 'completed' && onComplete) {
+                onComplete(data);
+             }
           }
         }
       } catch (e) {

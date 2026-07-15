@@ -10,6 +10,8 @@ import { useAnalyzeRoom, useGenerateDesign, useActiveProvider } from '../api/que
 import type { AnalyzeResponse } from '../api/types';
 import { useUIStore } from '../store/uiStore';
 import { logger } from '../lib/logger';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/client';
 
 const STEPS = [
   'Analyzing room structure...',
@@ -43,7 +45,34 @@ export function AnalysisPage() {
   const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
   const analyzeMutation = useAnalyzeRoom();
   const generateDesign = useGenerateDesign();
-  const { generation, isPending, isCompleted, isFailed, timedOut, resetTimeout } = usePollGeneration(generationId);
+  const { setIsGenerating } = useUIStore();
+  const queryClient = useQueryClient();
+  const hasNavigated = useRef(false);
+
+  const handleGenerationComplete = async (gen: any) => {
+    if (hasNavigated.current) return;
+    hasNavigated.current = true;
+    
+    logger.info('Generation completed. Invalidating caches and navigating.');
+    setIsGenerating(false);
+    
+    await queryClient.invalidateQueries({ queryKey: ['history'] });
+    if (gen.project_id) {
+      await queryClient.invalidateQueries({ queryKey: ['project_timeline', gen.project_id] });
+    }
+    
+    // Explicitly prefetch the final project/generation data before navigating
+    await queryClient.prefetchQuery({
+      queryKey: ['generation', gen.id],
+      queryFn: () => api.get(`/history/${gen.id}`)
+    });
+    
+    setWorkflowState('COMPLETE');
+    // Important: Route to the project ID, not the generation ID!
+    navigate(`/results/${gen.project_id}`, { replace: true });
+  };
+
+  const { generation, isPending, isCompleted, isFailed, timedOut, resetTimeout } = usePollGeneration(generationId, handleGenerationComplete);
 
   const hasStartedWorkflow = useRef(false);
 
@@ -52,6 +81,7 @@ export function AnalysisPage() {
       logger.info('Analyze started');
       setGenerateError(null);
       setWorkflowState('ANALYZING');
+      setIsGenerating(true);
       
       const analysisResult = await analyzeMutation.mutateAsync({ 
          image: pendingFile!, 
@@ -60,7 +90,6 @@ export function AnalysisPage() {
       
       logger.info('Analyze completed');
       setAnalysis(analysisResult);
-      clearUpload();
 
       logger.info('Generate started');
       setWorkflowState('GENERATING');
@@ -72,6 +101,7 @@ export function AnalysisPage() {
       setGenerationId(genResult.id);
     } catch (err) {
       setWorkflowState('ERROR');
+      setIsGenerating(false);
       setGenerateError(err instanceof Error ? err.message : 'An error occurred during generation workflow');
     }
   };
@@ -117,22 +147,16 @@ export function AnalysisPage() {
     return () => clearInterval(interval);
   }, [stepperDone, workflowState, isCompleted, isFailed]);
 
-  // Navigate when BOTH stepper done AND generation completed
-  useEffect(() => {
-    if (stepperDone && isCompleted && generationId) {
-      logger.info('Navigate to Results');
-      setWorkflowState('COMPLETE');
-      navigate(`/results/${generationId}`, { replace: true });
-    }
-  }, [stepperDone, isCompleted, generationId, navigate]);
+
 
   // Handle background generation failure
   useEffect(() => {
     if (isFailed && generation?.error) {
       setWorkflowState('ERROR');
+      setIsGenerating(false);
       setGenerateError(generation.error);
     }
-  }, [isFailed, generation]);
+  }, [isFailed, generation, setIsGenerating]);
 
   const handleRetry = () => {
     setGenerateError(null);

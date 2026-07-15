@@ -2,39 +2,47 @@ import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tan
 import { api, ApiError } from './client';
 import type { AnalyzeResponse, AppConfig, GenerationOut, HealthStatus, StyleOption, Project, ProjectDetails } from './types';
 import { logger } from '../lib/logger';
+import { useUIStore } from '../store/uiStore';
 
 // ── Boot-time static data ──────────────────────────────────────────────
 export function useConfig() {
+  const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['config'],
     queryFn: () => api.get<AppConfig>('/config'),
     staleTime: Infinity,
+    enabled: !isGenerating,
   });
 }
 
 export function useStyles() {
+  const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['styles'],
     queryFn: () => api.get<StyleOption[]>('/styles'),
     staleTime: 60 * 60 * 1000,
+    enabled: !isGenerating,
   });
 }
 
 export function useUserStats(enabled = true) {
+  const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['user_stats'],
     queryFn: () => api.get<{ total_designs: number; favorite_style: string | null; member_since: string }>('/auth/me/stats'),
     staleTime: 60000,
-    enabled,
+    enabled: enabled && !isGenerating,
   });
 }
 
 export function useHealth() {
+  const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['health'],
     queryFn: () => api.get<HealthStatus>('/health'),
-    refetchInterval: 30_000,
+    refetchInterval: isGenerating ? false : 30_000,
     retry: false,
+    enabled: !isGenerating,
   });
 }
 
@@ -85,13 +93,14 @@ export function useGeneration(id: number | null): UseQueryResult<GenerationOut> 
 }
 
 // ── History ──────────────────────────────────────────────────────────
-export function useHistory(limit = 50, enabled = true) {
+export function useHistory(limit = 50) {
+  const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['history', limit],
     queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
     staleTime: 30000,
     gcTime: 15 * 60000,
-    enabled,
+    enabled: !isGenerating,
     refetchOnMount: true,
   });
 }
@@ -226,16 +235,22 @@ export interface ActiveProviderStatus {
 }
 
 export function useActiveProvider() {
+  const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['active_provider'],
     queryFn: () => api.get<ActiveProviderStatus>('/settings/keys/active'),
+    staleTime: 60000,
+    enabled: !isGenerating,
   });
 }
 
 export function useActiveTextProvider() {
+  const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['active_text_provider'],
     queryFn: () => api.get<ActiveProviderStatus>('/settings/keys/active-text'),
+    staleTime: 60000,
+    enabled: !isGenerating,
   });
 }
 

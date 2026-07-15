@@ -177,10 +177,23 @@ def build_full_prompt(base_prompt: str, customization=None, instruction: str | N
             parts.append(f"CRITICAL USER INSTRUCTION (OVERRIDES ALL PREVIOUS STYLE AND LAYOUT GUIDANCE):\n{sanitize_prompt(instruction)}")
         
     final = "\n\n".join(p for p in parts if p)
+    
+    # Token budgeting: Check if we are over the 480 token limit.
+    # If so, we aggressively trim the customization clause to free up tokens.
     if estimate_tokens(final) > 480:
         import logging
         logger = logging.getLogger(__name__)
-        logger.warning(f"Assembled prompt ~{estimate_tokens(final):.0f} tokens — near Kontext's 512 limit, may truncate.")
+        logger.warning(f"Assembled prompt ~{estimate_tokens(final):.0f} tokens — near Kontext's 512 limit. Trimming decor details.")
+        
+        # Try rebuilding without the custom clause to save tokens, but keep architectural overrides
+        trimmed_parts = [base_prompt, QUALITY_SUFFIX]
+        if instruction:
+            if is_removal:
+                trimmed_parts.append(build_removal_clause(instruction))
+            else:
+                trimmed_parts.append(f"CRITICAL USER INSTRUCTION:\n{sanitize_prompt(instruction)}")
+        final = "\n\n".join(p for p in trimmed_parts if p)
+        
     return final
 
 

@@ -18,6 +18,10 @@ interface UIState {
   // Refinement panel draft text (survives if user navigates away and back within session)
   refinementDraft: string;
   setRefinementDraft: (text: string) => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
+  isGenerating: boolean;
+  setIsGenerating: (isGenerating: boolean) => void;
 
   // Last applied customization options per project
   lastCustomization: Record<number, CustomizationOptions>;
@@ -37,6 +41,11 @@ export const useUIStore = create<UIState>((set) => ({
 
   refinementDraft: '',
   setRefinementDraft: (text) => set({ refinementDraft: text }),
+  isMobileMenuOpen: false,
+  setIsMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
+  
+  isGenerating: false,
+  setIsGenerating: (isGenerating) => set({ isGenerating }),
 
   lastCustomization: {},
   setLastCustomization: (projectId, options) =>

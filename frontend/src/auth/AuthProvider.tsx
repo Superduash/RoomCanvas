@@ -26,6 +26,7 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { api } from '../api/client';
 import { useAuthModalStore } from './authModalStore';
+import { useUIStore } from '../store/uiStore';
 
 import { type User as ApiUser } from '../api/types';
 
@@ -215,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const syncBackendUser = useCallback((fbUser: User) => {
     if (activeSyncPromiseRef.current) return activeSyncPromiseRef.current;
+    if (useUIStore.getState().isGenerating) return Promise.resolve();
 
     const promise = (async () => {
       setIsSyncing(true);
