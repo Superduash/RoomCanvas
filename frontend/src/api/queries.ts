@@ -93,14 +93,14 @@ export function useGeneration(id: number | null): UseQueryResult<GenerationOut> 
 }
 
 // ── History ──────────────────────────────────────────────────────────
-export function useHistory(limit = 50) {
+export function useHistory(limit = 50, enabled = true) {
   const isGenerating = useUIStore(s => s.isGenerating);
   return useQuery({
     queryKey: ['history', limit],
     queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
     staleTime: 30000,
     gcTime: 15 * 60000,
-    enabled: !isGenerating,
+    enabled: enabled && !isGenerating,
     refetchOnMount: true,
   });
 }

@@ -32,7 +32,7 @@ export function AnalysisPage() {
   const navigate = useNavigate();
 
   const customization = location.state?.customization || {};
-  const { pendingFile, selectedStyleId, clearUpload } = useUIStore();
+  const { pendingFile, selectedStyleId } = useUIStore();
 
   const [workflowState, setWorkflowState] = useState<WorkflowState>('IDLE');
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
