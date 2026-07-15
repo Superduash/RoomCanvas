@@ -7,11 +7,11 @@ import { AdvancedOptions } from '../components/upload/AdvancedOptions';
 import { Card } from '../components/primitives/Card';
 import { Badge } from '../components/primitives/Badge';
 import { Skeleton } from '../components/primitives/Skeleton';
-import { useConfig, useStyles, useAnalyzeRoom, useActiveProvider, useActiveTextProvider } from '../api/queries';
+import { useConfig, useStyles, useActiveProvider, useActiveTextProvider } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { titleCase } from '../lib/utils';
-import { toast } from '../lib/toast';
 import { useRequireAuthAction } from '../auth/useRequireAuthAction';
+import type { CustomizationOptions } from '../api/types';
 import { toHexColor, needsColorBorder, formatColorName } from '../utils/colorHelpers';
 import { ProviderWarning } from '../components/common/ProviderWarning';
 
@@ -35,34 +35,29 @@ export function UploadPage() {
   const selectedStyleId = useUIStore((s) => s.selectedStyleId);
   const setPendingUpload = useUIStore((s) => s.setPendingUpload);
   const setSelectedStyle = useUIStore((s) => s.setSelectedStyle);
-  const clearUpload = useUIStore((s) => s.clearUpload);
 
-  const analyze = useAnalyzeRoom();
-  const [customization, setCustomization] = useState<any>({});
+
+
+  const [customization, setCustomization] = useState<Partial<CustomizationOptions>>({});
   
   const canSubmit = !!pendingFile && !!selectedStyleId && hasAllProviders;
   const selectedStyle = styles?.find((s) => s.id === selectedStyleId);
   const requireAuth = useRequireAuthAction();
 
   // Define handleSubmit before the event listener so TypeScript sees it
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!pendingFile || !selectedStyleId) return;
-    try {
-      const result = await analyze.mutateAsync({ image: pendingFile, style: selectedStyleId });
-      clearUpload();
-      navigate(`/analysis/${result.analysis_id}`, { state: { analysis: result, customization } });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to analyze room';
-      toast.error(msg);
-    }
+    navigate('/analysis', { state: { customization } });
   };
 
   // Resume pending action after sign in — re-register whenever handleSubmit changes (i.e. file/style changes)
   useEffect(() => {
     const handleResume = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail?.type === 'analyze') {
-        handleSubmit();
+      if ('detail' in e) {
+        const detail = (e as CustomEvent).detail;
+        if (detail?.type === 'analyze') {
+          handleSubmit();
+        }
       }
     };
     window.addEventListener('roomcanvas:resume-action', handleResume);
@@ -247,13 +242,13 @@ export function UploadPage() {
             
             <button
               onClick={handleAnalyzeClick}
-              disabled={!canSubmit || providersLoading || analyze.isPending}
+              disabled={!canSubmit || providersLoading}
               className="w-full flex justify-center items-center h-[52px] bg-accent text-white text-[15px] font-medium rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
-              {analyze.isPending || providersLoading ? (
+              {providersLoading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>{providersLoading ? 'Checking setup...' : 'Analyzing Room...'}</span>
+                  <span>Checking setup...</span>
                 </div>
               ) : (
                 'Generate Design'
@@ -267,7 +262,7 @@ export function UploadPage() {
             )}
 
             <AnimatePresence>
-              {!canSubmit && !analyze.isPending && hasAllProviders && (
+              {!canSubmit && hasAllProviders && (
                 <motion.p 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}

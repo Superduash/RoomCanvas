@@ -55,16 +55,23 @@ export async function getAuthHeader(): Promise<Record<string, string>> {
   }
 }
 
-async function safeFetch<T>(method: string, path: string, options: RequestInit): Promise<T> {
+async function safeFetch<T>(method: string, path: string, options: RequestInit, timeoutMs = 45_000): Promise<T> {
   const start = performance.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const authHeader = await getAuthHeader();
     const headers = { ...options.headers, ...authHeader };
     
-    const r = await fetch(`${API_PREFIX}${path}`, { ...options, method, headers });
+    const r = await fetch(`${API_PREFIX}${path}`, { ...options, method, headers, signal: controller.signal });
     return await handleResponse<T>(r, method, path, start);
   } catch (err) {
     if (err instanceof ApiError) throw err;
+    
+    if ((err as any)?.name === 'AbortError') {
+      throw new ApiError('The request took too long and was cancelled. Please try again.', 408);
+    }
     
     // Network failure, DNS error, or CORS error
     const elapsed = performance.now() - start;
@@ -77,34 +84,36 @@ async function safeFetch<T>(method: string, path: string, options: RequestInit):
       throw new ApiError('You appear to be offline. Please check your internet connection.', 0);
     }
     throw new ApiError('Network error. The server might be unreachable or down.', 0);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
 export const api = {
-  get: <T>(path: string): Promise<T> => safeFetch<T>('GET', path, {}),
+  get: <T>(path: string, timeoutMs?: number): Promise<T> => safeFetch<T>('GET', path, {}, timeoutMs),
   
-  post: <T>(path: string, body: unknown): Promise<T> =>
+  post: <T>(path: string, body?: unknown, timeoutMs?: number): Promise<T> =>
     safeFetch<T>('POST', path, {
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }),
+      body: body ? JSON.stringify(body) : undefined,
+    }, timeoutMs),
 
-  patch: <T>(path: string, body: unknown): Promise<T> =>
+  patch: <T>(path: string, body?: unknown, timeoutMs?: number): Promise<T> =>
     safeFetch<T>('PATCH', path, {
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }),
+      body: body ? JSON.stringify(body) : undefined,
+    }, timeoutMs),
     
-  put: <T>(path: string, body: unknown): Promise<T> =>
+  put: <T>(path: string, body?: unknown, timeoutMs?: number): Promise<T> =>
     safeFetch<T>('PUT', path, {
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }),
+      body: body ? JSON.stringify(body) : undefined,
+    }, timeoutMs),
 
-  postForm: <T>(path: string, formData: FormData): Promise<T> =>
-    safeFetch<T>('POST', path, { body: formData }),
+  postForm: <T>(path: string, formData: FormData, timeoutMs?: number): Promise<T> =>
+    safeFetch<T>('POST', path, { body: formData }, timeoutMs),
 
-  del: <T>(path: string): Promise<T> => safeFetch<T>('DELETE', path, {}),
+  del: <T>(path: string, timeoutMs?: number): Promise<T> => safeFetch<T>('DELETE', path, {}, timeoutMs),
 };
 
 // Image paths are now Supabase Storage keys

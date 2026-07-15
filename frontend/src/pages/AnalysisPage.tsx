@@ -6,8 +6,10 @@ import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
 import { Button } from '../components/primitives/Button';
 import { usePollGeneration } from '../hooks/usePollGeneration';
 import { ProviderWarning } from '../components/common/ProviderWarning';
-import { useGenerateDesign, useActiveProvider } from '../api/queries';
+import { useAnalyzeRoom, useGenerateDesign, useActiveProvider } from '../api/queries';
 import type { AnalyzeResponse } from '../api/types';
+import { useUIStore } from '../store/uiStore';
+import { logger } from '../lib/logger';
 
 const STEPS = [
   'Analyzing room structure...',
@@ -21,26 +23,128 @@ const STEPS = [
 
 const STEP_DURATION_MS = 2500;
 
+type WorkflowState = 'IDLE' | 'ANALYZING' | 'GENERATING' | 'COMPLETE' | 'ERROR';
+
 export function AnalysisPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const analysis: AnalyzeResponse | null = location.state?.analysis ?? null;
-  const customization = location.state?.customization;
+  const customization = location.state?.customization || {};
+  const { pendingFile, selectedStyleId, clearUpload } = useUIStore();
 
+  const [workflowState, setWorkflowState] = useState<WorkflowState>('IDLE');
+  const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [stepperDone, setStepperDone] = useState(false);
   const [generationId, setGenerationId] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
+  const analyzeMutation = useAnalyzeRoom();
   const generateDesign = useGenerateDesign();
   const { generation, isPending, isCompleted, isFailed, timedOut, resetTimeout } = usePollGeneration(generationId);
 
-  const hasStartedGenerate = useRef(false);
+  const hasStartedWorkflow = useRef(false);
 
-  // If analysis is missing (direct URL / refresh), show redirect state
-  if (!analysis) {
+  const runWorkflow = async () => {
+    try {
+      logger.info('Analyze started');
+      setGenerateError(null);
+      setWorkflowState('ANALYZING');
+      
+      const analysisResult = await analyzeMutation.mutateAsync({ 
+         image: pendingFile!, 
+         style: selectedStyleId! 
+      });
+      
+      logger.info('Analyze completed');
+      setAnalysis(analysisResult);
+      clearUpload();
+
+      logger.info('Generate started');
+      setWorkflowState('GENERATING');
+      
+      const genResult = await generateDesign.mutateAsync({ 
+         analysisId: analysisResult.analysis_id, 
+         customization 
+      });
+      setGenerationId(genResult.id);
+    } catch (err) {
+      setWorkflowState('ERROR');
+      setGenerateError(err instanceof Error ? err.message : 'An error occurred during generation workflow');
+    }
+  };
+
+  useEffect(() => {
+    if (hasStartedWorkflow.current) return;
+    if (providerLoading) return;
+    
+    if (activeProvider && !activeProvider.is_available) {
+      return;
+    }
+    if (!pendingFile || !selectedStyleId) {
+       return;
+    }
+
+    hasStartedWorkflow.current = true;
+    runWorkflow();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [providerLoading, activeProvider]);
+
+
+  // Auto-advance stepper on a fixed cadence
+  useEffect(() => {
+    if (stepperDone || workflowState === 'IDLE' || workflowState === 'ERROR') return;
+    const interval = setInterval(() => {
+      setCurrentStep((prev) => {
+        if (prev >= STEPS.length - 1) {
+          clearInterval(interval);
+          setStepperDone(true);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, STEP_DURATION_MS);
+    
+    // Fast-forward if generation completes early
+    if (workflowState === 'COMPLETE' || isCompleted || isFailed) {
+      clearInterval(interval);
+      setCurrentStep(STEPS.length - 1);
+      setStepperDone(true);
+    }
+    
+    return () => clearInterval(interval);
+  }, [stepperDone, workflowState, isCompleted, isFailed]);
+
+  // Navigate when BOTH stepper done AND generation completed
+  useEffect(() => {
+    if (stepperDone && isCompleted && generationId) {
+      logger.info('Navigate to Results');
+      setWorkflowState('COMPLETE');
+      navigate(`/results/${generationId}`, { replace: true });
+    }
+  }, [stepperDone, isCompleted, generationId, navigate]);
+
+  // Handle background generation failure
+  useEffect(() => {
+    if (isFailed && generation?.error) {
+      setWorkflowState('ERROR');
+      setGenerateError(generation.error);
+    }
+  }, [isFailed, generation]);
+
+  const handleRetry = () => {
+    setGenerateError(null);
+    setWorkflowState('IDLE');
+    setGenerationId(null);
+    setCurrentStep(0);
+    setStepperDone(false);
+    hasStartedWorkflow.current = false;
+  };
+
+  // If missing upload context, show redirect state
+  if (!pendingFile || !selectedStyleId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center page-enter">
         <div className="h-16 w-16 rounded-2xl bg-surface-alt border border-border flex items-center justify-center mb-6 shadow-sm">
@@ -57,78 +161,17 @@ export function AnalysisPage() {
     );
   }
 
-  // Auto-advance stepper on a fixed cadence
-  useEffect(() => {
-    if (stepperDone) return;
-    const interval = setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev >= STEPS.length - 1) {
-          clearInterval(interval);
-          setStepperDone(true);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, STEP_DURATION_MS);
-    
-    // Fast-forward if generation completes early
-    if (isCompleted || isFailed) {
-      clearInterval(interval);
-      setCurrentStep(STEPS.length - 1);
-      setStepperDone(true);
-    }
-    
-    return () => clearInterval(interval);
-  }, [stepperDone, isCompleted, isFailed]);
-
-  // Fire generate once on mount
-  useEffect(() => {
-    if (hasStartedGenerate.current) return;
-    if (providerLoading) return;
-    
-    if (activeProvider && !activeProvider.is_available) {
-      // Don't auto-generate if no provider
-      return;
-    }
-
-    hasStartedGenerate.current = true;
-
-    generateDesign.mutateAsync({ analysisId: analysis.analysis_id, customization })
-      .then((gen) => setGenerationId(gen.id))
-      .catch((err) => {
-        setGenerateError(err instanceof Error ? err.message : 'Generation failed');
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [providerLoading, activeProvider]);
-
-  // Navigate when BOTH stepper done AND generation completed
-  useEffect(() => {
-    if (stepperDone && isCompleted && generationId) {
-      navigate(`/results/${generationId}`, { replace: true });
-    }
-  }, [stepperDone, isCompleted, generationId, navigate]);
-
-  // Handle background generation failure
-  useEffect(() => {
-    if (isFailed && generation?.error) {
-      setGenerateError(generation.error);
-    }
-  }, [isFailed, generation]);
-
-  const handleRetry = () => {
-    setGenerateError(null);
-    hasStartedGenerate.current = false;
-    setGenerationId(null);
-    setCurrentStep(0);
-    setStepperDone(false);
-
-    generateDesign.mutateAsync({ analysisId: analysis.analysis_id, customization })
-      .then((gen) => setGenerationId(gen.id))
-      .catch((err) => setGenerateError(err instanceof Error ? err.message : 'Generation failed'));
-  };
+  // Missing provider state
+  if (activeProvider && !activeProvider.is_available) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center page-enter">
+        <ProviderWarning className="max-w-md mx-auto mb-6" />
+      </div>
+    );
+  }
 
   // Error state
-  if (generateError) {
+  if (workflowState === 'ERROR' || generateError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center page-enter">
         <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-danger-subtle border border-danger/20 mb-6 shadow-sm">
@@ -151,15 +194,6 @@ export function AnalysisPage() {
             </Button>
           </Link>
         </div>
-      </div>
-    );
-  }
-
-  // Missing provider state
-  if (activeProvider && !activeProvider.is_available) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center page-enter">
-        <ProviderWarning className="max-w-md mx-auto mb-6" />
       </div>
     );
   }
@@ -193,7 +227,7 @@ export function AnalysisPage() {
     <div className="mx-auto w-full max-w-2xl px-6 py-20 flex flex-col items-center page-enter min-h-[80vh] justify-center">
       
       {/* Fallback analysis notice */}
-      {analysis.room_type === 'Unknown' && (
+      {analysis?.room_type === 'Unknown' && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -214,7 +248,7 @@ export function AnalysisPage() {
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-accent blur-xl opacity-20 rounded-full scale-150" />
           <div className="relative flex items-center justify-center h-20 w-20 rounded-full bg-surface border border-border shadow-md">
-            {stepperDone && isPending ? (
+            {stepperDone && (isPending || workflowState === 'GENERATING' || workflowState === 'ANALYZING') ? (
                <Loader2 className="h-8 w-8 text-accent animate-spin" />
             ) : (
                <Sparkles className="h-8 w-8 text-accent animate-pulse" />
@@ -255,21 +289,21 @@ export function AnalysisPage() {
               </div>
               
               <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                {analysis.room_type !== 'Unknown' && (
+                {analysis && analysis.room_type !== 'Unknown' && (
                   <div>
                     <p className="text-xs text-text-tertiary mb-1">Detected Space</p>
                     <p className="text-sm font-medium text-text-primary">{analysis.room_type}</p>
                   </div>
                 )}
                 
-                {currentStep >= 3 && analysis.furniture && analysis.furniture.length > 0 && (
+                {currentStep >= 3 && analysis?.furniture && analysis.furniture.length > 0 && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <p className="text-xs text-text-tertiary mb-1">Identified Objects</p>
                     <p className="text-sm font-medium text-text-primary">{analysis.furniture.length} components mapped</p>
                   </motion.div>
                 )}
                 
-                {currentStep >= 4 && analysis.budget_summary && (
+                {currentStep >= 4 && analysis?.budget_summary && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">
                     <p className="text-xs text-text-tertiary mb-1">Estimated Renovation Budget</p>
                     <p className="text-sm font-medium text-text-primary">${analysis.budget_summary.grand_total.min}–${analysis.budget_summary.grand_total.max}</p>

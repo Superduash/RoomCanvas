@@ -41,9 +41,9 @@ function PageLoader() {
 }
 
 function RouterErrorBoundary() {
-  const error = useRouteError() as any;
+  const error = useRouteError();
   
-  const errorMessage = error?.message?.toLowerCase() || '';
+  const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
   const isChunkError = 
     errorMessage.includes('failed to fetch dynamically imported module') || 
     errorMessage.includes('importing a module script failed') ||
@@ -164,7 +164,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'analysis/:analysisId',
+        path: 'analysis',
         element: (
           <Suspense fallback={<PageLoader />}>
             <AnalysisPage />
