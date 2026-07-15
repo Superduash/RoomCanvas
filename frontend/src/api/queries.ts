@@ -11,7 +11,7 @@ export function useConfig() {
     queryKey: ['config'],
     queryFn: () => api.get<AppConfig>('/config'),
     staleTime: Infinity,
-    enabled: !isGenerating,
+    refetchOnWindowFocus: !isGenerating,
   });
 }
 
@@ -21,7 +21,7 @@ export function useStyles() {
     queryKey: ['styles'],
     queryFn: () => api.get<StyleOption[]>('/styles'),
     staleTime: 60 * 60 * 1000,
-    enabled: !isGenerating,
+    refetchOnWindowFocus: !isGenerating,
   });
 }
 
@@ -31,7 +31,8 @@ export function useUserStats(enabled = true) {
     queryKey: ['user_stats'],
     queryFn: () => api.get<{ total_designs: number; favorite_style: string | null; member_since: string }>('/auth/me/stats'),
     staleTime: 60000,
-    enabled: enabled && !isGenerating,
+    enabled,
+    refetchOnWindowFocus: !isGenerating,
   });
 }
 
@@ -42,7 +43,7 @@ export function useHealth() {
     queryFn: () => api.get<HealthStatus>('/health'),
     refetchInterval: isGenerating ? false : 30_000,
     retry: false,
-    enabled: !isGenerating,
+    refetchOnWindowFocus: !isGenerating,
   });
 }
 
@@ -100,8 +101,9 @@ export function useHistory(limit = 50, enabled = true) {
     queryFn: () => api.get<Project[]>(`/history?limit=${limit}`),
     staleTime: 30000,
     gcTime: 15 * 60000,
-    enabled: enabled && !isGenerating,
+    enabled,
     refetchOnMount: true,
+    refetchOnWindowFocus: !isGenerating,
   });
 }
 
@@ -240,7 +242,7 @@ export function useActiveProvider() {
     queryKey: ['active_provider'],
     queryFn: () => api.get<ActiveProviderStatus>('/settings/keys/active'),
     staleTime: 60000,
-    enabled: !isGenerating,
+    refetchOnWindowFocus: !isGenerating,
   });
 }
 
@@ -250,7 +252,7 @@ export function useActiveTextProvider() {
     queryKey: ['active_text_provider'],
     queryFn: () => api.get<ActiveProviderStatus>('/settings/keys/active-text'),
     staleTime: 60000,
-    enabled: !isGenerating,
+    refetchOnWindowFocus: !isGenerating,
   });
 }
 
