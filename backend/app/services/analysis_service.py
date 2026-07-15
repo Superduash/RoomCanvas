@@ -4,6 +4,7 @@ analysis_service.py — Orchestrates Gemini room analysis.
 import time
 import logging
 import json
+import hashlib
 from fastapi.concurrency import run_in_threadpool
 from app.ai.providers.provider_registry import get_text_provider
 from app.schemas.generation import AnalyzeResponse
@@ -43,9 +44,6 @@ class AnalysisService:
         analysis_dict = None
         error_msg = None
         status = "analyzed"
-
-        import hashlib
-        
         h = hashlib.sha256()
         h.update(image_bytes)
         image_hash = h.hexdigest()
@@ -53,7 +51,6 @@ class AnalysisService:
         # 0. Check DB Cache First
         cached_gen = await self.repository.get_cached_analysis_by_hash(image_hash, style_id)
         if cached_gen and cached_gen.analysis_json:
-            import json
             try:
                 analysis_dict = json.loads(cached_gen.analysis_json)
                 logger.info(f"DB cache hit for analysis (hash={image_hash[:8]}...)")
