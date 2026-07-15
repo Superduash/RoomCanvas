@@ -65,24 +65,6 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            
-            # Stopgap migration to add missing columns in production
-            from sqlalchemy import text
-            try:
-                if "sqlite" not in str(engine.url):
-                    await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_text_provider VARCHAR;"))
-                    await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_image_provider VARCHAR;"))
-                else:
-                    try:
-                        await conn.execute(text("ALTER TABLE users ADD COLUMN active_text_provider VARCHAR;"))
-                    except Exception:
-                        pass
-                    try:
-                        await conn.execute(text("ALTER TABLE users ADD COLUMN active_image_provider VARCHAR;"))
-                    except Exception:
-                        pass
-            except Exception as migrate_exc:
-                logger.warning(f"Stopgap migration failed (expected if columns exist): {migrate_exc}")
     except Exception as exc:
         logger.error(f"Failed to initialise database schema: {exc}", exc_info=True)
 
