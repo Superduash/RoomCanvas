@@ -13,11 +13,13 @@ router = APIRouter(prefix="/settings/keys", tags=["User Keys"])
 class KeySetRequest(BaseModel):
     provider: str
     api_key: str
-    preferred_model: str | None = None
+    preferred_text_model: str | None = None
+    preferred_image_model: str | None = None
 
 class ProviderStatus(BaseModel):
     provider: str
-    preferred_model: str | None = None
+    preferred_text_model: str | None = None
+    preferred_image_model: str | None = None
 
 class ActiveProviderResponse(BaseModel):
     is_available: bool
@@ -90,7 +92,7 @@ async def set_key(
         
     key_service = KeyService(db, user.id)
     try:
-        await key_service.save_key(req.provider, req.api_key, req.preferred_model)
+        await key_service.save_key(req.provider, req.api_key, req.preferred_text_model, req.preferred_image_model)
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
         

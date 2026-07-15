@@ -4,6 +4,7 @@ import { toast } from '../../lib/toast';
 import { getFriendlyApiError } from '../../utils/errors';
 import { Loader2, Key, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Select, SelectItem } from '../primitives/Select';
+import { Button } from '../primitives/Button';
 import { useAuth } from '../../auth/AuthProvider';
 import { api } from '../../api/client';
 import type { User } from '../../api/types';
@@ -17,40 +18,56 @@ export function ApiKeysSection() {
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Component state for forms
-  const [providerForms, setProviderForms] = useState<Record<string, { apiKey: string; model: string }>>({
-    gemini: { apiKey: '', model: 'gemini-1.5-flash' },
-    replicate: { apiKey: '', model: 'black-forest-labs/flux-schnell' },
-    groq: { apiKey: '', model: 'llama3-70b-8192' },
+  const [providerForms, setProviderForms] = useState<Record<string, { apiKey: string; textModel: string; imageModel: string }>>({
+    gemini: { apiKey: '', textModel: 'gemini-3-flash', imageModel: 'gemini-3.1-flash-image' },
+    replicate: { apiKey: '', textModel: '', imageModel: 'black-forest-labs/flux-kontext-pro' },
+    groq: { apiKey: '', textModel: 'openai/gpt-oss-120b', imageModel: '' },
   });
 
   // Providers & their models
-  const providers = {
+  type ModelDef = { id: string; label: string; badge: string };
+  const providers: Record<string, {
+    name: string;
+    textModels?: ModelDef[];
+    imageModels?: ModelDef[];
+    desc: string;
+  }> = {
     gemini: {
       name: 'Gemini',
-      models: [
-        { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Fast)' },
-        { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Quality)' },
-        { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image' },
+      textModels: [
+        { id: 'gemini-3-flash', label: 'Gemini 3 Flash', badge: 'Free' },
+        { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badge: 'Free' },
+        { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', badge: 'Free' },
+        { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', badge: 'Free' },
+        { id: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro', badge: 'Paid' },
+        { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', badge: 'Paid' },
+      ],
+      imageModels: [
+        { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image', badge: 'Free' },
+        { id: 'gemini-3.1-flash-lite-image', label: 'Gemini 3.1 Flash Lite Image', badge: 'Free' },
+        { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image', badge: 'Free' },
+        { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image', badge: 'Paid' },
       ],
       desc: 'Supports both text analysis and image generation.',
     },
     replicate: {
       name: 'Replicate',
-      models: [
-        { id: 'black-forest-labs/flux-schnell', label: 'Flux Schnell (Fast)' },
-        { id: 'black-forest-labs/flux-pro', label: 'Flux Pro (High Quality)' },
-        { id: 'stability-ai/sdxl', label: 'SDXL' },
+      imageModels: [
+        { id: 'black-forest-labs/flux-kontext-pro', label: 'Flux Kontext Pro', badge: 'Recommended' },
+        { id: 'black-forest-labs/flux-schnell', label: 'Flux Schnell (Fast)', badge: 'Free' },
+        { id: 'black-forest-labs/flux-kontext-max', label: 'Flux Kontext Max', badge: 'Paid' },
+        { id: 'black-forest-labs/flux-2-pro', label: 'Flux 2 Pro', badge: 'Paid' },
       ],
       desc: 'Supports advanced diffusion models for image generation.',
     },
     groq: {
       name: 'Groq',
-      models: [
-        { id: 'llama3-70b-8192', label: 'Llama 3 70B' },
-        { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
-        { id: 'gemma-7b-it', label: 'Gemma 7B' },
+      textModels: [
+        { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', badge: 'Free' },
+        { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', badge: 'Free' },
+        { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', badge: 'Free' },
       ],
-      desc: 'Ultra-fast LPU inference for text analysis.',
+      desc: 'All Groq models are available on the free tier. Paid plans only increase rate limits.',
     },
   };
 
@@ -59,8 +76,13 @@ export function ApiKeysSection() {
       setProviderForms(prev => {
         const next = { ...prev };
         keys.forEach(k => {
-          if (next[k.provider] && k.preferred_model) {
-            next[k.provider].model = k.preferred_model;
+          if (next[k.provider]) {
+            if (k.preferred_text_model) {
+              next[k.provider].textModel = k.preferred_text_model;
+            }
+            if (k.preferred_image_model) {
+              next[k.provider].imageModel = k.preferred_image_model;
+            }
           }
         });
         return next;
@@ -96,7 +118,8 @@ export function ApiKeysSection() {
       await saveKey.mutateAsync({
         provider: prov,
         api_key: form.apiKey,
-        preferred_model: form.model,
+        preferred_text_model: form.textModel || undefined,
+        preferred_image_model: form.imageModel || undefined,
       });
       toast.success(`${prov} API key saved successfully!`);
       // Clear the input box after save so it doesn't just sit there in plaintext
@@ -120,7 +143,8 @@ export function ApiKeysSection() {
   };
 
   const isConfigured = (prov: string) => keys?.some(k => k.provider === prov);
-  const configuredModel = (prov: string) => keys?.find(k => k.provider === prov)?.preferred_model;
+  const configuredTextModel = (prov: string) => keys?.find(k => k.provider === prov)?.preferred_text_model;
+  const configuredImageModel = (prov: string) => keys?.find(k => k.provider === prov)?.preferred_image_model;
 
   if (keysLoading || !profile) {
     return (
@@ -180,6 +204,14 @@ export function ApiKeysSection() {
         
         {Object.entries(providers).map(([prov, config]) => {
           const configured = isConfigured(prov);
+          const hasText = !!config.textModels;
+          const hasImage = !!config.imageModels;
+          const hasBoth = hasText && hasImage;
+          
+          const isButtonDisabled = !providerForms[prov].apiKey && (!configured || (
+            (hasText && providerForms[prov].textModel === configuredTextModel(prov)) &&
+            (hasImage && providerForms[prov].imageModel === configuredImageModel(prov))
+          )) || saveKey.isPending;
           
           return (
             <div key={prov} className={`p-4 rounded-xl border transition-colors ${configured ? 'border-border bg-surface' : 'border-dashed border-border-strong bg-transparent'}`}>
@@ -209,45 +241,80 @@ export function ApiKeysSection() {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                <div className="sm:col-span-5 flex flex-col gap-1.5">
-                  <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+              <div className={`grid grid-cols-1 sm:grid-cols-12 gap-3 items-end`}>
+                <div className={`${hasBoth ? 'sm:col-span-12 lg:col-span-4' : 'sm:col-span-5'} flex flex-col gap-1.5`}>
+                  <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide truncate">
                     {configured ? 'Overwrite API Key' : 'API Key'}
                   </label>
                   <input 
                     type="password"
                     placeholder={`Enter ${config.name} API Key...`}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
+                    className="w-full h-11 px-3 py-2 bg-background border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
                     value={providerForms[prov].apiKey}
                     onChange={(e) => setProviderForms(prev => ({...prev, [prov]: { ...prev[prov], apiKey: e.target.value }}))}
                   />
                 </div>
                 
-                <div className="sm:col-span-5 flex flex-col gap-1.5">
-                  <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">
-                    Preferred Model
-                  </label>
-                  <Select 
-                    value={providerForms[prov].model}
-                    onValueChange={(val) => setProviderForms(prev => ({...prev, [prov]: { ...prev[prov], model: val }}))}
-                  >
-                    {config.models.map(m => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.label} {configuredModel(prov) === m.id ? '(Saved)' : ''}
-                      </SelectItem>
-                    ))}
-                  </Select>
-                </div>
+                {hasText && (
+                  <div className={`${hasBoth ? 'sm:col-span-6 lg:col-span-3' : 'sm:col-span-5'} flex flex-col gap-1.5`}>
+                    <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide truncate">
+                      Text Model
+                    </label>
+                    <Select 
+                      value={providerForms[prov].textModel}
+                      onValueChange={(val) => setProviderForms(prev => ({...prev, [prov]: { ...prev[prov], textModel: val }}))}
+                    >
+                      {config.textModels?.map(m => (
+                        <SelectItem key={m.id} value={m.id}>
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <span className="truncate">{m.label} {configuredTextModel(prov) === m.id ? '(Saved)' : ''}</span>
+                            <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
+                              m.badge === 'Free' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              m.badge === 'Recommended' ? 'bg-accent/10 text-accent' :
+                              'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                            }`}>{m.badge}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+                )}
                 
-                <div className="sm:col-span-2">
-                  <button
+                {hasImage && (
+                  <div className={`${hasBoth ? 'sm:col-span-6 lg:col-span-3' : 'sm:col-span-5'} flex flex-col gap-1.5`}>
+                    <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide truncate">
+                      Image Model
+                    </label>
+                    <Select 
+                      value={providerForms[prov].imageModel}
+                      onValueChange={(val) => setProviderForms(prev => ({...prev, [prov]: { ...prev[prov], imageModel: val }}))}
+                    >
+                      {config.imageModels?.map(m => (
+                        <SelectItem key={m.id} value={m.id}>
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <span className="truncate">{m.label} {configuredImageModel(prov) === m.id ? '(Saved)' : ''}</span>
+                            <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
+                              m.badge === 'Free' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              m.badge === 'Recommended' ? 'bg-accent/10 text-accent' :
+                              'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                            }`}>{m.badge}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+                
+                <div className={`${hasBoth ? 'sm:col-span-12 lg:col-span-2' : 'sm:col-span-2'}`}>
+                  <Button
                     type="button"
-                    disabled={!providerForms[prov].apiKey && (!configured || providerForms[prov].model === configuredModel(prov)) || saveKey.isPending}
+                    variant="primary"
+                    disabled={isButtonDisabled}
                     onClick={() => handleSaveKey(prov)}
-                    className="w-full h-[38px] px-3 bg-text-primary text-background text-sm font-medium rounded-lg hover:bg-text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                    className="w-full h-11"
                   >
                     {saveKey.isPending && saveKey.variables?.provider === prov ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

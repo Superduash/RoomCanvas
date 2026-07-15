@@ -31,10 +31,10 @@ class KeyService:
         except InvalidToken:
             raise ValueError("Failed to decrypt the key (invalid token)")
 
-    async def get_user_key(self, provider: str) -> tuple[str | None, str | None]:
-        """Returns (api_key, preferred_model) for the given provider for the current user."""
+    async def get_user_key(self, provider: str) -> tuple[str | None, str | None, str | None]:
+        """Returns (api_key, preferred_text_model, preferred_image_model) for the given provider for the current user."""
         if not self.user_id:
-            return None, None
+            return None, None, None
             
         query = select(UserApiKeys).where(
             UserApiKeys.user_id == self.user_id,
@@ -46,11 +46,11 @@ class KeyService:
         if record:
             try:
                 decrypted_key = self._decrypt(record.encrypted_key)
-                return decrypted_key, record.preferred_model
+                return decrypted_key, record.preferred_text_model, record.preferred_image_model
             except Exception as e:
                 logger.error(f"Could not decrypt key for user {self.user_id} provider {provider}: {e}")
-                return None, None
-        return None, None
+                return None, None, None
+        return None, None, None
         
     async def get_all_configured_providers(self) -> list[dict]:
         """Returns list of configured providers and their preferred models (no raw keys)."""
@@ -62,11 +62,11 @@ class KeyService:
         records = result.scalars().all()
         
         return [
-            {"provider": r.provider, "preferred_model": r.preferred_model} 
+            {"provider": r.provider, "preferred_text_model": r.preferred_text_model, "preferred_image_model": r.preferred_image_model} 
             for r in records
         ]
 
-    async def save_key(self, provider: str, api_key: str, preferred_model: str | None = None) -> None:
+    async def save_key(self, provider: str, api_key: str, preferred_text_model: str | None = None, preferred_image_model: str | None = None) -> None:
         if not self.user_id:
             raise ValueError("User ID required to save key")
             
@@ -81,13 +81,15 @@ class KeyService:
         
         if record:
             record.encrypted_key = encrypted_key
-            record.preferred_model = preferred_model
+            record.preferred_text_model = preferred_text_model
+            record.preferred_image_model = preferred_image_model
         else:
             record = UserApiKeys(
                 user_id=self.user_id,
                 provider=provider,
                 encrypted_key=encrypted_key,
-                preferred_model=preferred_model
+                preferred_text_model=preferred_text_model,
+                preferred_image_model=preferred_image_model
             )
             self.db.add(record)
             

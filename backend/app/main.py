@@ -44,10 +44,7 @@ async def lifespan(app: FastAPI):
     All initialisation logic runs before the first `yield`; cleanup runs after.
     """
     # ── Startup ──────────────────────────────────────────────────────────────
-    if not settings.GEMINI_API_KEY:
-        logger.error("GEMINI_API_KEY is not set — Gemini Provider requests will fail.")
-    if not settings.REPLICATE_API_TOKEN:
-        logger.error("REPLICATE_API_TOKEN is not set — Replicate Provider requests will fail.")
+
     if not settings.SUPABASE_SERVICE_ROLE_KEY:
         logger.error(
             "SUPABASE_SERVICE_ROLE_KEY is not set — all image uploads (rooms + avatars) will fail with 403. "

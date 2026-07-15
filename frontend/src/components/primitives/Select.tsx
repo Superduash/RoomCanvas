@@ -35,13 +35,16 @@ export function Select({ value, onValueChange, placeholder, label, hint, error, 
           </RadixSelect.Icon>
         </RadixSelect.Trigger>
         <RadixSelect.Portal>
-          <RadixSelect.Content className={cn(
+          <RadixSelect.Content 
+            position="popper"
+            className={cn(
             'z-[var(--z-dropdown)] overflow-hidden rounded-xl border border-border',
             'bg-surface-raised shadow-lg',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+            'max-h-[200px] w-[var(--radix-select-trigger-width)]'
           )}>
-            <RadixSelect.Viewport className="p-1.5">
+            <RadixSelect.Viewport className="p-1.5 max-h-[190px] overflow-y-auto">
               {children}
             </RadixSelect.Viewport>
           </RadixSelect.Content>

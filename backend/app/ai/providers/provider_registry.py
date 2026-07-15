@@ -24,17 +24,17 @@ async def get_text_provider(db: AsyncSession, user_id: int | None = None) -> Ana
         
     key_service = KeyService(db, user_id)
     active_prov = user.active_text_provider
-    api_key, preferred_model = await key_service.get_user_key(active_prov)
+    api_key, preferred_text_model, _ = await key_service.get_user_key(active_prov)
     
     if not api_key:
         raise ProviderUnavailableError(f"API key missing for your active text provider ({active_prov}).")
         
     if active_prov == "groq":
         from app.ai.providers.groq_provider import GroqProvider
-        return GroqProvider(api_key=api_key, model=preferred_model or settings.GROQ_TEXT_MODEL_DEFAULT)
+        return GroqProvider(api_key=api_key, model=preferred_text_model or settings.GROQ_TEXT_MODEL_DEFAULT)
     elif active_prov == "gemini":
         from app.ai.providers.gemini_provider import GeminiProvider
-        return GeminiProvider(api_key=api_key, model=preferred_model or "gemini-1.5-flash")
+        return GeminiProvider(api_key=api_key, model=preferred_text_model or "gemini-3-flash")
     else:
         raise ProviderUnavailableError(f"Unsupported text provider: {active_prov}")
 
@@ -48,7 +48,7 @@ async def get_image_provider(db: AsyncSession, user_id: int | None = None) -> Ge
         
     key_service = KeyService(db, user_id)
     active_prov = user.active_image_provider
-    api_key, preferred_model = await key_service.get_user_key(active_prov)
+    api_key, _, preferred_image_model = await key_service.get_user_key(active_prov)
     
     if not api_key:
         raise ProviderUnavailableError(f"API key missing for your active image provider ({active_prov}).")
@@ -58,7 +58,7 @@ async def get_image_provider(db: AsyncSession, user_id: int | None = None) -> Ge
         return ReplicateProvider(api_token=api_key)
     elif active_prov == "gemini":
         from app.ai.providers.gemini_provider import GeminiProvider
-        return GeminiProvider(api_key=api_key, model=preferred_model or settings.GEMINI_IMAGE_MODEL_DEFAULT)
+        return GeminiProvider(api_key=api_key, model=preferred_image_model or settings.GEMINI_IMAGE_MODEL_DEFAULT)
     else:
         raise ProviderUnavailableError(f"Unsupported image provider: {active_prov}")
 
@@ -71,7 +71,7 @@ async def get_active_image_provider_info(db: AsyncSession, user_id: int | None =
         return {"is_available": False, "provider_name": None, "is_platform": False}
         
     key_service = KeyService(db, user_id)
-    api_key, _ = await key_service.get_user_key(user.active_image_provider)
+    api_key, _, _ = await key_service.get_user_key(user.active_image_provider)
     
     if api_key:
         return {"is_available": True, "provider_name": f"Your {user.active_image_provider.capitalize()} Key", "is_platform": False}
@@ -87,7 +87,7 @@ async def get_active_text_provider_info(db: AsyncSession, user_id: int | None = 
         return {"is_available": False, "provider_name": None, "is_platform": False}
         
     key_service = KeyService(db, user_id)
-    api_key, _ = await key_service.get_user_key(user.active_text_provider)
+    api_key, _, _ = await key_service.get_user_key(user.active_text_provider)
     
     if api_key:
         return {"is_available": True, "provider_name": f"Your {user.active_text_provider.capitalize()} Key", "is_platform": False}

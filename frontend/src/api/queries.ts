@@ -215,7 +215,8 @@ export function useRenameGeneration() {
 // ── User API Keys ─────────────────────────────────────────────────────────
 export interface UserKeyStatus {
   provider: string;
-  preferred_model?: string;
+  preferred_text_model?: string;
+  preferred_image_model?: string;
 }
 
 export interface ActiveProviderStatus {
@@ -248,7 +249,7 @@ export function useUserKeys() {
 export function useSaveUserKey() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { provider: string; api_key: string; preferred_model?: string }) =>
+    mutationFn: (data: { provider: string; api_key: string; preferred_text_model?: string; preferred_image_model?: string }) =>
       api.put<{ message: string }>('/settings/keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user_keys'] });
