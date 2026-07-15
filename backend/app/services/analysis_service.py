@@ -78,8 +78,9 @@ class AnalysisService:
                             raise e
                     else:
                         raise e
-                        
-                res["budget_summary"] = compute_budget_summary(res.get("furniture", []))
+                
+                all_objects = res.get("movable_objects", []) + res.get("built_in_objects", [])
+                res["budget_summary"] = compute_budget_summary(all_objects)
                 res.pop("estimated_budget_range", None)
                 # Validate response shape
                 _ = AnalyzeResponse(analysis_id=0, **res)
@@ -98,16 +99,10 @@ class AnalysisService:
                 error_msg = f"Provider failed: {str(e)}"
                 status = "failed_analysis"
                 analysis_dict = {
+                    "analysis_confidence": 0.0,
                     "room_type": "Unknown",
-                    "furniture": [
-                        {
-                            "item": "Main structural elements", 
-                            "description": "Unable to map detailed furniture", 
-                            "price_min": 0, 
-                            "price_max": 0, 
-                            "purchase_status": "keep_existing"
-                        }
-                    ],
+                    "movable_objects": [],
+                    "built_in_objects": [],
                     "estimated_dimensions": {"width_ft": 0.0, "length_ft": 0.0, "confidence": "low"},
                     "layout_notes": "Unable to analyze room layout dynamically. You can still generate a design manually by specifying options.",
                     "color_palette": [

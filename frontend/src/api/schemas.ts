@@ -34,7 +34,26 @@ export const GenerationOutSchema = z.object({
 
 export const AnalyzeResponseSchema = z.object({
   analysis_id: z.number(),
+  analysis_confidence: z.number().optional(),
   room_type: z.string(),
+  movable_objects: z.array(z.object({
+    item: z.string(),
+    description: z.string(),
+    price_min: z.number().nullable().optional(),
+    price_max: z.number().nullable().optional(),
+    purchase_status: z.enum(['keep_existing', 'new_purchase', 'optional_upgrade']).optional(),
+    dimensions: z.string().optional(),
+    confidence: z.enum(['Low', 'Medium', 'High']).optional(),
+  })).optional(),
+  built_in_objects: z.array(z.object({
+    item: z.string(),
+    description: z.string(),
+    price_min: z.number().nullable().optional(),
+    price_max: z.number().nullable().optional(),
+    purchase_status: z.enum(['keep_existing', 'new_purchase', 'optional_upgrade']).optional(),
+    dimensions: z.string().optional(),
+    confidence: z.enum(['Low', 'Medium', 'High']).optional(),
+  })).optional(),
   furniture: z.array(z.object({
     item: z.string(),
     description: z.string(),

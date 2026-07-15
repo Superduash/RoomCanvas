@@ -4,10 +4,11 @@ JSON Schema definitions for Gemini structured outputs.
 
 ANALYSIS_RESPONSE_SCHEMA = {
     "type": "object",
-    "required": ["room_type", "architecture", "furniture_placement", "furniture", "estimated_dimensions", "layout_notes",
+    "required": ["analysis_confidence", "room_type", "architecture", "furniture_placement", "movable_objects", "built_in_objects", "estimated_dimensions", "layout_notes",
                  "color_palette", "lighting_suggestions",
                  "style_explanation", "redesign_prompt", "design_rationale", "space_occupancy", "open_floor_area_pct"],
     "properties": {
+        "analysis_confidence": {"type": "number"},
         "space_occupancy": {"type": "string", "enum": ["mostly_empty", "partially_furnished", "densely_furnished"]},
         "open_floor_area_pct": {"type": "number"},
         "room_type": {"type": "string"},
@@ -24,6 +25,38 @@ ANALYSIS_RESPONSE_SCHEMA = {
         },
         "furniture_placement": {"type": "string"},
         "furniture": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["item", "description", "price_min", "price_max", "purchase_status"],
+                "properties": {
+                    "item": {"type": "string"},
+                    "description": {"type": "string"},
+                    "price_min": {"type": "number"},
+                    "price_max": {"type": "number"},
+                    "purchase_status": {"type": "string", "enum": ["new_purchase", "keep_existing", "optional_upgrade"]},
+                    "dimensions": {"type": "string"},
+                    "confidence": {"type": "string", "enum": ["Low", "Medium", "High"]}
+                }
+            }
+        },
+        "movable_objects": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["item", "description", "price_min", "price_max", "purchase_status"],
+                "properties": {
+                    "item": {"type": "string"},
+                    "description": {"type": "string"},
+                    "price_min": {"type": "number"},
+                    "price_max": {"type": "number"},
+                    "purchase_status": {"type": "string", "enum": ["new_purchase", "keep_existing", "optional_upgrade"]},
+                    "dimensions": {"type": "string"},
+                    "confidence": {"type": "string", "enum": ["Low", "Medium", "High"]}
+                }
+            }
+        },
+        "built_in_objects": {
             "type": "array",
             "items": {
                 "type": "object",

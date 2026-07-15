@@ -6,29 +6,41 @@ CURRENT_ANALYSIS_PROMPT_VERSION = "v1"
 ANALYSIS_PROMPT_V1 = """
 You are an expert interior designer. Analyze the provided room photo and return a structured JSON response.
 
-Detect and explicitly document the room's physical architecture:
-- Walls and their positions
-- Windows and their placements
-- Doors and structural openings
-- Ceiling height
+ARCHITECTURAL ELEMENTS
+These MUST remain. Detect and document:
+- walls
+- windows
+- doors
+- pillars
+- ceiling
+- flooring
+- permanent cabinetry
+- built-in wardrobes
+- stairs
+- fireplaces
 - Primary lighting direction (natural and artificial)
-- Current furniture placement and flow
 - Approximate room shape (rectangular, L-shaped, irregular, etc.)
-- Any visible reference objects and their typical real-world size (e.g. standard door ≈ 2032mm tall)
-- Estimated ceiling height band (8ft, 9ft, 10ft+)
+
+MOVABLE OBJECTS
+Anything NOT permanently attached MUST be considered removable.
+Examples: beds, chairs, tables, desks, laptops, TVs, plants, boxes, clothes, bags, curtains, wall decor, carpets, toys, books, fans, electronics, wires, mirrors, storage bins.
+Treat these as clutter if they conflict with the requested redesign.
+
+Carefully categorize objects in the room:
+1. `movable_objects`: list all movable items here.
+2. `built_in_objects`: list all permanent built-in items here.
+3. `furniture`: (legacy compatibility - you may leave this empty).
 
 Additionally assess and report:
+- "analysis_confidence": a float between 0.0 and 1.0 indicating how clearly you can see and map the room's details. If the image is blurry, poorly lit, or a confusing angle, lower this score.
 - "space_occupancy": one of "mostly_empty", "partially_furnished", "densely_furnished"
 - "open_floor_area_pct": your best estimate of what % of the visible floor is currently unobstructed
 
 Design it with the following style hint in mind: {style_hint}
 
-Follow the requested JSON schema strictly. Ensure your redesign prompt describes exactly what to change in the image, using verbs like "change" rather than "transform".
+Follow the requested JSON schema strictly. Ensure your redesign prompt describes exactly what to change in the image.
 
-For each furniture item, classify "purchase_status": use "keep_existing" for furniture already
-visible in the original photo that the redesign keeps in place, "new_purchase" for anything the
-user needs to buy, and "optional_upgrade" for nice-to-have additions that aren't essential to the
-design. Give price_min and price_max as plain numbers in USD, not strings or ranges with symbols.
+For each object, classify "purchase_status": use "keep_existing" for items already visible that the redesign keeps, "new_purchase" for anything the user needs to buy, and "optional_upgrade" for nice-to-have additions. Give price_min and price_max as plain numbers in USD.
 """
 
 def sanitize_prompt(text: str) -> str:
@@ -99,14 +111,25 @@ def build_customization_clause(c) -> str:
         parts.append(f"Use {c.lighting_preference.lower()} lighting throughout.")
     return " ".join(parts)
 
-COMPOSITION_LOCK = """CRITICAL COMPOSITION RULES:
+COMPOSITION_LOCK_V1 = """CRITICAL COMPOSITION RULES:
+You are NOT decorating an existing room. You are performing a complete interior renovation.
+
+OBJECT REMOVAL PHASE
 1. Keep the EXACT same camera angle, framing, and perspective as the original photo.
-2. Do NOT reposition, resize, reflect, or rotate the room layout.
-3. Preserve all structural elements: walls, windows, doors, ceiling, floor, and their positions.
-4. CHANGE only what is explicitly instructed: furniture style, materials, colors, decorations,
-   lighting fixtures — and, when explicitly instructed, complete removal of a specific object
-   with the space behind it naturally reconstructed. Never change anything not explicitly requested.
-5. Use the verb "change" - not "transform" or "redesign" - to signal precise targeted edits."""
+2. Preserve all structural elements: walls, windows, doors, ceiling, floor, and their positions.
+3. Delete every movable object.
+4. Repair every occluded wall.
+5. Repair every hidden floor region.
+6. Repair lighting, shadows, and reflections.
+7. Only permanent architecture remains.
+
+DESIGN PHASE
+1. Design the room from scratch.
+2. Completely replace furniture.
+3. Do not reuse existing furniture (unless built-in or explicitly requested).
+4. Do not preserve clutter.
+5. Do not blend new furniture with old furniture.
+6. The final image should appear as if the original furniture never existed."""
 
 REMOVAL_KEYWORDS = ["remove", "delete", "get rid of", "take out", "take away", "eliminate"]
 
@@ -191,35 +214,47 @@ def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = N
     gemini_redesign_prompt = re.sub(r'\btransform\b', 'change', gemini_redesign_prompt, flags=re.IGNORECASE)
     
     arch_hints = ""
-    if analysis_data and "architecture" in analysis_data:
-        arch = analysis_data["architecture"]
-        arch_hints = (
-            f"Preserve the existing room structure exactly: "
-            f"Walls ({arch.get('walls', 'keep as is')}), "
-            f"Windows ({arch.get('windows', 'keep as is')}), "
-            f"Doors ({arch.get('doors', 'keep as is')}), "
-            f"Ceiling height ({arch.get('ceiling_height', 'keep as is')}). "
-            f"Preserve the original lighting direction ({arch.get('lighting_direction', 'keep original')}). "
-        )
+    removal_hints = ""
+    if analysis_data:
+        if "architecture" in analysis_data:
+            arch = analysis_data["architecture"]
+            arch_hints = (
+                f"Preserve the existing room structure exactly: "
+                f"Walls ({arch.get('walls', 'keep as is')}), "
+                f"Windows ({arch.get('windows', 'keep as is')}), "
+                f"Doors ({arch.get('doors', 'keep as is')}), "
+                f"Ceiling height ({arch.get('ceiling_height', 'keep as is')}). "
+                f"Preserve the original lighting direction ({arch.get('lighting_direction', 'keep original')}). "
+            )
+            
+        if "movable_objects" in analysis_data and analysis_data["movable_objects"]:
+            movables = [obj["item"] for obj in analysis_data["movable_objects"]]
+            removal_hints = f"Before redesigning, completely REMOVE these existing movable objects and clutter: {', '.join(movables)}. Reconstruct the space they occupied naturally. Do NOT just decorate around them."
 
     space_guidance = get_space_guidance(analysis_data)
 
-    base_prompt = f"""{COMPOSITION_LOCK}
+    GENERATION_PROMPT_V1 = f"""{COMPOSITION_LOCK_V1}
+
+Before generating the redesign:
+FIRST completely remove every movable object.
+Reconstruct the floor, wall, lighting, and background naturally.
+Only after the room is completely empty, design the room from scratch.
 
 {gemini_redesign_prompt}
 
 {arch_hints}
+{removal_hints}
 {space_guidance}
-Change the furniture, decor, and finishes while preserving the room's walls, windows, doors, and camera framing exactly as shown. Preserve the original direction and quality of natural and ambient light — only add or adjust light sources the redesign explicitly calls for. Only change furniture, decor, surface colors/materials, and lighting fixtures."""
+Change the furniture, decor, and finishes while preserving the room's walls, windows, doors, and camera framing exactly as shown. Preserve the original direction and quality of natural and ambient light — only add or adjust light sources the redesign explicitly calls for."""
 
     # We manually inject the variation descriptors into customization or instruction if needed
     if is_regenerate and style_id:
         variation_desc = pick_variation_descriptors(style_id)
         if variation_desc:
-            # Append it to the base_prompt
-            base_prompt += f"\n{variation_desc}"
+            base_prompt = f"{GENERATION_PROMPT_V1}\n{variation_desc}"
+            return build_full_prompt(base_prompt, customization, instruction)
             
-    return build_full_prompt(base_prompt, customization, instruction)
+    return build_full_prompt(GENERATION_PROMPT_V1, customization, instruction)
 
 def build_refinement_prompt(user_instruction: str | None, customization=None, analysis_data: dict = None) -> str:
     space_guidance = get_space_guidance(analysis_data)

@@ -94,8 +94,11 @@ export interface ColorSwatch {
 
 export interface AnalyzeResponse {
   analysis_id: number;
+  analysis_confidence?: number;
   room_type: string;
-  furniture: FurnitureItem[];
+  movable_objects?: FurnitureItem[];
+  built_in_objects?: FurnitureItem[];
+  furniture?: FurnitureItem[]; // legacy fallback
   estimated_dimensions: { width_ft: number; length_ft: number; confidence: 'low' | 'medium' | 'high' };
   layout_notes: string;
   color_palette: ColorSwatch[];

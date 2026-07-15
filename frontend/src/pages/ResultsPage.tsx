@@ -21,10 +21,10 @@ import { Skeleton, SkeletonText } from '../components/primitives/Skeleton';
 import { 
   useProjectTimeline, 
   useGenerateDesign, 
-  useSelectVariation, 
   useDeleteGeneration,
   useDeleteRefinement,
-  useActiveProvider
+  useActiveProvider,
+  useActiveTextProvider
 } from '../api/queries';
 import { useUIStore } from '../store/uiStore';
 import { resolveImageUrl } from '../api/client';
@@ -53,6 +53,8 @@ export function ResultsPage() {
 
   const { data: activeProvider, isLoading: providerLoading } = useActiveProvider();
   const hasProvider = activeProvider?.is_available ?? false;
+  
+  const { data: activeTextProvider } = useActiveTextProvider();
 
   // Fetch the entire project timeline
   const { data: projectDetails, isLoading, isError } = useProjectTimeline(id);
@@ -323,7 +325,11 @@ export function ResultsPage() {
                 <Badge variant="outline">{formatStyleName(activeGeneration.style)}</Badge>
               </div>
               <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
-                {activeGeneration.room_type_detected ?? 'Your Space'}
+                {
+                  (analysisData?.room_type && analysisData.room_type !== 'Unknown' ? analysisData.room_type : null) || 
+                  project.room_type_detected || 
+                  'Custom Design'
+                }
               </h1>
             </div>
 
@@ -479,49 +485,97 @@ export function ResultsPage() {
           <div className="border-t border-border" />
 
           {/* AI Analysis Recommendations */}
-          {analysisData && (
-            <div>
-              <div className="flex items-center gap-2 mb-5">
-                <Sparkles className="h-5 w-5 text-accent" />
-                <h2 className="text-lg font-semibold text-text-primary">AI Analysis</h2>
+          {analysisData && (() => {
+            const textProviderName = activeTextProvider?.provider_name?.toLowerCase() || '';
+            const isGroq = textProviderName.includes('groq');
+            
+            const confidence = analysisData.analysis_confidence ?? 1.0;
+            const showWarning = confidence < 0.7;
+            
+            const caps = {
+              dimensions: !isGroq && confidence >= 0.7,
+              budget: !isGroq && confidence >= 0.7,
+              palette: !isGroq && confidence >= 0.7,
+              furniture: confidence >= 0.7,
+              lighting: confidence >= 0.7
+            };
+
+            return (
+              <div>
+                <div className="flex items-center gap-2 mb-5">
+                  <Sparkles className="h-5 w-5 text-accent" />
+                  <h2 className="text-lg font-semibold text-text-primary">AI Analysis</h2>
+                </div>
+                <div className="space-y-6">
+                  {showWarning && (
+                    <div className="rounded-xl border border-warning bg-warning-subtle p-5 flex items-start gap-3 shadow-sm">
+                      <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-warning mb-1">Limited Room Analysis</h4>
+                        <p className="text-sm text-warning/90 leading-relaxed">
+                          The selected analysis model could not identify every room detail. RoomCanvas will continue using the available information, so the redesign may be less accurate than with a complete analysis.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {analysisData.design_rationale && (
+                    <DesignRationale
+                      overview={analysisData.design_rationale.overview}
+                      observations={analysisData.design_rationale.observations}
+                      watchOut={analysisData.design_rationale.watch_out}
+                    />
+                  )}
+                  
+                  {caps.dimensions ? (
+                    <DimensionCard
+                      width={analysisData.estimated_dimensions.width_ft}
+                      length={analysisData.estimated_dimensions.length_ft}
+                      confidence={analysisData.estimated_dimensions.confidence}
+                      onMeasureClick={() => setShowMeasurement(true)}
+                    />
+                  ) : null}
+                  
+                  {caps.budget ? (
+                    <BudgetCard 
+                      summary={analysisData.budget_summary} 
+                      items={analysisData.furniture || []} 
+                      fallbackEstimate={(analysisData as any).estimated_budget_range}
+                    />
+                  ) : null}
+                  
+                  {caps.palette && analysisData.color_palette?.length > 0 && !analysisData.color_palette.some(c => c.hex.toLowerCase() === '#808080') && (
+                    <PaletteSwatches swatches={analysisData.color_palette} />
+                  )}
+                  
+                  {caps.furniture && analysisData.furniture?.length > 0 && (
+                    <FurnitureList items={analysisData.furniture} />
+                  )}
+                  
+                  {caps.lighting ? (
+                    analysisData.lighting_suggestions && (
+                      <TextBlock label="Lighting Strategy" content={analysisData.lighting_suggestions} />
+                    )
+                  ) : (
+                    <TextBlock 
+                      label="Lighting Strategy" 
+                      content="Limited analysis available. The redesign was generated using the visible room context." 
+                    />
+                  )}
+
+                  {analysisData.layout_notes && (
+                    <TextBlock label="Spatial Layout" content={analysisData.layout_notes} />
+                  )}
+                  
+                  {!analysisData.design_rationale && analysisData.style_explanation && (
+                    <blockquote className="border-l-2 border-accent pl-4 text-sm text-text-secondary italic leading-relaxed py-1">
+                      {analysisData.style_explanation}
+                    </blockquote>
+                  )}
+                </div>
               </div>
-              <div className="space-y-6">
-                {analysisData.design_rationale && (
-                  <DesignRationale
-                    overview={analysisData.design_rationale.overview}
-                    observations={analysisData.design_rationale.observations}
-                    watchOut={analysisData.design_rationale.watch_out}
-                  />
-                )}
-                
-                <DimensionCard
-                  width={analysisData.estimated_dimensions.width_ft}
-                  length={analysisData.estimated_dimensions.length_ft}
-                  confidence={analysisData.estimated_dimensions.confidence}
-                  onMeasureClick={() => setShowMeasurement(true)}
-                />
-                <BudgetCard 
-                  summary={analysisData.budget_summary} 
-                  items={analysisData.furniture} 
-                  fallbackEstimate={(analysisData as any).estimated_budget_range}
-                />
-                <PaletteSwatches swatches={analysisData.color_palette} />
-                <FurnitureList items={analysisData.furniture} />
-                
-                {analysisData.lighting_suggestions && (
-                  <TextBlock label="Lighting Strategy" content={analysisData.lighting_suggestions} />
-                )}
-                {analysisData.layout_notes && (
-                  <TextBlock label="Spatial Layout" content={analysisData.layout_notes} />
-                )}
-                {!analysisData.design_rationale && analysisData.style_explanation && (
-                  <blockquote className="border-l-2 border-accent pl-4 text-sm text-text-secondary italic leading-relaxed py-1">
-                    {analysisData.style_explanation}
-                  </blockquote>
-                )}
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>
