@@ -9,6 +9,7 @@ from fastapi.concurrency import run_in_threadpool
 from app.ai.providers.provider_registry import get_text_provider
 from app.schemas.generation import AnalyzeResponse
 from app.repositories.generation_repository import GenerationRepository
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
