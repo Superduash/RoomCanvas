@@ -7,8 +7,8 @@ router = APIRouter(prefix="/providers", tags=["Providers"])
 
 def get_cached_providers_data():
     def compute_fn():
-        gemini_key = getattr(settings, "GEMINI_API_KEY", None)
-        replicate_key = getattr(settings, "REPLICATE_API_TOKEN", None)
+        gemini_key = settings.GEMINI_API_KEY
+        replicate_key = settings.REPLICATE_API_TOKEN
         return {
             "analysis": {
                 "active": getattr(settings, "ACTIVE_ANALYSIS_PROVIDER", "gemini"),

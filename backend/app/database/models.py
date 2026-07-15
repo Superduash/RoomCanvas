@@ -4,6 +4,8 @@ from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.session import Base
 
+# Any column added/changed here REQUIRES: alembic revision --autogenerate -m "<description>"
+# before merging — Base.metadata.create_all does NOT alter existing tables in production.
 class User(Base):
     __tablename__ = "users"
     
@@ -107,6 +109,8 @@ class Variation(Base):
         lazy="selectin"
     )
 
+# Any column added/changed here REQUIRES: alembic revision --autogenerate -m "<description>"
+# before merging — Base.metadata.create_all does NOT alter existing tables in production.
 class UserApiKeys(Base):
     __tablename__ = "user_api_keys"
 

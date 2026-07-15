@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     FIREBASE_SERVICE_ACCOUNT_JSON: str | None = None
     FIREBASE_CREDENTIALS_PATH: str | None = None
 
+    # Fallback AI Provider Keys (for users without BYOK)
+    GEMINI_API_KEY: str | None = None
+    REPLICATE_API_TOKEN: str | None = None
+    GROQ_API_KEY: str | None = None
+
     # Model Defaults
     GROQ_TEXT_MODEL_DEFAULT: str = "openai/gpt-oss-120b"
     GEMINI_IMAGE_MODEL_DEFAULT: str = "gemini-3.1-flash-image"
