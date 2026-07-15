@@ -21,6 +21,7 @@ import { Skeleton, SkeletonText } from '../components/primitives/Skeleton';
 import { 
   useProjectTimeline, 
   useGenerateDesign, 
+  useSelectVariation,
   useDeleteGeneration,
   useDeleteRefinement,
   useActiveProvider,
@@ -548,7 +549,7 @@ export function ResultsPage() {
                     <PaletteSwatches swatches={analysisData.color_palette} />
                   )}
                   
-                  {caps.furniture && analysisData.furniture?.length > 0 && (
+                  {caps.furniture && analysisData.furniture && analysisData.furniture.length > 0 && (
                     <FurnitureList items={analysisData.furniture} />
                   )}
                   
