@@ -54,7 +54,7 @@ export function useAnalyzeRoom() {
       const formData = new FormData();
       formData.append('image', image);
       formData.append('style', style);
-      return api.postForm<AnalyzeResponse>('/analyze', formData);
+      return api.postForm<AnalyzeResponse>('/analyze', formData, 180000);
     },
   });
 }
@@ -64,7 +64,7 @@ export function useGenerateDesign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ analysisId, forceNew, customization, instruction }: { analysisId: number; forceNew?: boolean; customization?: any; instruction?: string }) =>
-      api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false, customization, instruction }),
+      api.post<GenerationOut>('/generate', { analysis_id: analysisId, force_new: forceNew ?? false, customization, instruction }, 180000),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['history'], exact: false });
       qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });
@@ -77,7 +77,7 @@ export function useRefineDesign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ generation_id, instruction, customization }: { generation_id: number; instruction?: string; customization?: any }) =>
-      api.post<GenerationOut>('/refine', { generation_id, instruction, customization }),
+      api.post<GenerationOut>('/refine', { generation_id, instruction, customization }, 90000),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['history'], exact: false });
       qc.invalidateQueries({ queryKey: ['project_timeline'], exact: false });

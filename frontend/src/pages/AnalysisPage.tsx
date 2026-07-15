@@ -81,6 +81,7 @@ export function AnalysisPage() {
 
   const runWorkflow = async () => {
     try {
+      console.log('[runWorkflow] Firing workflow... hasStartedWorkflow.current =', hasStartedWorkflow.current);
       logger.info('Analyze started');
       setGenerateError(null);
       setWorkflowState('ANALYZING');
@@ -103,6 +104,7 @@ export function AnalysisPage() {
       });
       setGenerationId(genResult.id);
     } catch (err) {
+      console.error('[runWorkflow] Error caught:', err);
       setWorkflowState('ERROR');
       setIsGenerating(false);
       setGenerateError(err instanceof Error ? err.message : 'An error occurred during generation workflow');
@@ -110,6 +112,7 @@ export function AnalysisPage() {
   };
 
   useEffect(() => {
+    console.log('[useEffect] Checking workflow start conditions. hasStartedWorkflow.current =', hasStartedWorkflow.current);
     if (hasStartedWorkflow.current) return;
     if (providerLoading) return;
     
@@ -120,6 +123,7 @@ export function AnalysisPage() {
        return;
     }
 
+    console.log('[workflow] starting, guard was', hasStartedWorkflow.current);
     hasStartedWorkflow.current = true;
     runWorkflow();
   // eslint-disable-next-line react-hooks/exhaustive-deps
