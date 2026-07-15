@@ -262,7 +262,7 @@ export function AnalysisPage() {
                   </div>
                 )}
                 
-                {currentStep >= 3 && analysis.furniture.length > 0 && (
+                {currentStep >= 3 && analysis.furniture && analysis.furniture.length > 0 && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <p className="text-xs text-text-tertiary mb-1">Identified Objects</p>
                     <p className="text-sm font-medium text-text-primary">{analysis.furniture.length} components mapped</p>
