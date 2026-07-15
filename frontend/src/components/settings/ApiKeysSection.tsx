@@ -19,13 +19,47 @@ export function ApiKeysSection() {
 
   // Component state for forms
   const [providerForms, setProviderForms] = useState<Record<string, { apiKey: string; textModel: string; imageModel: string }>>({
-    gemini: { apiKey: '', textModel: 'gemini-3-flash', imageModel: 'gemini-3.1-flash-image' },
-    replicate: { apiKey: '', textModel: '', imageModel: 'black-forest-labs/flux-kontext-pro' },
-    groq: { apiKey: '', textModel: 'openai/gpt-oss-120b', imageModel: '' },
+    gemini: { apiKey: '', textModel: '', imageModel: '' },
+    replicate: { apiKey: '', textModel: '', imageModel: '' },
+    groq: { apiKey: '', textModel: '', imageModel: '' },
   });
 
-  // Providers & their models
+  // Providers & their models (fetched dynamically from backend)
   type ModelDef = { id: string; label: string; badge: string };
+  const [supportedModels, setSupportedModels] = useState<Record<string, { text: ModelDef[], image: ModelDef[] }>>({});
+  const [modelsLoading, setModelsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res = await api.get('/config/models');
+        const data = res.data;
+        setSupportedModels(data);
+        
+        // Initialize default forms for providers if empty
+        setProviderForms(prev => {
+          const next = { ...prev };
+          if (data.gemini) {
+            if (!next.gemini.textModel && data.gemini.text.length > 0) next.gemini.textModel = data.gemini.text[0].id;
+            if (!next.gemini.imageModel && data.gemini.image.length > 0) next.gemini.imageModel = data.gemini.image[0].id;
+          }
+          if (data.replicate) {
+            if (!next.replicate.imageModel && data.replicate.image.length > 0) next.replicate.imageModel = data.replicate.image[0].id;
+          }
+          if (data.groq) {
+            if (!next.groq.textModel && data.groq.text.length > 0) next.groq.textModel = data.groq.text[0].id;
+          }
+          return next;
+        });
+      } catch (err) {
+        console.error('Failed to fetch supported models:', err);
+      } finally {
+        setModelsLoading(false);
+      }
+    };
+    fetchModels();
+  }, []);
+
   const providers: Record<string, {
     name: string;
     textModels?: ModelDef[];
@@ -34,39 +68,18 @@ export function ApiKeysSection() {
   }> = {
     gemini: {
       name: 'Gemini',
-      textModels: [
-        { id: 'gemini-3-flash', label: 'Gemini 3 Flash', badge: 'Default' },
-        { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badge: 'Free' },
-        { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', badge: 'Free' },
-        { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', badge: 'Free' },
-        { id: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro', badge: 'Paid' },
-        { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', badge: 'Paid' },
-      ],
-      imageModels: [
-        { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image', badge: 'Default' },
-        { id: 'gemini-3.1-flash-lite-image', label: 'Gemini 3.1 Flash Lite Image', badge: 'Free' },
-        { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image', badge: 'Free' },
-        { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image', badge: 'Paid' },
-      ],
+      textModels: supportedModels.gemini?.text || [],
+      imageModels: supportedModels.gemini?.image || [],
       desc: 'Supports both text analysis and image generation.',
     },
     replicate: {
       name: 'Replicate',
-      imageModels: [
-        { id: 'black-forest-labs/flux-kontext-pro', label: 'Flux Kontext Pro', badge: 'Default' },
-        { id: 'black-forest-labs/flux-schnell', label: 'Flux Schnell (Fast)', badge: 'Free' },
-        { id: 'black-forest-labs/flux-kontext-max', label: 'Flux Kontext Max', badge: 'Paid' },
-        { id: 'black-forest-labs/flux-2-pro', label: 'Flux 2 Pro', badge: 'Paid' },
-      ],
+      imageModels: supportedModels.replicate?.image || [],
       desc: 'Supports advanced diffusion models for image generation.',
     },
     groq: {
       name: 'Groq',
-      textModels: [
-        { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', badge: 'Default' },
-        { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', badge: 'Free' },
-        { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', badge: 'Free' },
-      ],
+      textModels: supportedModels.groq?.text || [],
       desc: 'All Groq models are available on the free tier. Paid plans only increase rate limits.',
     },
   };
@@ -109,26 +122,30 @@ export function ApiKeysSection() {
 
   const handleSaveKey = async (prov: string) => {
     const form = providerForms[prov];
-    if (!form.apiKey) {
-      toast.error('API key is required');
+    const configured = isConfigured(prov);
+    
+    if (!form.apiKey && !configured) {
+      toast.error('API key is required for first-time setup');
       return;
     }
     
     try {
       await saveKey.mutateAsync({
         provider: prov,
-        api_key: form.apiKey,
+        api_key: form.apiKey || undefined,
         preferred_text_model: form.textModel || undefined,
         preferred_image_model: form.imageModel || undefined,
-      });
-      toast.success(`${prov} API key saved successfully!`);
+      } as any);
+      toast.success(form.apiKey ? `${prov} API key saved successfully!` : `${prov} settings updated successfully!`);
       // Clear the input box after save so it doesn't just sit there in plaintext
-      setProviderForms(prev => ({
-        ...prev,
-        [prov]: { ...prev[prov], apiKey: '' }
-      }));
+      if (form.apiKey) {
+        setProviderForms(prev => ({
+          ...prev,
+          [prov]: { ...prev[prov], apiKey: '' }
+        }));
+      }
     } catch (err: any) {
-      toast.error(getFriendlyApiError(err, 'Failed to save API key. Make sure it is valid.'));
+      toast.error(getFriendlyApiError(err, 'Failed to save settings. Make sure your API key is valid.'));
     }
   };
 
@@ -268,8 +285,8 @@ export function ApiKeysSection() {
                           <div className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
                             <span className="truncate">{m.label} {configuredTextModel(prov) === m.id ? '(Saved)' : ''}</span>
                             <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
-                              m.badge === 'Free' ? 'bg-[#E6F4EA] text-[#137333] dark:bg-green-900/30 dark:text-green-400' :
-                              (m.badge === 'Recommended' || m.badge === 'Default') ? 'bg-accent/10 text-accent' :
+                              m.badge.includes('Free') ? 'bg-[#E6F4EA] text-[#137333] dark:bg-green-900/30 dark:text-green-400' :
+                              (m.badge.includes('Recommended') || m.badge.includes('Default')) ? 'bg-accent/10 text-accent' :
                               'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                             }`}>{m.badge}</span>
                           </div>
@@ -293,8 +310,8 @@ export function ApiKeysSection() {
                           <div className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
                             <span className="truncate">{m.label} {configuredImageModel(prov) === m.id ? '(Saved)' : ''}</span>
                             <span className={`flex-shrink-0 px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded ${
-                              m.badge === 'Free' ? 'bg-[#E6F4EA] text-[#137333] dark:bg-green-900/30 dark:text-green-400' :
-                              (m.badge === 'Recommended' || m.badge === 'Default') ? 'bg-accent/10 text-accent' :
+                              m.badge.includes('Free') ? 'bg-[#E6F4EA] text-[#137333] dark:bg-green-900/30 dark:text-green-400' :
+                              (m.badge.includes('Recommended') || m.badge.includes('Default')) ? 'bg-accent/10 text-accent' :
                               'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                             }`}>{m.badge}</span>
                           </div>

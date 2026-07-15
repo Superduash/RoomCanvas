@@ -6,7 +6,7 @@ import socket
 from google.genai import errors as genai_errors
 
 from app.config import settings
-from app.ai.providers.base_provider import AnalysisProvider
+from app.ai.providers.base_provider import AnalysisProvider, GenerationProvider
 from app.utils.exceptions import AnalysisServiceError
 from app.ai.prompts.schemas import ANALYSIS_RESPONSE_SCHEMA
 from app.ai.prompt_builder import get_analysis_prompt
@@ -22,13 +22,79 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
             api_key=self.api_key,
             http_options=types.HttpOptions(timeout=settings.GEMINI_TIMEOUT_SECONDS * 1000),
         )
-        self.model_name = model or "gemini-2.5-flash"
+        self.model_name = model or settings.GEMINI_TEXT_MODEL_DEFAULT
         
     async def generate(self, image_bytes: bytes, mime_type: str, prompt: str, seed: int = None) -> tuple[str, int]:
-        raise NotImplementedError("Gemini Image Generation not yet fully implemented")
+        return await self._run_gemini_generation(image_bytes, mime_type, prompt, seed)
         
     async def refine(self, image_bytes: bytes, mime_type: str, instruction: str, seed: int = None) -> tuple[str, int]:
-        raise NotImplementedError("Gemini Image Generation not yet fully implemented")
+        return await self._run_gemini_generation(image_bytes, mime_type, instruction, seed)
+
+    async def _run_gemini_generation(self, image_bytes: bytes, mime_type: str, prompt: str, seed: int = None) -> tuple[str, int]:
+        import asyncio
+        import random
+        import base64
+        
+        if seed is None:
+            seed = random.randint(0, 2**32 - 1)
+            
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        
+        last_exc = None
+        for attempt in range(1, 4):
+            try:
+                response = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=[image_part, prompt],
+                )
+                
+                # Extract image bytes or URL
+                img_data = None
+                img_mime = "image/jpeg"
+                if hasattr(response, 'candidates') and response.candidates:
+                    for part in response.candidates[0].content.parts:
+                        if hasattr(part, 'inline_data') and part.inline_data:
+                            img_data = part.inline_data.data
+                            img_mime = part.inline_data.mime_type
+                            break
+                        
+                if img_data:
+                    b64_img = base64.b64encode(img_data).decode('utf-8')
+                    return (f"data:{img_mime};base64,{b64_img}", seed)
+                else:
+                    if response.text and response.text.startswith('http'):
+                        return (response.text.strip(), seed)
+                    raise AnalysisServiceError("No image returned from Gemini", 500)
+                    
+            except Exception as e:
+                last_exc = e
+                if GeminiProvider._is_transient(e):
+                    if attempt < 3:
+                        wait_time = 2 ** attempt
+                        logger.warning(f"Gemini {self.model_name} failed on attempt {attempt}. Retrying in {wait_time}s... Error: {e}")
+                        await asyncio.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error(f"Gemini {self.model_name} failed after 3 attempts.")
+                        raise AnalysisServiceError("Network timeout connecting to Gemini. Please try again.", 504)
+                else:
+                    err_msg = str(e)
+                    status_code = 500
+                    if isinstance(e, genai_errors.APIError):
+                        if e.code == 404:
+                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible with your API key."
+                            status_code = 400
+                        elif e.code == 429:
+                            err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                            status_code = 429
+                        elif e.code in (401, 403):
+                            err_msg = "Invalid API key or quota exceeded. Please check your Google AI Studio dashboard."
+                            status_code = 401
+                    logger.error(f"Gemini generation hard failed on {self.model_name}: {e}")
+                    raise AnalysisServiceError(err_msg, status_code)
+                    
+        raise AnalysisServiceError(f"Gemini request failed: {str(last_exc)}", 500)
 
     @staticmethod
     def _is_transient(exc: Exception) -> bool:
@@ -52,40 +118,44 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
             temperature=0.2,
         )
 
-        models = [
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite",
-            "gemini-2.0-flash"
-        ]
-
         last_exc = None
-        for model in models:
-            self.model_name = model
-            for attempt in range(1, 4):
-                try:
-                    response = await asyncio.to_thread(
-                        self.client.models.generate_content,
-                        model=self.model_name,
-                        contents=[image_part, prompt],
-                        config=config,
-                    )
-                    if not response.text:
-                        raise AnalysisServiceError("Empty response from Gemini", 500)
-                    return json.loads(response.text)
-                except Exception as e:
-                    last_exc = e
-                    if GeminiProvider._is_transient(e):
-                        if attempt < 3:
-                            wait_time = 2 ** attempt
-                            logger.warning(f"{model} failed on attempt {attempt}. Retrying in {wait_time}s... Error: {e}")
-                            await asyncio.sleep(wait_time)
-                            continue
-                        else:
-                            logger.error(f"{model} failed after 3 attempts. Falling back to next model.")
-                            break # Move to next model
+        for attempt in range(1, 4):
+            try:
+                response = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=[image_part, prompt],
+                    config=config,
+                )
+                if not response.text:
+                    raise AnalysisServiceError("Empty response from Gemini", 500)
+                return json.loads(response.text)
+            except Exception as e:
+                last_exc = e
+                if GeminiProvider._is_transient(e):
+                    if attempt < 3:
+                        wait_time = 2 ** attempt
+                        logger.warning(f"Gemini {self.model_name} failed on attempt {attempt}. Retrying in {wait_time}s... Error: {e}")
+                        await asyncio.sleep(wait_time)
+                        continue
                     else:
-                        # Not a transient error, maybe auth or bad request — bubble up immediately
-                        logger.error(f"Gemini analysis hard failed on {model}: {e}")
-                        raise AnalysisServiceError(f"Analysis failed: {str(e)}", 500)
-                        
-        raise AnalysisServiceError(f"All Gemini models failed. Last error: {str(last_exc)}", 500)
+                        logger.error(f"Gemini {self.model_name} failed after 3 attempts.")
+                        raise AnalysisServiceError("Network timeout connecting to Gemini. Please try again.", 504)
+                else:
+                    # Parse user-friendly error
+                    err_msg = str(e)
+                    status_code = 500
+                    if isinstance(e, genai_errors.APIError):
+                        if e.code == 404:
+                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible with your API key."
+                            status_code = 400
+                        elif e.code == 429:
+                            err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                            status_code = 429
+                        elif e.code in (401, 403):
+                            err_msg = "Invalid API key or quota exceeded. Please check your Google AI Studio dashboard."
+                            status_code = 401
+                    logger.error(f"Gemini analysis hard failed on {self.model_name}: {e}")
+                    raise AnalysisServiceError(err_msg, status_code)
+                    
+        raise AnalysisServiceError(f"Gemini request failed: {str(last_exc)}", 500)

@@ -70,10 +70,24 @@ class ReplicateProvider(GenerationProvider):
             
         except Exception as e:
             logger.error(f"Replicate generation failed: {e}")
-            import httpx
-            if isinstance(e, httpx.TimeoutException) or "timeout" in str(e).lower() or "timed out" in str(e).lower():
+            
+            err_msg = str(e)
+            status_code = 500
+            if hasattr(e, 'status') or hasattr(e, 'status_code'):
+                code = getattr(e, 'status', getattr(e, 'status_code', 500))
+                if code == 404:
+                    err_msg = f"Model {self.model} is invalid or not accessible with your API key."
+                    status_code = 400
+                elif code == 429:
+                    err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                    status_code = 429
+                elif code in (401, 403):
+                    err_msg = "Invalid API key or quota exceeded. Please check your Replicate dashboard."
+                    status_code = 401
+                    
+            if "timeout" in err_msg.lower() or "timed out" in err_msg.lower():
                 raise InferenceServiceError("Replicate request timed out. Please try again.", 504)
-            raise InferenceServiceError(f"Replicate generation failed: {str(e)}", 500)
+            raise InferenceServiceError(f"Replicate Error: {err_msg}", status_code)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -118,7 +132,21 @@ class ReplicateProvider(GenerationProvider):
             
         except Exception as e:
             logger.error(f"Replicate refinement failed: {e}")
-            import httpx
-            if isinstance(e, httpx.TimeoutException) or "timeout" in str(e).lower() or "timed out" in str(e).lower():
+            
+            err_msg = str(e)
+            status_code = 500
+            if hasattr(e, 'status') or hasattr(e, 'status_code'):
+                code = getattr(e, 'status', getattr(e, 'status_code', 500))
+                if code == 404:
+                    err_msg = f"Model {self.model} is invalid or not accessible with your API key."
+                    status_code = 400
+                elif code == 429:
+                    err_msg = "Rate limit exceeded. Please wait a moment and try again."
+                    status_code = 429
+                elif code in (401, 403):
+                    err_msg = "Invalid API key or quota exceeded. Please check your Replicate dashboard."
+                    status_code = 401
+                    
+            if "timeout" in err_msg.lower() or "timed out" in err_msg.lower():
                 raise InferenceServiceError("Replicate request timed out. Please try again.", 504)
-            raise InferenceServiceError(f"Replicate refinement failed: {str(e)}", 500)
+            raise InferenceServiceError(f"Replicate Error: {err_msg}", status_code)

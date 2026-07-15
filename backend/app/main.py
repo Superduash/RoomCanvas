@@ -51,6 +51,17 @@ async def lifespan(app: FastAPI):
             "Set it in Render env vars using the 'service_role' key from Supabase → Project Settings → API."
         )
 
+    # Validate model defaults against registry
+    from app.ai.models_registry import is_model_supported
+    if not is_model_supported("gemini", settings.GEMINI_TEXT_MODEL_DEFAULT, "text"):
+        raise ValueError(f"Configured GEMINI_TEXT_MODEL_DEFAULT ({settings.GEMINI_TEXT_MODEL_DEFAULT}) is not supported in registry")
+    if not is_model_supported("gemini", settings.GEMINI_IMAGE_MODEL_DEFAULT, "image"):
+        raise ValueError(f"Configured GEMINI_IMAGE_MODEL_DEFAULT ({settings.GEMINI_IMAGE_MODEL_DEFAULT}) is not supported in registry")
+    if not is_model_supported("groq", settings.GROQ_TEXT_MODEL_DEFAULT, "text"):
+        raise ValueError(f"Configured GROQ_TEXT_MODEL_DEFAULT ({settings.GROQ_TEXT_MODEL_DEFAULT}) is not supported in registry")
+    if not is_model_supported("replicate", settings.REPLICATE_IMAGE_MODEL_DEFAULT, "image"):
+        raise ValueError(f"Configured REPLICATE_IMAGE_MODEL_DEFAULT ({settings.REPLICATE_IMAGE_MODEL_DEFAULT}) is not supported in registry")
+
     # Initialise provider singletons (once per process, not once per request)
     try:
         init_providers()

@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.models import UserApiKeys
 from app.config import settings
+from app.ai.models_registry import is_model_supported
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,32 @@ class KeyService:
         if record:
             try:
                 decrypted_key = self._decrypt(record.encrypted_key)
-                return decrypted_key, record.preferred_text_model, record.preferred_image_model
+                # Graceful fallback for legacy models with DB auto-correction
+                needs_commit = False
+                
+                pref_text = record.preferred_text_model
+                if pref_text and not is_model_supported(provider, pref_text, "text"):
+                    # Map to correct default
+                    if provider == "gemini":
+                        pref_text = settings.GEMINI_TEXT_MODEL_DEFAULT
+                    elif provider == "groq":
+                        pref_text = settings.GROQ_TEXT_MODEL_DEFAULT
+                    record.preferred_text_model = pref_text
+                    needs_commit = True
+                    
+                pref_img = record.preferred_image_model
+                if pref_img and not is_model_supported(provider, pref_img, "image"):
+                    if provider == "gemini":
+                        pref_img = settings.GEMINI_IMAGE_MODEL_DEFAULT
+                    elif provider == "replicate":
+                        pref_img = settings.REPLICATE_IMAGE_MODEL_DEFAULT
+                    record.preferred_image_model = pref_img
+                    needs_commit = True
+                    
+                if needs_commit:
+                    await self.db.commit()
+                    
+                return decrypted_key, pref_text, pref_img
             except Exception as e:
                 logger.error(f"Could not decrypt key for user {self.user_id} provider {provider}: {e}")
                 return None, None, None
@@ -61,12 +87,39 @@ class KeyService:
         result = await self.db.execute(query)
         records = result.scalars().all()
         
-        return [
-            {"provider": r.provider, "preferred_text_model": r.preferred_text_model, "preferred_image_model": r.preferred_image_model} 
-            for r in records
-        ]
+        async def _apply_fallback(r):
+            needs_commit = False
+            
+            text_model = r.preferred_text_model
+            if text_model and not is_model_supported(r.provider, text_model, "text"):
+                if r.provider == "gemini":
+                    text_model = settings.GEMINI_TEXT_MODEL_DEFAULT
+                elif r.provider == "groq":
+                    text_model = settings.GROQ_TEXT_MODEL_DEFAULT
+                r.preferred_text_model = text_model
+                needs_commit = True
+            
+            image_model = r.preferred_image_model
+            if image_model and not is_model_supported(r.provider, image_model, "image"):
+                if r.provider == "gemini":
+                    image_model = settings.GEMINI_IMAGE_MODEL_DEFAULT
+                elif r.provider == "replicate":
+                    image_model = settings.REPLICATE_IMAGE_MODEL_DEFAULT
+                r.preferred_image_model = image_model
+                needs_commit = True
+                
+            if needs_commit:
+                await self.db.commit()
+                
+            return {
+                "provider": r.provider, 
+                "preferred_text_model": text_model, 
+                "preferred_image_model": image_model
+            }
 
-    async def save_key(self, provider: str, api_key: str, preferred_text_model: str | None = None, preferred_image_model: str | None = None) -> None:
+        return [await _apply_fallback(r) for r in records]
+
+    async def save_key(self, provider: str, api_key: str | None = None, preferred_text_model: str | None = None, preferred_image_model: str | None = None) -> None:
         if not self.user_id:
             raise ValueError("User ID required to save key")
             
@@ -77,17 +130,20 @@ class KeyService:
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
         
-        encrypted_key = self._encrypt(api_key)
-        
         if record:
-            record.encrypted_key = encrypted_key
-            record.preferred_text_model = preferred_text_model
-            record.preferred_image_model = preferred_image_model
+            if api_key:
+                record.encrypted_key = self._encrypt(api_key)
+            if preferred_text_model is not None:
+                record.preferred_text_model = preferred_text_model
+            if preferred_image_model is not None:
+                record.preferred_image_model = preferred_image_model
         else:
+            if not api_key:
+                raise ValueError("API key is required for first-time setup")
             record = UserApiKeys(
                 user_id=self.user_id,
                 provider=provider,
-                encrypted_key=encrypted_key,
+                encrypted_key=self._encrypt(api_key),
                 preferred_text_model=preferred_text_model,
                 preferred_image_model=preferred_image_model
             )

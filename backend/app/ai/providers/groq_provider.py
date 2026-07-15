@@ -48,13 +48,34 @@ class GroqProvider(AnalysisProvider):
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 resp = await client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
-                if resp.status_code != 200:
-                    raise ValueError(f"Groq API returned {resp.status_code}: {resp.text}")
+                resp.raise_for_status()
                     
                 data = resp.json()
                 result_text = data['choices'][0]['message']['content']
                 return json.loads(result_text)
                 
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            err_msg = e.response.text
+            try:
+                err_json = e.response.json()
+                if "error" in err_json and "message" in err_json["error"]:
+                    err_msg = err_json["error"]["message"]
+            except Exception:
+                pass
+                
+            friendly_msg = "Groq request failed. Please try again."
+            if status_code == 404:
+                friendly_msg = f"Model {self.model_name} is invalid or not accessible with your API key."
+                status_code = 400
+            elif status_code == 429:
+                friendly_msg = "Rate limit exceeded. Please wait a moment and try again."
+            elif status_code in (401, 403):
+                friendly_msg = "Invalid API key or quota exceeded. Please check your Groq console."
+                
+            logger.error(f"Groq HTTP error {status_code}: {err_msg}")
+            raise AnalysisServiceError(friendly_msg, status_code)
+            
         except Exception as e:
             logger.error(f"Groq analysis failed: {e}")
             raise AnalysisServiceError(f"Groq analysis failed: {str(e)}", 500)

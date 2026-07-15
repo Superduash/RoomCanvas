@@ -16,3 +16,10 @@ def get_config():
     # Config only changes on restart — cache for 10 minutes in browser
     response.headers["Cache-Control"] = "public, max-age=600, stale-while-revalidate=3600"
     return response
+
+@router.get("/models", status_code=200)
+def get_supported_models():
+    from app.ai.models_registry import SUPPORTED_MODELS
+    response = JSONResponse(content=SUPPORTED_MODELS)
+    response.headers["Cache-Control"] = "public, max-age=600, stale-while-revalidate=3600"
+    return response

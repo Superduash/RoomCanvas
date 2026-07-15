@@ -6,13 +6,16 @@ from app.auth.dependencies import get_current_user
 from app.database.models import User
 from app.services.key_service import KeyService
 import httpx
+import logging
 from app.ai.providers.provider_registry import get_active_image_provider_info, get_active_text_provider_info
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/settings/keys", tags=["User Keys"])
 
 class KeySetRequest(BaseModel):
     provider: str
-    api_key: str
+    api_key: str | None = None
     preferred_text_model: str | None = None
     preferred_image_model: str | None = None
 
@@ -35,22 +38,25 @@ async def validate_api_key(provider: str, api_key: str) -> None:
                     headers={"Authorization": f"Bearer {api_key}"}
                 )
                 if resp.status_code != 200:
-                    raise ValueError(f"Invalid Groq API key: {resp.text}")
+                    logger.warning(f"Groq API validation failed: {resp.text}")
+                    raise ValueError("That API key was rejected by Groq. Double-check it and try again.")
             elif provider == "gemini":
                 # Quick generateContent to test
                 resp = await client.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}",
                     json={"contents": [{"parts": [{"text": "Hello"}]}]}
                 )
                 if resp.status_code != 200:
-                    raise ValueError(f"Invalid Gemini API key: {resp.text}")
+                    logger.warning(f"Gemini API validation failed: {resp.text}")
+                    raise ValueError("That API key was rejected by Gemini. Double-check it and try again.")
             elif provider == "replicate":
                 resp = await client.get(
                     "https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro",
                     headers={"Authorization": f"Bearer {api_key}"}
                 )
                 if resp.status_code != 200:
-                    raise ValueError(f"Invalid Replicate API key: {resp.text}")
+                    logger.warning(f"Replicate API validation failed: {resp.text}")
+                    raise ValueError("That API key was rejected by Replicate. Double-check it and try again.")
             else:
                 raise ValueError(f"Unknown provider: {provider}")
     except httpx.RequestError as e:
@@ -85,12 +91,18 @@ async def set_key(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    try:
-        await validate_api_key(req.provider, req.api_key)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-        
     key_service = KeyService(db, user.id)
+    
+    if req.api_key:
+        try:
+            await validate_api_key(req.provider, req.api_key)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        existing_key, _, _ = await key_service.get_user_key(req.provider)
+        if not existing_key:
+            raise HTTPException(status_code=400, detail="No API key saved yet for this provider")
+            
     try:
         await key_service.save_key(req.provider, req.api_key, req.preferred_text_model, req.preferred_image_model)
     except ValueError as e:

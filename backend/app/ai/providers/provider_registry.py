@@ -34,7 +34,7 @@ async def get_text_provider(db: AsyncSession, user_id: int | None = None) -> Ana
         return GroqProvider(api_key=api_key, model=preferred_text_model or settings.GROQ_TEXT_MODEL_DEFAULT)
     elif active_prov == "gemini":
         from app.ai.providers.gemini_provider import GeminiProvider
-        return GeminiProvider(api_key=api_key, model=preferred_text_model or "gemini-3-flash")
+        return GeminiProvider(api_key=api_key, model=preferred_text_model or settings.GEMINI_TEXT_MODEL_DEFAULT)
     else:
         raise ProviderUnavailableError(f"Unsupported text provider: {active_prov}")
 
@@ -55,7 +55,7 @@ async def get_image_provider(db: AsyncSession, user_id: int | None = None) -> Ge
         
     if active_prov == "replicate":
         from app.ai.providers.replicate_provider import ReplicateProvider
-        return ReplicateProvider(api_token=api_key)
+        return ReplicateProvider(api_token=api_key, model=preferred_image_model or settings.REPLICATE_IMAGE_MODEL_DEFAULT)
     elif active_prov == "gemini":
         from app.ai.providers.gemini_provider import GeminiProvider
         return GeminiProvider(api_key=api_key, model=preferred_image_model or settings.GEMINI_IMAGE_MODEL_DEFAULT)
