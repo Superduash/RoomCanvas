@@ -65,12 +65,7 @@ export function UploadPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleSubmit]);
 
-  // Revoke object URL on unmount
-  useEffect(() => {
-    return () => {
-      if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-    };
-  }, [pendingPreviewUrl]);
+
 
   const handleFileAccepted = (file: File) => {
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
