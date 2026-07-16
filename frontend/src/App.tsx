@@ -37,28 +37,26 @@ export default function App() {
             <RouterProvider router={router} />
           </AuthProvider>
           <Toaster
-            position="bottom-center"
+            position="top-center"
+            containerStyle={{ top: 56 }}
             toastOptions={{
               duration: 5000,
               style: {
-                background: 'var(--color-surface)',
-                color: 'var(--color-text-primary)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '14px',
-                boxShadow: 'var(--shadow-md)',
+                background: '#ffffff',
+                color: '#1a1a1a',
+                border: '1px solid #e5e7eb',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: '500',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                padding: '10px 14px',
+                maxWidth: '380px',
               },
               success: {
-                iconTheme: {
-                  primary: 'var(--color-success)',
-                  secondary: 'var(--color-success-subtle)',
-                },
+                iconTheme: { primary: '#16A34A', secondary: '#FFFFFF' },
               },
               error: {
-                iconTheme: {
-                  primary: 'var(--color-danger)',
-                  secondary: 'var(--color-danger-subtle)',
-                },
+                iconTheme: { primary: '#DC2626', secondary: '#FFFFFF' },
               },
             }}
           />

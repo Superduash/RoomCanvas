@@ -1,8 +1,6 @@
 import os
-import subprocess
 from pathlib import Path
 
-# Common binary and non-text extensions to skip reading
 SKIP_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", 
     ".mp4", ".mp3", ".wav", ".zip", ".7z", ".rar", ".pdf", 
@@ -10,48 +8,44 @@ SKIP_EXTENSIONS = {
     ".pyc", ".pyo", ".woff", ".woff2", ".ttf", ".otf", ".eot"
 }
 
+IGNORE_DIRS = {
+    "node_modules", "venv", ".git", "dist", "build", "coverage", 
+    "__pycache__", ".next", ".cache", ".gemini", ".agents"
+}
+
+IGNORE_FILES = {
+    "Backend.txt", "Frontend.txt", "export_output.txt", 
+    "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+    ".DS_Store"
+}
+
 def get_project_files():
-    """
-    Returns a sorted list of all project files, respecting .gitignore.
-    Uses git to determine tracked and untracked (but not ignored) files.
-    """
-    try:
-        # Get all tracked files and untracked (but not ignored) files
-        result = subprocess.run(
-            ['git', 'ls-files', '--cached', '--others', '--exclude-standard'],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        # Filter out empty strings and sort
-        files = sorted([f for f in result.stdout.split('\n') if f])
+    """Returns a sorted list of all project files using recursive os.walk."""
+    files = []
+    project_root = Path(__file__).parent.resolve()
+    
+    for root, dirs, filenames in os.walk(project_root):
+        # Modify dirs in-place to prune unwanted directories
+        dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
         
-        filtered_files = []
-        
-        # Only hardcode ignores that we truly don't want exported but might be tracked
-        # or are large generated files we want to skip unconditionally
-        ignores = {
-            "Backend.txt",
-            "Frontend.txt",
-            "export_output.txt",
-            "package-lock.json",
-            "yarn.lock",
-            "pnpm-lock.yaml"
-        }
-        
-        for file_path in files:
-            path_obj = Path(file_path)
-            
-            # Skip if matches explicit hardcoded ignores
-            if any(part in ignores for part in path_obj.parts) or file_path in ignores:
+        for name in filenames:
+            if name in IGNORE_FILES:
                 continue
                 
-            filtered_files.append(file_path)
+            file_path = Path(root) / name
             
-        return filtered_files
-    except subprocess.CalledProcessError:
-        print("Error: Must be run inside a git repository.")
-        return []
+            # Additional safety check for ignored dirs in the full path (in case of symlinks or weird nested structures)
+            if any(part in IGNORE_DIRS for part in file_path.parts):
+                continue
+                
+            try:
+                # Store relative path for cleaner output
+                rel_path = str(file_path.relative_to(project_root)).replace("\\", "/")
+                files.append(rel_path)
+            except ValueError:
+                pass
+                
+    return sorted(files)
 
 def is_backend(file_path):
     parts = Path(file_path).parts
@@ -70,7 +64,6 @@ def is_frontend(file_path):
     return False
 
 def build_tree(files):
-    """Builds a nested dictionary representing the directory tree."""
     tree = {}
     for f in files:
         parts = Path(f).parts
@@ -81,7 +74,6 @@ def build_tree(files):
     return tree
 
 def print_tree(tree, indent=""):
-    """Recursively formats the directory tree into a string."""
     output = ""
     items = sorted(tree.items(), key=lambda x: (x[1] is None, x[0]))
     for k, v in items:
@@ -105,8 +97,9 @@ def write_files(output_file, filter_fn, all_files):
     if not relevant_files:
         return
 
+    project_root = Path(__file__).parent.resolve()
+    
     with open(output_file, 'w', encoding='utf-8') as outfile:
-        # Generate directory tree
         outfile.write("="*80 + "\n")
         outfile.write(f"DIRECTORY TREE ({output_file})\n")
         outfile.write("="*80 + "\n\n")
@@ -115,37 +108,33 @@ def write_files(output_file, filter_fn, all_files):
         outfile.write(print_tree(tree))
         outfile.write("\n\n")
         
-        # Generate file contents
         outfile.write("="*80 + "\n")
         outfile.write("FILE CONTENTS\n")
         outfile.write("="*80 + "\n\n")
 
-        for file_path in relevant_files:
-            path_obj = Path(file_path)
+        for rel_path in relevant_files:
+            file_path = project_root / rel_path
             
             try:
-                size = path_obj.stat().st_size
+                size = file_path.stat().st_size
                 size_str = format_size(size)
             except OSError:
                 size = 0
                 size_str = "Unknown"
 
             outfile.write(f"\n\n{'='*80}\n")
-            outfile.write(f"FILE: {file_path}\n")
+            outfile.write(f"FILE: {rel_path}\n")
             outfile.write(f"SIZE: {size_str}\n")
             outfile.write(f"{'='*80}\n\n")
             
-            # 1. Check size limit
             if size > 2_000_000:
                 outfile.write(f"[Skipped: File larger than 2 MB]\n")
                 continue
                 
-            # 2. Check binary extension
-            if path_obj.suffix.lower() in SKIP_EXTENSIONS:
+            if file_path.suffix.lower() in SKIP_EXTENSIONS:
                 outfile.write(f"[Skipped: Binary or excluded extension]\n")
                 continue
             
-            # 3. Read and write content
             try:
                 with open(file_path, 'r', encoding='utf-8') as infile:
                     outfile.write(infile.read())
@@ -157,6 +146,7 @@ def write_files(output_file, filter_fn, all_files):
 def main():
     files = get_project_files()
     if not files:
+        print("No files found.")
         return
         
     write_files("Backend.txt", is_backend, files)

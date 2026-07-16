@@ -42,9 +42,9 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str | None = None
 
     # Model Defaults
-    GROQ_TEXT_MODEL_DEFAULT: str = "openai/gpt-oss-120b"
-    GEMINI_TEXT_MODEL_DEFAULT: str = "gemini-3-flash"
-    GEMINI_IMAGE_MODEL_DEFAULT: str = "gemini-3.1-flash-image"
+    GROQ_TEXT_MODEL_DEFAULT: str = "llama-3.1-8b-instant"
+    GEMINI_TEXT_MODEL_DEFAULT: str = "gemini-3.1-flash-lite"
+    GEMINI_IMAGE_MODEL_DEFAULT: str = "nano-banana-2"
     REPLICATE_IMAGE_MODEL_DEFAULT: str = "black-forest-labs/flux-kontext-pro"
 
     # Timeouts

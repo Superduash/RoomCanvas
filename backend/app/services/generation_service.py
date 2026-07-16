@@ -127,22 +127,10 @@ class GenerationService:
                     )
                 except Exception as e:
                     status_code = getattr(e, 'status_code', getattr(e, 'status', 500))
-                    if status_code == 429:
-                        from app.ai.providers.provider_registry import get_fallback_image_provider
-                        logger.warning(f"Image provider {current_prov} hit rate limit (429). Attempting fallback...")
-                        fallback_provider, fallback_name = await get_fallback_image_provider(session, generation.user_id, current_prov)
-                        if fallback_provider:
-                            logger.info(f"Fallback to {fallback_name} image provider successful.")
-                            provider = fallback_provider
-                            output_url, seed_used = await provider.generate(
-                                image_bytes=image_bytes,
-                                mime_type="image/jpeg",
-                                prompt=final_prompt,
-                            )
-                        else:
-                            raise e
-                    else:
-                        raise e
+                    error_type = type(e).__name__
+                    model_used = getattr(provider, 'model', getattr(provider, 'model_name', "unknown"))
+                    error_msg = f"Provider: {current_prov} | Model: {model_used} | Status: {status_code} | Error: {error_type} - {str(e)}"
+                    raise Exception(error_msg)
                 t2 = time.perf_counter()
                 logger.info(f"Generation id={generation.id}: replicate call took {t2-t1:.1f}s")
 

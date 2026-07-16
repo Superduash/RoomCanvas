@@ -63,8 +63,7 @@ async def analyze_room(
     """
     Upload a room image and generate detailed interior design analysis recommendations.
     
-    If the external AI provider fails or times out, a graceful fallback analysis response 
-    will still be generated to allow manual refinement rather than crashing the flow.
+    If the external AI provider fails or times out, the exact error will be returned to the frontend.
     """
     validate_image_file(image)
     original_image_path = await StorageService.save_upload(image)

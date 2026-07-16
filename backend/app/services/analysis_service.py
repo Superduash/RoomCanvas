@@ -67,18 +67,13 @@ class AnalysisService:
                 try:
                     res = await provider.analyze_room(image_bytes, mime_type, style_id)
                 except Exception as e:
-                    status_code = getattr(e, 'status_code', 500)
-                    if status_code == 429:
-                        from app.ai.providers.provider_registry import get_fallback_text_provider
-                        logger.warning(f"Text provider {current_prov} hit rate limit (429). Attempting fallback...")
-                        fallback_provider, fallback_name = await get_fallback_text_provider(self.db, user_id, current_prov)
-                        if fallback_provider:
-                            logger.info(f"Fallback to {fallback_name} text provider successful.")
-                            res = await fallback_provider.analyze_room(image_bytes, mime_type, style_id)
-                        else:
-                            raise e
-                    else:
-                        raise e
+                    status_code = getattr(e, 'status_code', getattr(e, 'status', 500))
+                    error_type = type(e).__name__
+                    model_used = getattr(provider, 'model_name', getattr(provider, 'model', "unknown"))
+                    error_msg = f"Provider: {current_prov} | Model: {model_used} | Status: {status_code} | Error: {error_type} - {str(e)}"
+                    logger.error(f"Analysis failed: {error_msg}")
+                    from fastapi import HTTPException
+                    raise HTTPException(status_code=500, detail=error_msg)
                 
                 all_objects = res.get("movable_objects", []) + res.get("built_in_objects", [])
                 res["budget_summary"] = compute_budget_summary(all_objects)
@@ -96,56 +91,14 @@ class AnalysisService:
                 # Cache for 2 hours
                 analysis_dict = await cached_json_async(cache_key, 7200, fetch_analysis)
             except Exception as e:
-                logger.error(f"Analysis provider failed: {e}. Falling back to default skeleton.")
-                error_msg = f"Provider failed: {str(e)}"
-                status = "failed_analysis"
-                analysis_dict = {
-                    "analysis_confidence": 0.0,
-                    "room_type": "Unknown",
-                    "movable_objects": [],
-                    "built_in_objects": [],
-                    "estimated_dimensions": {"width_ft": 0.0, "length_ft": 0.0, "confidence": "low"},
-                    "layout_notes": "Unable to analyze room layout dynamically. You can still generate a design manually by specifying options.",
-                    "color_palette": [
-                        {"name": "Neutral Tone", "hex": "#808080"}
-                    ],
-                    "lighting_suggestions": "Unable to analyze lighting context.",
-                    "budget_summary": {
-                        "required_purchase_total": {"min": 0, "max": 0},
-                        "optional_upgrade_total": {"min": 0, "max": 0},
-                        "grand_total": {"min": 0, "max": 0},
-                        "items_to_buy_count": 0,
-                        "items_kept_count": 1,
-                    },
-                    "space_occupancy": "mostly_empty",
-                    "open_floor_area_pct": 100,
-                    "architecture": {
-                        "walls": "keep as is",
-                        "windows": "keep as is",
-                        "doors": "keep as is",
-                        "ceiling_height": "keep as is",
-                        "lighting_direction": "keep original"
-                    },
-                    "style_explanation": "Unable to analyze style dynamically.",
-                    "redesign_prompt": (
-                        f"Fully redesign this room in {style_id.replace('_', ' ')} style. "
-                        f"Add appropriate furniture, decor, and lighting fixtures for a {style_id.replace('_', ' ')} "
-                        f"living space — this room should look furnished and complete, not empty."
-                    )
-                }
+                # Re-raise — let the router return the error to the frontend.
+                raise
 
 
-        # Capture provider info from the cached analysis result
+        # Provider info defaults (overwritten by fetch_analysis path if a live call was made)
         provider_name = "gemini"
         model_used = settings.GEMINI_TEXT_MODEL_DEFAULT
         model_version = "latest"
-        try:
-            provider = await get_text_provider(self.db, user_id)
-            provider_name = provider.__class__.__name__.replace('Provider', '').lower()
-            model_used = getattr(provider, 'model_name', getattr(provider, 'model', "unknown"))
-            model_version = getattr(provider, 'model_version', "latest")
-        except Exception:
-            pass
 
         generation_data = {
             "original_image_path": original_image_path,

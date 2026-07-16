@@ -51,7 +51,7 @@ async def validate_api_key(provider: str, api_key: str, model_to_validate: str |
                 if resp.status_code == 404:
                     # Model deprecated - provide helpful error
                     logger.warning(f"Gemini API validation failed - model {test_model} deprecated: {resp.text}")
-                    raise ValueError(f"Model '{test_model}' is no longer available. Please select gemini-3-flash or gemini-3.1-flash-lite from the model dropdown.")
+                    raise ValueError(f"Model '{test_model}' is no longer available. Please select gemini-3.1-flash-lite or gemini-2.5-flash from the model dropdown.")
                 elif resp.status_code != 200:
                     logger.warning(f"Gemini API validation failed: {resp.text}")
                     raise ValueError("That API key was rejected by Gemini. Double-check it and try again.")

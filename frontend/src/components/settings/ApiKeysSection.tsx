@@ -2,43 +2,12 @@ import { useState, useEffect } from 'react';
 import { useUserKeys, useSaveUserKey, useDeleteUserKey } from '../../api/queries';
 import { toast } from '../../lib/toast';
 import { getFriendlyApiError } from '../../utils/errors';
-import { Loader2, Key, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, Key, Trash2, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { Select, SelectItem } from '../primitives/Select';
 import { Button } from '../primitives/Button';
 import { useAuth } from '../../auth/AuthProvider';
 import { api } from '../../api/client';
 import type { User } from '../../api/types';
-
-// ─── Badge system ─────────────────────────────────────────────────────────────
-type BadgeKind = 'recommended' | 'free' | 'paid' | 'default';
-
-const BADGE_STYLES: Record<BadgeKind, string> = {
-  recommended: 'bg-[#DBEAFE] text-[#1D4ED8] dark:bg-blue-900/40 dark:text-blue-300',
-  free:        'bg-[#DCFCE7] text-[#166534] dark:bg-green-900/40 dark:text-green-300',
-  paid:        'bg-[#FFEDD5] text-[#9A3412] dark:bg-orange-900/40 dark:text-orange-300',
-  default:     'bg-[#DBEAFE] text-[#1D4ED8] dark:bg-blue-900/40 dark:text-blue-300',
-};
-
-const BADGE_LABELS: Record<BadgeKind, string> = {
-  recommended: 'Default',
-  free:        'Free',
-  paid:        'Paid',
-  default:     'Default',
-};
-
-/** Parse a combined badge string like "Recommended • Free" into separate pill kinds */
-function parseBadge(badge: string): BadgeKind[] {
-  const lower = badge.toLowerCase();
-  const kinds: BadgeKind[] = [];
-  if (lower.includes('recommended')) kinds.push('recommended');
-  if (lower.includes('default'))     kinds.push('default');
-  if (lower.includes('free'))        kinds.push('free');
-  if (lower.includes('paid') && !lower.includes('free')) kinds.push('paid');
-  return kinds.length > 0 ? kinds : ['free'];
-}
-
-
-
 
 export function ApiKeysSection() {
   const { profile, setProfile } = useAuth();
@@ -102,17 +71,17 @@ export function ApiKeysSection() {
       name: 'Gemini',
       textModels:  supportedModels.gemini?.text  || [],
       imageModels: supportedModels.gemini?.image || [],
-      desc: 'Supports both text analysis and image generation.',
+      desc: 'Text analysis + image generation via Google AI Studio.',
     },
     replicate: {
       name: 'Replicate',
       imageModels: supportedModels.replicate?.image || [],
-      desc: 'Supports advanced diffusion models for image generation.',
+      desc: 'Advanced diffusion models for high-quality image generation.',
     },
     groq: {
       name: 'Groq',
       textModels: supportedModels.groq?.text || [],
-      desc: 'All Groq models are available on the free tier. Paid plans only increase rate limits.',
+      desc: 'Ultra-fast inference. Free tier available with generous rate limits.',
     },
   };
 
@@ -138,7 +107,11 @@ export function ApiKeysSection() {
         : { active_image_provider: val };
       const updatedUser = await api.patch<User>('/auth/me/settings', updates);
       setProfile(updatedUser);
-      toast.success(`Active ${type} provider updated.`);
+      if (val) {
+        toast.success(`${type === 'text' ? 'Analysis' : 'Generation'} provider set to ${val}.`);
+      } else {
+        toast.success(`${type === 'text' ? 'Analysis' : 'Generation'} provider removed.`);
+      }
     } catch (err) {
       toast.error(getFriendlyApiError(err, 'Failed to update active provider.'));
     } finally {
@@ -160,22 +133,30 @@ export function ApiKeysSection() {
         preferred_text_model:  form.textModel  || undefined,
         preferred_image_model: form.imageModel || undefined,
       } as any);
-      toast.success(form.apiKey ? `${prov} API key saved successfully!` : `${prov} settings updated successfully!`);
+      toast.success(form.apiKey ? `${prov} API key saved.` : `${prov} settings updated.`);
       if (form.apiKey) {
         setProviderForms(prev => ({ ...prev, [prov]: { ...prev[prov], apiKey: '' } }));
       }
     } catch (err: any) {
-      toast.error(getFriendlyApiError(err, 'Failed to save settings. Make sure your API key is valid.'));
+      toast.error(getFriendlyApiError(err, 'Failed to save. Make sure your API key is valid.'));
     }
   };
 
   const handleDeleteKey = async (prov: string) => {
-    if (!confirm(`Are you sure you want to delete your ${prov} API key?`)) return;
+    if (!confirm(`Remove your ${prov} API key? This will also clear it as an active provider.`)) return;
     try {
       await deleteKey.mutateAsync(prov);
+      // Also clear it as active provider if it was selected
+      const updates: Partial<User> = {};
+      if (profile?.active_text_provider === prov) updates.active_text_provider = null as any;
+      if (profile?.active_image_provider === prov) updates.active_image_provider = null as any;
+      if (Object.keys(updates).length > 0) {
+        const updatedUser = await api.patch<User>('/auth/me/settings', updates);
+        setProfile(updatedUser);
+      }
       toast.success(`${prov} key removed.`);
     } catch (err: any) {
-      toast.error(getFriendlyApiError(err, 'Failed to delete key.'));
+      toast.error(getFriendlyApiError(err, 'Failed to remove key.'));
     }
   };
 
@@ -199,26 +180,39 @@ export function ApiKeysSection() {
         <div>
           <h4 className="text-sm font-semibold text-text-primary flex items-center gap-2 mb-1">
             <Key className="w-4 h-4 text-accent" />
-            Active Providers (BYOK Mode)
+            Active Providers
           </h4>
           <p className="text-xs text-text-secondary">
-            RoomCanvas relies entirely on your personal API keys. Configure and select which provider to use for Analysis (Text) and Generation (Image).
+            Select which configured provider to use for analysis (text) and generation (image).
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap gap-6">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           {/* Text provider */}
           <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
-            <label className="text-xs font-medium text-text-primary">Active Analysis Provider (Text)</label>
-            <Select
-              value={profile.active_text_provider || ''}
-              onValueChange={val => handleUpdateActiveProvider('text', val)}
-              disabled={savingSettings}
-            >
-              <SelectItem value="">Select a provider...</SelectItem>
-              <SelectItem value="groq">Groq (Recommended)</SelectItem>
-              <SelectItem value="gemini">Gemini</SelectItem>
-            </Select>
+            <label className="text-xs font-medium text-text-primary">Analysis Provider (Text)</label>
+            <div className="flex items-center gap-2">
+              <Select
+                value={profile.active_text_provider || ''}
+                onValueChange={val => handleUpdateActiveProvider('text', val)}
+                disabled={savingSettings}
+              >
+                <SelectItem value="">Select a provider…</SelectItem>
+                <SelectItem value="gemini">Gemini</SelectItem>
+                <SelectItem value="groq">Groq</SelectItem>
+              </Select>
+              {profile.active_text_provider && (
+                <button
+                  type="button"
+                  onClick={() => handleUpdateActiveProvider('text', '')}
+                  disabled={savingSettings}
+                  title="Remove active text provider"
+                  className="flex-shrink-0 p-2 rounded-lg text-text-tertiary hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             {!profile.active_text_provider && (
               <span className="text-[11px] text-red-600 dark:text-red-400 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 flex-shrink-0" /> Required for redesign
@@ -228,16 +222,29 @@ export function ApiKeysSection() {
 
           {/* Image provider */}
           <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
-            <label className="text-xs font-medium text-text-primary">Active Generation Provider (Image)</label>
-            <Select
-              value={profile.active_image_provider || ''}
-              onValueChange={val => handleUpdateActiveProvider('image', val)}
-              disabled={savingSettings}
-            >
-              <SelectItem value="">Select a provider...</SelectItem>
-              <SelectItem value="replicate">Replicate</SelectItem>
-              <SelectItem value="gemini">Gemini (Recommended)</SelectItem>
-            </Select>
+            <label className="text-xs font-medium text-text-primary">Generation Provider (Image)</label>
+            <div className="flex items-center gap-2">
+              <Select
+                value={profile.active_image_provider || ''}
+                onValueChange={val => handleUpdateActiveProvider('image', val)}
+                disabled={savingSettings}
+              >
+                <SelectItem value="">Select a provider…</SelectItem>
+                <SelectItem value="replicate">Replicate</SelectItem>
+                <SelectItem value="gemini">Gemini</SelectItem>
+              </Select>
+              {profile.active_image_provider && (
+                <button
+                  type="button"
+                  onClick={() => handleUpdateActiveProvider('image', '')}
+                  disabled={savingSettings}
+                  title="Remove active image provider"
+                  className="flex-shrink-0 p-2 rounded-lg text-text-tertiary hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             {!profile.active_image_provider && (
               <span className="text-[11px] text-red-600 dark:text-red-400 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 flex-shrink-0" /> Required for redesign
@@ -273,17 +280,15 @@ export function ApiKeysSection() {
               }`}
             >
               {/* Card header */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h5 className="text-sm font-semibold capitalize text-text-primary">{config.name}</h5>
-                    {configured && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#DCFCE7] text-[#166534] dark:bg-green-900/40 dark:text-green-300">
-                        <CheckCircle2 className="w-3 h-3" /> Configured
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-text-secondary mt-1">{config.desc}</p>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h5 className="text-sm font-semibold capitalize text-text-primary">{config.name}</h5>
+                  {configured && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#DCFCE7] text-[#166534] dark:bg-green-900/40 dark:text-green-300">
+                      <CheckCircle2 className="w-3 h-3" /> Configured
+                    </span>
+                  )}
+                  <p className="text-[11px] text-text-secondary">{config.desc}</p>
                 </div>
 
                 {configured && (
@@ -292,7 +297,7 @@ export function ApiKeysSection() {
                     onClick={() => handleDeleteKey(prov)}
                     disabled={deleteKey.isPending}
                     className="p-1.5 ml-2 flex-shrink-0 text-text-tertiary hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/30 rounded-md transition-colors"
-                    title={`Delete ${config.name} Key`}
+                    title={`Remove ${config.name} key`}
                   >
                     {deleteKey.isPending && deleteKey.variables === prov
                       ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -310,7 +315,7 @@ export function ApiKeysSection() {
                   </label>
                   <input
                     type="password"
-                    placeholder={`Enter ${config.name} API Key...`}
+                    placeholder={`Enter ${config.name} API Key…`}
                     className="w-full h-11 px-3 py-2 bg-background border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
                     value={providerForms[prov].apiKey}
                     onChange={e => setProviderForms(prev => ({ ...prev, [prov]: { ...prev[prov], apiKey: e.target.value } }))}
@@ -327,22 +332,10 @@ export function ApiKeysSection() {
                     >
                       {config.textModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <span className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
-                            <span className="truncate min-w-0">
-                              {m.label}
-                              {configuredTextModel(prov) === m.id && (
-                                <span className="ml-1.5 text-text-tertiary text-[10px]">(Saved)</span>
-                              )}
-                            </span>
-                            {/* Badges outside ItemText — only visible in dropdown, not in trigger */}
-                            <span className="flex-shrink-0 flex items-center gap-1 select-badges">
-                              {parseBadge(m.badge).map(kind => (
-                                <span key={kind} className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider leading-none whitespace-nowrap ${BADGE_STYLES[kind]}`}>
-                                  {BADGE_LABELS[kind]}
-                                </span>
-                              ))}
-                            </span>
-                          </span>
+                          {m.label}
+                          {configuredTextModel(prov) === m.id && (
+                            <span className="ml-1.5 text-text-tertiary text-[10px]">(Saved)</span>
+                          )}
                         </SelectItem>
                       ))}
                     </Select>
@@ -359,22 +352,10 @@ export function ApiKeysSection() {
                     >
                       {config.imageModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
-                          <span className="flex items-center justify-between w-full min-w-0 gap-2 pr-6">
-                            <span className="truncate min-w-0">
-                              {m.label}
-                              {configuredImageModel(prov) === m.id && (
-                                <span className="ml-1.5 text-text-tertiary text-[10px]">(Saved)</span>
-                              )}
-                            </span>
-                            {/* Badges outside ItemText — only visible in dropdown, not in trigger */}
-                            <span className="flex-shrink-0 flex items-center gap-1 select-badges">
-                              {parseBadge(m.badge).map(kind => (
-                                <span key={kind} className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider leading-none whitespace-nowrap ${BADGE_STYLES[kind]}`}>
-                                  {BADGE_LABELS[kind]}
-                                </span>
-                              ))}
-                            </span>
-                          </span>
+                          {m.label}
+                          {configuredImageModel(prov) === m.id && (
+                            <span className="ml-1.5 text-text-tertiary text-[10px]">(Saved)</span>
+                          )}
                         </SelectItem>
                       ))}
                     </Select>

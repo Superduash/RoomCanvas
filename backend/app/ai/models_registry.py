@@ -1,32 +1,34 @@
 SUPPORTED_MODELS = {
     "gemini": {
         "text": [
-            {"id": "gemini-3-flash", "label": "Gemini 3 Flash", "badge": "Recommended • Free"},
-            {"id": "gemini-3.1-flash-lite", "label": "Gemini 3.1 Flash Lite", "badge": "Free"},
-            {"id": "gemini-3.1-pro", "label": "Gemini 3.1 Pro", "badge": "Paid"},
-            {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro", "badge": "Paid"}
+            {"id": "gemini-3.1-flash-lite", "label": "Gemini 3.1 Flash Lite", "badge": "Default"},
+            {"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash", "badge": "Free"},
+            {"id": "gemini-3.5-flash", "label": "Gemini 3.5 Flash", "badge": "Free"},
+            {"id": "gemini-3.1-pro", "label": "Gemini 3.1 Pro", "badge": "Paid"}
         ],
         "image": [
-            {"id": "gemini-3.1-flash-image", "label": "Gemini 3.1 Flash Image", "badge": "Recommended • Free"},
-            {"id": "gemini-3.1-flash-lite-image", "label": "Gemini 3.1 Flash Lite Image", "badge": "Free"},
-            {"id": "gemini-3-pro-image", "label": "Gemini 3 Pro Image", "badge": "Paid"}
+            {"id": "nano-banana-2", "label": "Nano Banana 2", "badge": "Default"},
+            {"id": "nano-banana", "label": "Nano Banana", "badge": "Free"},
+            {"id": "nano-banana-2-lite", "label": "Nano Banana 2 Lite", "badge": "Free"},
+            {"id": "nano-banana-pro", "label": "Nano Banana Pro", "badge": "Paid"}
         ]
     },
     "groq": {
         "text": [
-            {"id": "openai/gpt-oss-120b", "label": "GPT-OSS 120b", "badge": "Recommended • Free"},
-            {"id": "llama-3.1-70b-versatile", "label": "Llama 3.1 70B", "badge": "Free"},
-            {"id": "llama3-8b-8192", "label": "Llama 3 8B", "badge": "Free"},
-            {"id": "mixtral-8x7b-32768", "label": "Mixtral 8x7B", "badge": "Free"}
+            {"id": "llama-3.1-8b-instant", "label": "Llama 3.1 8B Instant", "badge": "Default"},
+            {"id": "meta-llama/llama-4-scout-17b-16e-instruct", "label": "Llama 4 Scout 17B", "badge": "Free"},
+            {"id": "openai/gpt-oss-20b", "label": "GPT-OSS 20B", "badge": "Free"},
+            {"id": "openai/gpt-oss-120b", "label": "GPT-OSS 120B", "badge": "Paid"}
         ],
         "image": []
     },
     "replicate": {
         "text": [],
         "image": [
-            {"id": "black-forest-labs/flux-kontext-pro", "label": "Flux Kontext Pro", "badge": "Recommended • Free"},
-            {"id": "black-forest-labs/flux-dev", "label": "Flux Dev", "badge": "Free"},
-            {"id": "black-forest-labs/flux-schnell", "label": "Flux Schnell", "badge": "Free"}
+            {"id": "black-forest-labs/flux-kontext-pro", "label": "Flux Kontext Pro", "badge": "Default"},
+            {"id": "google/imagen-4", "label": "Imagen 4", "badge": "Free"},
+            {"id": "black-forest-labs/flux-1.1-pro", "label": "Flux 1.1 Pro", "badge": "Free"},
+            {"id": "black-forest-labs/flux-2-pro", "label": "Flux 2 Pro", "badge": "Paid"}
         ]
     }
 }

@@ -114,12 +114,6 @@ export function useProjectTimeline(projectId: number | null) {
     enabled: projectId !== null,
     staleTime: 30000,
     refetchOnMount: true,
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (!data) return false;
-      const isGenerating = data.timeline.some(g => g.status === 'pending' || g.status === 'analyzed');
-      return isGenerating ? 2500 : false;
-    },
     retry: (failureCount, error) => {
       // Allow retries for transient errors, but not for 404s
       if ((error as any)?.response?.status === 404) return false;

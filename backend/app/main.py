@@ -17,7 +17,6 @@ import app.logging_config as logging_config
 from app.config import settings
 from app.database.session import engine, Base
 import app.database.models  # Ensure models are loaded before create_all
-from app.ai.providers.provider_registry import init_providers
 from app.auth.firebase_admin_init import init_firebase_admin
 from app.routers import health, analyze, generate, refine, history, styles, providers, config, auth, measure, user_keys
 from app.utils.exceptions import InteriorAIError
@@ -62,11 +61,6 @@ async def lifespan(app: FastAPI):
     if not is_model_supported("replicate", settings.REPLICATE_IMAGE_MODEL_DEFAULT, "image"):
         raise ValueError(f"Configured REPLICATE_IMAGE_MODEL_DEFAULT ({settings.REPLICATE_IMAGE_MODEL_DEFAULT}) is not supported in registry")
 
-    # Initialise provider singletons (once per process, not once per request)
-    try:
-        init_providers()
-    except Exception as exc:
-        logger.error(f"Failed to initialise AI providers: {exc}")
 
     try:
         init_firebase_admin()

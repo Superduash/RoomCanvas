@@ -188,44 +188,7 @@ async def get_generation_by_id(
     return await get_generation(generation_id, repo)
 
 
-# ── GET /api/generation/{id}/status (SSE) ─────────────────────────────────────
-from sse_starlette.sse import EventSourceResponse
-import json
 
-@router.get(
-    "/generation/{generation_id}/status",
-    tags=["Generation"],
-)
-async def generation_status_sse(
-    generation_id: int,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    repo = GenerationRepository(db, user_id=current_user.id)
-    
-    async def event_generator():
-        session_factory = async_sessionmaker(engine, expire_on_commit=False)
-        while True:
-            if await request.is_disconnected():
-                break
-                
-            async with session_factory() as fresh_db:
-                fresh_repo = GenerationRepository(fresh_db, user_id=current_user.id)
-                generation = await fresh_repo.get_by_id(generation_id)
-                if not generation:
-                    yield {"event": "error", "data": "Not found"}
-                    break
-                    
-                serialized = GenerationOut.model_validate(generation).model_dump(mode="json")
-                yield {"event": "message", "data": json.dumps(serialized)}
-                
-                if generation.status in ("completed", "failed", "failed_analysis"):
-                    break
-                    
-            await asyncio.sleep(2)
-
-    return EventSourceResponse(event_generator())
 
 
 # ── POST /api/history/{id}/select/{variation_id} ──────────────────────────────

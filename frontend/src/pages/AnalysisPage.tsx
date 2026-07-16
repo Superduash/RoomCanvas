@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, RefreshCw, ArrowLeft, Clock, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, ArrowLeft, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { AnalysisStepper } from '../components/analysis/AnalysisStepper';
 import { Button } from '../components/primitives/Button';
 import { usePollGeneration } from '../hooks/usePollGeneration';
@@ -49,7 +49,7 @@ export function AnalysisPage() {
   const queryClient = useQueryClient();
   const hasNavigated = useRef(false);
 
-  const handleGenerationComplete = async (gen: any) => {
+  const handleGenerationComplete = useCallback(async (gen: any) => {
     if (hasNavigated.current) return;
     hasNavigated.current = true;
     
@@ -73,15 +73,14 @@ export function AnalysisPage() {
     setWorkflowState('COMPLETE');
     // Important: Route to the project ID, not the generation ID!
     navigate(`/results/${gen.project_id}`, { replace: true });
-  };
+  }, [navigate, queryClient, setIsGenerating]);
 
-  const { generation, isPending, isCompleted, isFailed, timedOut, resetTimeout } = usePollGeneration(generationId, handleGenerationComplete);
+  const { generation, isPending, isCompleted, isFailed } = usePollGeneration(generationId, handleGenerationComplete);
 
   const hasStartedWorkflow = useRef(false);
 
   const runWorkflow = async () => {
     try {
-      console.log('[runWorkflow] Firing workflow... hasStartedWorkflow.current =', hasStartedWorkflow.current);
       logger.info('Analyze started');
       setGenerateError(null);
       setWorkflowState('ANALYZING');
@@ -104,7 +103,6 @@ export function AnalysisPage() {
       });
       setGenerationId(genResult.id);
     } catch (err) {
-      console.error('[runWorkflow] Error caught:', err);
       setWorkflowState('ERROR');
       setIsGenerating(false);
       setGenerateError(err instanceof Error ? err.message : 'An error occurred during generation workflow');
@@ -112,7 +110,6 @@ export function AnalysisPage() {
   };
 
   useEffect(() => {
-    console.log('[useEffect] Checking workflow start conditions. hasStartedWorkflow.current =', hasStartedWorkflow.current);
     if (hasStartedWorkflow.current) return;
     if (providerLoading) return;
     
@@ -123,7 +120,6 @@ export function AnalysisPage() {
        return;
     }
 
-    console.log('[workflow] starting, guard was', hasStartedWorkflow.current);
     hasStartedWorkflow.current = true;
     runWorkflow();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,30 +225,7 @@ export function AnalysisPage() {
     );
   }
 
-  // Timeout state
-  if (timedOut) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center page-enter">
-        <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-warning-subtle border border-warning/20 mb-6 shadow-sm">
-          <Clock className="h-7 w-7 text-warning" />
-        </div>
-        <h1 className="text-xl font-semibold text-text-primary mb-2">
-          This is taking longer than usual
-        </h1>
-        <p className="text-base text-text-secondary mb-8 max-w-md leading-relaxed">
-          The design is still generating in the background. You can keep waiting on this screen, or check your History later — it will appear there once complete.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="primary" size="lg" onClick={resetTimeout} icon={<Loader2 className="h-4 w-4 animate-spin" />}>
-            Keep Waiting
-          </Button>
-          <Link to="/history">
-            <Button variant="secondary" size="lg">Go to History</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-20 flex flex-col items-center page-enter min-h-[80vh] justify-center">

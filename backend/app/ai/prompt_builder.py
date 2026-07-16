@@ -1,5 +1,8 @@
 import re
+import logging
 from app.ai.prompts.style_hints import STYLE_TEMPLATES
+
+logger = logging.getLogger(__name__)
 
 CURRENT_ANALYSIS_PROMPT_VERSION = "v1"
 
@@ -7,24 +10,21 @@ ANALYSIS_PROMPT_V1 = """
 You are an expert interior designer. Analyze the provided room photo and return a structured JSON response.
 
 ARCHITECTURAL ELEMENTS
-These MUST remain. Detect and document:
-- walls
+These MUST remain exactly as they are. Detect and document:
+- room dimensions
+- wall positions
+- floor
+- ceiling
 - windows
 - doors
-- pillars
-- ceiling
-- flooring
-- permanent cabinetry
-- built-in wardrobes
-- stairs
-- fireplaces
+- built-in structures
 - Primary lighting direction (natural and artificial)
-- Approximate room shape (rectangular, L-shaped, irregular, etc.)
+- camera position, angle, perspective, and focal length
 
 MOVABLE OBJECTS
 Anything NOT permanently attached MUST be considered removable.
-Examples: beds, chairs, tables, desks, laptops, TVs, plants, boxes, clothes, bags, curtains, wall decor, carpets, toys, books, fans, electronics, wires, mirrors, storage bins.
-Treat these as clutter if they conflict with the requested redesign.
+Examples: chairs, tables, sofas, beds, shelves, electronics, boxes, clutter, decorations, clothes, plants, loose furniture.
+Treat these as items to be completely removed or replaced to match the requested redesign.
 
 Carefully categorize objects in the room:
 1. `movable_objects`: list all movable items here.
@@ -32,13 +32,13 @@ Carefully categorize objects in the room:
 3. `furniture`: (legacy compatibility - you may leave this empty).
 
 Additionally assess and report:
-- "analysis_confidence": a float between 0.0 and 1.0 indicating how clearly you can see and map the room's details. If the image is blurry, poorly lit, or a confusing angle, lower this score.
+- "analysis_confidence": a float between 0.0 and 1.0 indicating how clearly you can see and map the room's details.
 - "space_occupancy": one of "mostly_empty", "partially_furnished", "densely_furnished"
 - "open_floor_area_pct": your best estimate of what % of the visible floor is currently unobstructed
 
 Design it with the following style hint in mind: {style_hint}
 
-Follow the requested JSON schema strictly. Ensure your redesign prompt describes exactly what to change in the image.
+Follow the requested JSON schema strictly. Ensure your redesign prompt describes exactly what to change in the image, replacing clutter with clean, styled furniture.
 
 For each object, classify "purchase_status": use "keep_existing" for items already visible that the redesign keeps, "new_purchase" for anything the user needs to buy, and "optional_upgrade" for nice-to-have additions. Give price_min and price_max as plain numbers in USD.
 """
@@ -61,9 +61,10 @@ def get_analysis_prompt(style_id: str) -> str:
 
     return ANALYSIS_PROMPT_V1.format(style_hint=style_hint)
 
+import random
+from app.ai.prompts.style_hints import STYLE_VARIATION_POOLS
+
 def pick_variation_descriptors(style_id: str) -> str:
-    import random
-    from app.ai.prompts.style_hints import STYLE_VARIATION_POOLS
     pools = STYLE_VARIATION_POOLS.get(style_id, {})
     if not pools:
         return ""
@@ -80,15 +81,15 @@ QUALITY_SUFFIX = """
 Target architectural visualization quality comparable to professional real-estate renders.
 
 Prioritize:
-- architectural accuracy
+- architectural accuracy (never alter permanent walls, ceilings, windows, or doors)
+- accurate perspective and camera angle (do not shift the camera)
 - furniture proportion
 - material realism
 - lighting realism
-- preservation of room geometry
 - premium interior styling
 - consistency with the requested design language
 
-If a tradeoff exists, always preserve the original room architecture over adding additional decorative elements.
+Architecture preservation must always have the highest priority over adding decorative elements.
 """ + DESIGN_PRINCIPLES
 
 def build_customization_clause(c) -> str:
@@ -112,17 +113,24 @@ def build_customization_clause(c) -> str:
     return " ".join(parts)
 
 COMPOSITION_LOCK_V1 = """CRITICAL COMPOSITION RULES:
-You are redesigning this room's furniture, decor, materials, and finishes — you are NOT performing a full renovation from an empty shell.
+You are performing a professional interior redesign. You must behave like an interior designer, NOT an image decorator.
 
-1. Keep the EXACT same camera angle, framing, and perspective as the original photo.
-2. Preserve all structural elements exactly: walls, windows, doors, ceiling, and floor positions.
-3. Do not alter the room's architecture, layout, or dimensions in any way.
-4. Replace or restyle furniture and decor according to the redesign brief below — follow the
-   space-usage guidance to decide whether to replace items outright or restyle them in place.
-5. Repair only the specific floor/wall areas exposed by removing an object that is being replaced —
-   do not reconstruct areas that are not being changed.
-6. Preserve the original lighting direction, shadows, and reflections unless the redesign brief
-   explicitly calls for a lighting change."""
+1. HIGHEST PRIORITY: Preserve ALL permanent architecture exactly. These MUST NEVER change:
+   - room dimensions
+   - wall positions
+   - floor
+   - ceiling
+   - windows
+   - doors
+   - built-in structures
+   - camera position
+   - camera angle
+   - perspective
+   - focal length
+   - lighting direction
+2. Never expand rooms, never invent extra floor space, never widen walls, never move windows, never create new doors, and never change room geometry.
+3. Completely remove clutter and reconstruct any hidden walls, floors, or architectural surfaces that were previously occluded.
+4. Replace, reposition, or redesign movable objects (chairs, tables, sofas, beds, shelves, electronics, decorations, etc.) to match the requested style while respecting the original room layout."""
 
 REMOVAL_KEYWORDS = ["remove", "delete", "get rid of", "take out", "take away", "eliminate"]
 
@@ -153,8 +161,6 @@ def build_full_prompt(base_prompt: str, customization=None, instruction: str | N
         
         # Conflict detection
         if customization:
-            import logging
-            logger = logging.getLogger(__name__)
             if getattr(customization, "must_have_furniture", None):
                 for item in customization.must_have_furniture:
                     if item.lower() in instruction_lower and is_removal:
@@ -174,8 +180,6 @@ def build_full_prompt(base_prompt: str, customization=None, instruction: str | N
     # Token budgeting: Check if we are over the 480 token limit.
     # If so, we aggressively trim the customization clause to free up tokens.
     if estimate_tokens(final) > 480:
-        import logging
-        logger = logging.getLogger(__name__)
         logger.warning(f"Assembled prompt ~{estimate_tokens(final):.0f} tokens — near Kontext's 512 limit. Trimming decor details.")
         
         # Try rebuilding without the custom clause to save tokens, but keep architectural overrides
@@ -191,27 +195,6 @@ def build_full_prompt(base_prompt: str, customization=None, instruction: str | N
 
 
 
-def get_space_guidance(analysis_data: dict = None) -> str:
-    occupancy = (analysis_data or {}).get("space_occupancy", "mostly_empty")
-    open_pct = (analysis_data or {}).get("open_floor_area_pct", 100)
-
-    if occupancy == "densely_furnished" or open_pct < 25:
-        return (
-            "This room has very little open floor space and is already densely furnished. "
-            "Do NOT add large new furniture (no new sofas, cupboards, wardrobes, dining sets, or beds). "
-            "Restyle what already exists in place: update colors, materials, and finishes on the existing "
-            "furniture pieces exactly where they currently sit. Where there is genuinely open space "
-            "(a corner, a windowsill, a small gap), you may add only small-footprint items — a side table, "
-            "a floor lamp, a small plant, an accent chair, wall art, a rug in the open area only. "
-            "Never overlap new objects with existing furniture or walkways."
-        )
-    elif occupancy == "partially_furnished" or open_pct < 60:
-        return (
-            "This room is partially furnished. Keep existing large furniture in its current position "
-            "and restyle it rather than replacing it outright unless the instructions say otherwise. "
-            "Use the remaining open space for appropriately-scaled additions only."
-        )
-    return ""
 
 def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = None, customization=None, is_regenerate=False, style_id=None, instruction: str | None = None) -> str:
     gemini_redesign_prompt = sanitize_prompt(gemini_redesign_prompt)
@@ -237,15 +220,12 @@ def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = N
             movables = [obj["item"] for obj in analysis_data["movable_objects"]]
             removal_hints = f"Before redesigning, completely REMOVE these existing movable objects and clutter: {', '.join(movables)}. Reconstruct the space they occupied naturally. Do NOT just decorate around them."
 
-    space_guidance = get_space_guidance(analysis_data)
-
     GENERATION_PROMPT_V1 = f"""{COMPOSITION_LOCK_V1}
 
 {gemini_redesign_prompt}
 
 {arch_hints}
 {removal_hints}
-{space_guidance}
 Change the furniture, decor, and finishes while preserving the room's walls, windows, doors, and camera framing exactly as shown. Preserve the original direction and quality of natural and ambient light — only add or adjust light sources the redesign explicitly calls for."""
 
     # We manually inject the variation descriptors into customization or instruction if needed
@@ -258,11 +238,8 @@ Change the furniture, decor, and finishes while preserving the room's walls, win
     return build_full_prompt(GENERATION_PROMPT_V1, customization, instruction)
 
 def build_refinement_prompt(user_instruction: str | None, customization=None, analysis_data: dict = None) -> str:
-    space_guidance = get_space_guidance(analysis_data)
-
     base_prompt = f"""{COMPOSITION_LOCK_V1}
 
-{space_guidance}
 Apply this change only. Keep everything else in the image exactly as it is — same furniture placement, same room structure, same lighting direction, same camera angle — unless the instruction explicitly says otherwise."""
 
     return build_full_prompt(base_prompt, customization, user_instruction)
