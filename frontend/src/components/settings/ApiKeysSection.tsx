@@ -310,10 +310,12 @@ export function ApiKeysSection() {
               <div className="flex flex-col md:flex-row flex-wrap gap-3 items-end">
                 {/* API Key */}
                 <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
-                  <label className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+                  <label htmlFor={`api-key-${prov}`} className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">
                     {configured ? 'Overwrite API Key' : 'API Key'}
                   </label>
                   <input
+                    id={`api-key-${prov}`}
+                    name={`api-key-${prov}`}
                     type="password"
                     placeholder={`Enter ${config.name} API Key…`}
                     className="w-full h-11 px-3 py-2 bg-background border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"

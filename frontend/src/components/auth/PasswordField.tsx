@@ -14,6 +14,7 @@ export function PasswordField({ value, onChange, label = 'Password', placeholder
       <div className="relative">
         <input
           id={id}
+          name={id}
           type={visible ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}

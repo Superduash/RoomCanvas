@@ -147,8 +147,10 @@ export function SignUpPage() {
         />
 
         <div className="flex flex-col mt-1 mb-2">
-          <label className="flex items-start gap-2 cursor-pointer select-none group touch-manipulation">
+          <label htmlFor="terms-agreed" className="flex items-start gap-2 cursor-pointer select-none group touch-manipulation">
             <input 
+              id="terms-agreed"
+              name="terms-agreed"
               type="checkbox" 
               checked={agreed} 
               onChange={(e) => setAgreed(e.target.checked)} 

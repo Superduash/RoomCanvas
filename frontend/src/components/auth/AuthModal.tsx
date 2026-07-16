@@ -157,6 +157,7 @@ export function AuthModal() {
                     <label htmlFor="modal-name" className="text-[13px] font-semibold text-text-primary">Name</label>
                     <input
                       id="modal-name"
+                      name="name"
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -171,6 +172,7 @@ export function AuthModal() {
                   <label htmlFor="modal-email" className="text-[13px] font-semibold text-text-primary">Email</label>
                   <input
                     id="modal-email"
+                    name="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -188,8 +190,10 @@ export function AuthModal() {
                 
                 {mode === 'signin' && (
                   <div className="flex items-center justify-between mt-1 mb-2">
-                    <label className="flex items-center gap-2 cursor-pointer select-none touch-manipulation">
+                    <label htmlFor="modal-remember" className="flex items-center gap-2 cursor-pointer select-none touch-manipulation">
                       <input 
+                        id="modal-remember"
+                        name="remember"
                         type="checkbox" 
                         checked={remember} 
                         onChange={(e) => setRemember(e.target.checked)} 

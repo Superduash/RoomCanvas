@@ -102,8 +102,10 @@ export function SignInPage() {
         />
 
         <div className="flex items-center justify-between mt-0.5 mb-1">
-          <label className="flex items-center gap-2 cursor-pointer select-none group touch-manipulation">
+          <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer select-none group touch-manipulation">
             <input 
+              id="remember-me"
+              name="remember-me"
               type="checkbox" 
               checked={remember} 
               onChange={(e) => setRemember(e.target.checked)} 
