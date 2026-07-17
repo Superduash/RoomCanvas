@@ -65,10 +65,7 @@ class AnalysisService:
                 current_prov = getattr(provider, '__class__', type(provider)).__name__.replace('Provider', '').lower()
                 model_used = getattr(provider, 'model_name', getattr(provider, 'model', "unknown"))
                 
-                from app.ai.models_registry import supports_vision
-                if not supports_vision(current_prov, model_used):
-                    from app.utils.exceptions import ProviderUnavailableError
-                    raise ProviderUnavailableError(f"Your selected model ({model_used}) can't analyze photos. Choose a vision-capable model in Settings (e.g. Gemini 2.5 Flash or Llama 4 Scout).")
+                # Vision check removed per user request
                 
                 try:
                     res = await provider.analyze_room(image_bytes, mime_type, style_id)

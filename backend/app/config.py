@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     GROQ_VISION_MODEL_DEFAULT: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     GROQ_TEXT_MODEL_DEFAULT: str = "llama-3.1-8b-instant"
     GEMINI_TEXT_MODEL_DEFAULT: str = "gemini-3.1-flash-lite"
-    GEMINI_IMAGE_MODEL_DEFAULT: str = "imagen-3.0-generate-001"
+    GEMINI_IMAGE_MODEL_DEFAULT: str = "nano-banana-2"
     REPLICATE_IMAGE_MODEL_DEFAULT: str = "black-forest-labs/flux-kontext-pro"
 
     # Timeouts
