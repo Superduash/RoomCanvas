@@ -32,7 +32,7 @@ class KeyService:
         except InvalidToken:
             raise ValueError("Failed to decrypt the key (invalid token)")
 
-    def _resolve_supported_models(self, provider: str, pref_text: str | None, pref_image: str | None) -> tuple[str | None, str | None, bool]:
+    def _resolve_supported_models(self, provider: str, pref_text: str | None, pref_img: str | None) -> tuple[str | None, str | None, bool]:
         """Returns (valid_text_model, valid_image_model, needs_commit)."""
         needs_commit = False
         
