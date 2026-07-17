@@ -76,6 +76,7 @@ class AnalysisService:
         # Return fallback empty data so Pydantic validation passes and frontend routing continues
         return AnalyzeResponse(
             analysis_id=analysis_id,
+            analysis_confidence=0.0,
             room_type="Unknown",
             furniture=[],
             color_palette=[],
@@ -83,6 +84,7 @@ class AnalysisService:
             style_explanation="",
             layout_notes="",
             lighting_suggestions="",
-            budget_summary=None
+            estimated_dimensions={},
+            budget_summary={}
         )
 
