@@ -72,6 +72,7 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
   const [pointA, setPointA] = useState<THREE.Vector3 | null>(null);
   const hitMatrixRef = useRef<THREE.Matrix4 | null>(null);
   const [isSurfaceFound, setIsSurfaceFound] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const handleCapture = () => {
     if (!isSurfaceFound || !hitMatrixRef.current) return;
@@ -93,13 +94,30 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
   };
 
   const startAR = async () => {
+    setCameraError(null);
     try {
+      // 1. Explicitly request camera permissions to force native prompt on mobile/PWA
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Immediately stop tracks so WebXR can take exclusive control of the camera
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      // 2. Start WebXR AR Session
       if (store) {
         await store.enterAR();
         onSessionStart();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to start AR', err);
+      // Format a user-friendly error message
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
+        setCameraError("Camera permission was denied. Please enable camera access in your browser settings.");
+      } else if (err.name === 'NotFoundError') {
+        setCameraError("No camera found on this device.");
+      } else {
+        setCameraError(`Unable to start AR session: ${err.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -145,9 +163,16 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
       </div>
 
       {!sessionActive && (
-        <Button variant="primary" size="lg" onClick={startAR} className="mt-4" disabled={!store}>
-          Start Measuring
-        </Button>
+        <div className="flex flex-col items-center mt-4">
+          {cameraError && (
+            <div className="mb-4 max-w-sm p-3 text-sm text-center text-white bg-red-500/90 rounded-lg shadow-sm border border-red-400">
+              {cameraError}
+            </div>
+          )}
+          <Button variant="primary" size="lg" onClick={startAR} disabled={!store}>
+            Start Measuring
+          </Button>
+        </div>
       )}
 
       {store && (
