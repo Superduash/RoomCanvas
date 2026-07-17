@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     REPLICATE_IMAGE_MODEL_DEFAULT: str = "black-forest-labs/flux-kontext-pro"
 
     # Timeouts
-    GEMINI_TIMEOUT_SECONDS: int = 60
+    GEMINI_TIMEOUT_SECONDS: int = 120
     REPLICATE_TIMEOUT_SECONDS: int = 120
 
     @field_validator("MAX_UPLOAD_SIZE_MB")
