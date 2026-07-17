@@ -104,7 +104,7 @@ export function AnalysisPage() {
       const genResult = await generateDesign.mutateAsync({ 
          analysisId: currentAnalysisId, 
          customization,
-         force_new: true // Ensure we get a fresh attempt
+         forceNew: true // Ensure we get a fresh attempt
       });
       setGenerationId(genResult.id);
     } catch (err) {
