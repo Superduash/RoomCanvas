@@ -207,18 +207,28 @@ def build_generation_prompt(gemini_redesign_prompt: str, analysis_data: dict = N
     if analysis_data:
         if "architecture" in analysis_data:
             arch = analysis_data["architecture"]
-            arch_hints = (
-                f"Preserve the existing room structure exactly: "
-                f"Walls ({arch.get('walls', 'keep as is')}), "
-                f"Windows ({arch.get('windows', 'keep as is')}), "
-                f"Doors ({arch.get('doors', 'keep as is')}), "
-                f"Ceiling height ({arch.get('ceiling_height', 'keep as is')}). "
-                f"Preserve the original lighting direction ({arch.get('lighting_direction', 'keep original')}). "
-            )
+            if isinstance(arch, dict):
+                arch_hints = (
+                    f"Preserve the existing room structure exactly: "
+                    f"Walls ({arch.get('walls', 'keep as is')}), "
+                    f"Windows ({arch.get('windows', 'keep as is')}), "
+                    f"Doors ({arch.get('doors', 'keep as is')}), "
+                    f"Ceiling height ({arch.get('ceiling_height', 'keep as is')}). "
+                    f"Preserve the original lighting direction ({arch.get('lighting_direction', 'keep original')}). "
+                )
             
         if "movable_objects" in analysis_data and analysis_data["movable_objects"]:
-            movables = [obj["item"] for obj in analysis_data["movable_objects"]]
-            removal_hints = f"Before redesigning, completely REMOVE these existing movable objects and clutter: {', '.join(movables)}. Reconstruct the space they occupied naturally. Do NOT just decorate around them."
+            movables = []
+            for obj in analysis_data["movable_objects"]:
+                if isinstance(obj, dict):
+                    name = obj.get("item", obj.get("name", ""))
+                    if name:
+                        movables.append(str(name))
+                else:
+                    movables.append(str(obj))
+                    
+            if movables:
+                removal_hints = f"Before redesigning, completely REMOVE these existing movable objects and clutter: {', '.join(movables)}. Reconstruct the space they occupied naturally. Do NOT just decorate around them."
 
     GENERATION_PROMPT_V1 = f"""{COMPOSITION_LOCK_V1}
 

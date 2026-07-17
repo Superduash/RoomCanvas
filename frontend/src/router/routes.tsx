@@ -56,6 +56,31 @@ function RouterErrorBoundary() {
       window.location.reload();
       return <PageLoader />;
     }
+    
+    // Chunk error persists after reload, likely an app update
+    sessionStorage.removeItem('chunk_reload');
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center bg-bg">
+        <AlertTriangle size={40} strokeWidth={1.75} className="text-danger" aria-hidden="true" />
+        <h1 className="text-xl font-semibold text-text-primary">App Update Available</h1>
+        <p className="max-w-sm text-sm text-text-secondary">
+          We just pushed a new update to RoomCanvas. Please refresh the page to continue.
+        </p>
+        <Button onClick={async () => {
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(r => r.unregister()));
+          }
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          }
+          window.location.href = '/';
+        }}>
+          Refresh Page
+        </Button>
+      </div>
+    );
   }
   
   // Otherwise, clear reload flag and show standard error UI
@@ -64,22 +89,20 @@ function RouterErrorBoundary() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center bg-bg">
       <AlertTriangle size={40} strokeWidth={1.75} className="text-danger" aria-hidden="true" />
-      <h1 className="text-xl font-semibold text-text-primary">App Update Available</h1>
+      <h1 className="text-xl font-semibold text-text-primary">Something went wrong</h1>
       <p className="max-w-sm text-sm text-text-secondary">
-        We just pushed a new update to RoomCanvas. Please refresh the page to continue.
+        An unexpected error occurred. Please try again.
       </p>
-      <Button onClick={async () => {
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map(r => r.unregister()));
-        }
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map(k => caches.delete(k)));
-        }
-        window.location.href = '/';
-      }}>
-        Refresh Page
+      {error instanceof Error && (
+        <div className="text-xs text-text-tertiary mt-2 max-w-lg overflow-auto text-left bg-surface rounded p-4 border border-border">
+          {error.message}
+        </div>
+      )}
+      <Button onClick={() => window.location.reload()} className="mt-4">
+        Try Again
+      </Button>
+      <Button variant="ghost" onClick={() => window.location.href = '/'}>
+        Return Home
       </Button>
     </div>
   );

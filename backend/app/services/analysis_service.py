@@ -13,9 +13,11 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-def compute_budget_summary(furniture: list[dict]) -> dict:
-    new_items = [f for f in furniture if f.get("purchase_status") == "new_purchase"]
-    optional_items = [f for f in furniture if f.get("purchase_status") == "optional_upgrade"]
+def compute_budget_summary(furniture: list) -> dict:
+    # Safely filter out any items that aren't dicts (e.g. if the AI returned a list of strings)
+    valid_furniture = [f for f in furniture if isinstance(f, dict)]
+    new_items = [f for f in valid_furniture if f.get("purchase_status") == "new_purchase"]
+    optional_items = [f for f in valid_furniture if f.get("purchase_status") == "optional_upgrade"]
     required_min = sum(f.get("price_min", 0) for f in new_items)
     required_max = sum(f.get("price_max", 0) for f in new_items)
     optional_min = sum(f.get("price_min", 0) for f in optional_items)
@@ -25,7 +27,7 @@ def compute_budget_summary(furniture: list[dict]) -> dict:
         "optional_upgrade_total": {"min": optional_min, "max": optional_max},
         "grand_total": {"min": required_min + optional_min, "max": required_max + optional_max},
         "items_to_buy_count": len(new_items),
-        "items_kept_count": len([f for f in furniture if f.get("purchase_status") == "keep_existing"]),
+        "items_kept_count": len([f for f in valid_furniture if f.get("purchase_status") == "keep_existing"]),
     }
 
 class AnalysisService:
