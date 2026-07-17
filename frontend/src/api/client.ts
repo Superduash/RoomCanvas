@@ -118,7 +118,11 @@ export const api = {
 
 // Image paths are now Supabase Storage keys
 // e.g. "uploads/xyz.jpg" → https://PROJECT.supabase.co/storage/v1/object/public/roomcanvas/uploads/xyz.jpg
-export function resolveImageUrl(key: string | null | undefined): string {
-  if (!key) return '';
-  return key;
+export function resolveImageUrl(url: string | null | undefined, width?: number): string {
+  if (!url) return '';
+  if (width && url.includes('supabase.co')) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}width=${width}`;
+  }
+  return url;
 }

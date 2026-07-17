@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, Plus, History, X, Sun, Moon } from 'lucide-react';
+import { Menu, Plus, History, X, Sun, Moon, Ruler } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Button } from '../primitives/Button';
@@ -146,6 +146,9 @@ export function TopNav() {
               </NavLink>
               <NavLink to="/history" className={navLinkClass}>
                 Library
+              </NavLink>
+              <NavLink to="/measure-live" className={navLinkClass}>
+                Live Measure
               </NavLink>
             </nav>
           </div>
@@ -318,6 +321,7 @@ export function TopNav() {
                   <MobileNavLink to="/" label="Home" onClick={() => setMobileOpen(false)} />
                   <MobileNavLink to="/upload" label="New Design" icon={<Plus className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
                   <MobileNavLink to="/history" label="Library" icon={<History className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
+                  <MobileNavLink to="/measure-live" label="Live Measure" icon={<Ruler className="h-[18px] w-[18px]" />} onClick={() => setMobileOpen(false)} />
                   {user && (
                     <>
                       <MobileNavLink to="/profile" label="Profile" onClick={() => setMobileOpen(false)} />

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../primitives/Button';
 import { X, ZoomIn, ZoomOut } from 'lucide-react';
 import { getCroppedImg } from '../../utils/cropImage';
+import { logger } from '../../lib/logger';
 
 interface ImageCropModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export function ImageCropModal({ isOpen, imageSrc, onClose, onCropComplete }: Im
       const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
       onCropComplete(croppedBlob);
     } catch (e) {
-      console.error(e);
+      logger.error('Image crop failed:', e);
     } finally {
       setIsProcessing(false);
     }

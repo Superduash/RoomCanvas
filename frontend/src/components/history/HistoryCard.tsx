@@ -33,8 +33,8 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
   const g = p.latest_generation;
 
   const thumbnail = g.variations[0]?.image_path
-    ? resolveImageUrl(g.variations[0].image_path)
-    : resolveImageUrl(p.original_image_path);
+    ? resolveImageUrl(g.variations[0].image_path, 400)
+    : resolveImageUrl(p.original_image_path, 400);
 
   const handleDelete = async () => {
     try {
@@ -111,7 +111,7 @@ export const HistoryCard = memo(function HistoryCard({ project: p, viewMode = 'g
     return () => clearTimeout(timeout);
   }, [isHovering, g.status, p.original_image_path]);
 
-  const originalSrc = resolveImageUrl(p.original_image_path);
+  const originalSrc = resolveImageUrl(p.original_image_path, 400);
 
   return (
     <>

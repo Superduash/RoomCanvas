@@ -20,18 +20,18 @@ async def get_text_provider(db: AsyncSession, user_id: int | None = None) -> Ana
         
     user = await _get_user(db, user_id)
     if not user or not user.active_text_provider:
-        raise ProviderUnavailableError("No active text provider selected. Please configure one in Settings.")
+        raise ProviderUnavailableError("No AI provider configured — set one up in Settings.")
         
     key_service = KeyService(db, user_id)
     active_prov = user.active_text_provider
     api_key, preferred_text_model, _ = await key_service.get_user_key(active_prov)
     
     if not api_key:
-        raise ProviderUnavailableError(f"API key missing for your active text provider ({active_prov}).")
+        raise ProviderUnavailableError(f"Your {active_prov} key is missing. Check Settings.")
         
     if active_prov == "groq":
         from app.ai.providers.groq_provider import GroqProvider
-        return GroqProvider(api_key=api_key, model=preferred_text_model or settings.GROQ_TEXT_MODEL_DEFAULT)
+        return GroqProvider(api_key=api_key, model=preferred_text_model or settings.GROQ_VISION_MODEL_DEFAULT)
     elif active_prov == "gemini":
         from app.ai.providers.gemini_provider import GeminiProvider
         return GeminiProvider(api_key=api_key, model=preferred_text_model or settings.GEMINI_TEXT_MODEL_DEFAULT)
@@ -44,14 +44,14 @@ async def get_image_provider(db: AsyncSession, user_id: int | None = None) -> Ge
         
     user = await _get_user(db, user_id)
     if not user or not user.active_image_provider:
-        raise ProviderUnavailableError("No active image provider selected. Please configure one in Settings.")
+        raise ProviderUnavailableError("No AI provider configured — set one up in Settings.")
         
     key_service = KeyService(db, user_id)
     active_prov = user.active_image_provider
     api_key, _, preferred_image_model = await key_service.get_user_key(active_prov)
     
     if not api_key:
-        raise ProviderUnavailableError(f"API key missing for your active image provider ({active_prov}).")
+        raise ProviderUnavailableError(f"Your {active_prov} key is missing. Check Settings.")
         
     if active_prov == "replicate":
         from app.ai.providers.replicate_provider import ReplicateProvider

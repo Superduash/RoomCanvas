@@ -133,7 +133,7 @@ export function SignUpPage() {
           value={password} 
           onChange={setPassword} 
           showStrength 
-          placeholder="Minimum 8 characters"
+          placeholder="8+ characters"
           error={errors.password}
         />
 

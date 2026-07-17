@@ -42,15 +42,16 @@ export default function App() {
             toastOptions={{
               duration: 5000,
               style: {
-                background: '#ffffff',
-                color: '#1a1a1a',
-                border: '1px solid #e5e7eb',
+                background: 'var(--color-surface-raised, #ffffff)',
+                color: 'var(--color-text-primary, #1a1a1a)',
+                border: '1px solid var(--color-border-strong, #d4d4d8)',
                 borderRadius: '10px',
                 fontSize: '13px',
                 fontWeight: '500',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-                padding: '10px 14px',
-                maxWidth: '380px',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.16)',
+                padding: '8px 12px',
+                maxWidth: '340px',
+                whiteSpace: 'nowrap',
               },
               success: {
                 iconTheme: { primary: '#16A34A', secondary: '#FFFFFF' },

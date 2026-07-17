@@ -15,7 +15,7 @@ const HistoryPage   = lazy(() => import('../pages/HistoryPage').then(m => ({ def
 const ProfilePage   = lazy(() => import('../pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const SettingsPage  = lazy(() => import('../pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const NotFoundPage  = lazy(() => import('../pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
-
+const LiveMeasurePage = lazy(() => import('../pages/LiveMeasurePage').then(m => ({ default: m.LiveMeasurePage })));
 // Static pages
 const AboutPage     = lazy(() => import('../pages/AboutPage'));
 const TermsPage     = lazy(() => import('../pages/TermsPage'));
@@ -240,6 +240,16 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoader />}>
             <ContactPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'measure-live',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <RequireAuth>
+              <LiveMeasurePage />
+            </RequireAuth>
           </Suspense>
         ),
       },

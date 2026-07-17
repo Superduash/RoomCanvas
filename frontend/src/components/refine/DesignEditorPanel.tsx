@@ -168,7 +168,7 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
       <div className="space-y-3">
         <Textarea
           id="refinement-instruction"
-          placeholder="e.g. 'Make the walls a warm sage green' or 'Remove the black laptop'"
+          placeholder="e.g. Sage green walls, remove laptop"
           value={refinementDraft}
           onChange={(e) => setRefinementDraft(e.target.value)}
           className="min-h-[100px] w-full text-sm resize-none"
@@ -335,7 +335,7 @@ export function DesignEditorPanel({ generationId, projectId, disabled, defaultDi
                   <label className="text-xs font-medium text-text-secondary mb-2 block">Color Preference</label>
                   <input
                     type="text"
-                    placeholder="e.g. warm earth tones, navy and brass"
+                    placeholder="e.g. warm earth tones"
                     value={colorPreference}
                     onChange={e => setColorPreference(e.target.value)}
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"

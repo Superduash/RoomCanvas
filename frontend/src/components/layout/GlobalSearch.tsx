@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, Clock, FileText, Palette } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
+import { logger } from '../../lib/logger';
 import { useHistory, useStyles } from '../../api/queries';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,7 +74,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
         setRecentSearches(JSON.parse(stored));
       }
     } catch (e) {
-      console.error('Failed to parse recent searches', e);
+      logger.error('Failed to parse recent searches', e);
     }
   }, []);
 
@@ -311,7 +312,7 @@ export function GlobalSearch({ isMobile = false, onNavigate }: GlobalSearchProps
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search designs, styles, pages..."
+          placeholder="Search..."
           role="combobox"
           aria-expanded={isOpen}
           aria-controls="search-listbox"

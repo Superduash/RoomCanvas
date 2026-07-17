@@ -138,7 +138,7 @@ export function AdvancedOptions({ value, onChange }: { value: CustomizationOptio
                 <label className="text-xs font-medium text-text-secondary mb-2 block">Color Preference</label>
                 <input
                   type="text"
-                  placeholder="e.g. warm earth tones, navy and brass"
+                  placeholder="e.g. warm earth tones"
                   value={value.color_preference || ''}
                   onChange={e => onChange({ ...value, color_preference: e.target.value })}
                   className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"

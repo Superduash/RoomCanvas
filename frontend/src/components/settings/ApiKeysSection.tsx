@@ -5,6 +5,7 @@ import { getFriendlyApiError } from '../../utils/errors';
 import { Loader2, Key, Trash2, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { Select, SelectItem } from '../primitives/Select';
 import { Button } from '../primitives/Button';
+import { logger } from '../../lib/logger';
 import { useAuth } from '../../auth/AuthProvider';
 import { api } from '../../api/client';
 import type { User } from '../../api/types';
@@ -17,7 +18,21 @@ export function ApiKeysSection() {
 
   const [savingSettings, setSavingSettings] = useState(false);
 
-  type ModelDef = { id: string; label: string; badge: string };
+  type ModelDef = {
+    id: string;
+    label: string;
+    badge: string;
+    vision?: boolean;
+    provider?: string;
+    supports_image_generation?: boolean;
+    supports_text?: boolean;
+    supports_streaming?: boolean;
+    supports_json?: boolean;
+    supports_reasoning?: boolean;
+    recommended?: boolean;
+    tier?: string;
+    speed?: string;
+  };
 
   const [providerForms, setProviderForms] = useState<Record<string, { apiKey: string; textModel: string; imageModel: string }>>({
     gemini:    { apiKey: '', textModel: '', imageModel: '' },
@@ -57,7 +72,7 @@ export function ApiKeysSection() {
           return next;
         });
       } catch (err) {
-        console.error('Failed to fetch supported models:', err);
+        logger.error('Failed to fetch supported models:', err);
         setSupportedModels(EMPTY_MODELS);
       } finally {
         setModelsLoading(false);
@@ -317,7 +332,7 @@ export function ApiKeysSection() {
                     id={`api-key-${prov}`}
                     name={`api-key-${prov}`}
                     type="password"
-                    placeholder={`Enter ${config.name} API Key…`}
+                    placeholder={`${config.name} API Key…`}
                     className="w-full h-11 px-3 py-2 bg-background border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
                     value={providerForms[prov].apiKey}
                     onChange={e => setProviderForms(prev => ({ ...prev, [prov]: { ...prev[prov], apiKey: e.target.value } }))}
@@ -335,6 +350,9 @@ export function ApiKeysSection() {
                       {config.textModels?.map(m => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.label}
+                          {m.vision === false && (
+                            <span className="ml-1.5 text-text-tertiary text-[10px]">📝 Text Only</span>
+                          )}
                           {configuredTextModel(prov) === m.id && (
                             <span className="ml-1.5 text-text-tertiary text-[10px]">(Saved)</span>
                           )}

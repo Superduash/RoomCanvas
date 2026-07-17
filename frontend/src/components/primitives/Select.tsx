@@ -60,13 +60,14 @@ export function Select({ value, onValueChange, placeholder, label, hint, error, 
   );
 }
 
-export function SelectItem({ value, children }: { value: string; children: React.ReactNode }) {
+export function SelectItem({ value, disabled, children }: { value: string; disabled?: boolean; children: React.ReactNode }) {
   return (
-    <RadixSelect.Item value={value} className={cn(
+    <RadixSelect.Item value={value} disabled={disabled} className={cn(
       'relative flex cursor-pointer select-none items-center rounded-lg px-4 py-2.5',
       'text-sm text-text-primary outline-none',
       'data-[highlighted]:bg-surface-alt data-[highlighted]:text-text-primary',
       'data-[state=checked]:text-accent data-[state=checked]:font-medium',
+      'data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed',
     )}>
       <RadixSelect.ItemText>{children}</RadixSelect.ItemText>
       <RadixSelect.ItemIndicator className="absolute right-3">
@@ -75,4 +76,3 @@ export function SelectItem({ value, children }: { value: string; children: React
     </RadixSelect.Item>
   );
 }
-

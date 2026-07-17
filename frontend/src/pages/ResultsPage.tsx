@@ -428,7 +428,7 @@ export function ResultsPage() {
                   const isRoot = g.parent_generation_id === null;
                   const hasChildren = timeline.some(child => child.parent_generation_id === g.id);
                   const isDeleteDisabled = isRoot && hasChildren;
-                  const thumb = g.variations[0]?.image_path ? resolveImageUrl(g.variations[0].image_path) : originalSrc;
+                  const thumb = g.variations[0]?.image_path ? resolveImageUrl(g.variations[0].image_path, 200) : resolveImageUrl(project.original_image_path, 200);
                   const label = isRoot ? 'Original Base' : `Refinement ${timeline.length - index - (timeline.some(x => x.parent_generation_id === null) ? 1 : 0)}`;
 
                   return (
