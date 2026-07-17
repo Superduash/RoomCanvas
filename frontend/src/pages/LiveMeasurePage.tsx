@@ -42,28 +42,28 @@ export function LiveMeasurePage() {
   return (
     <ErrorBoundary>
       <div className="fixed inset-0 z-50 bg-bg text-text-primary flex flex-col pt-[env(safe-area-inset-top)]">
-        {!sessionActive ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+        
+        {/* Splash screen overlay */}
+        {!sessionActive && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center pointer-events-none bg-bg">
             <ScanLine className="w-16 h-16 text-accent mb-4" />
             <h1 className="text-2xl font-bold mb-2">Live AR Measure</h1>
             <p className="text-text-secondary mb-8 max-w-sm">
               Point your camera at real-world surfaces to measure distances exactly like Apple Measure.
             </p>
-            {/* The ArScene will contain the store and the "Start Measuring" button */}
-            <ArScene 
-              onSessionStart={() => setSessionActive(true)} 
-              onSessionEnd={() => setSessionActive(false)} 
-              measurementsState={measurements} 
-            />
           </div>
-        ) : (
+        )}
+
+        {/* ArScene must remain mounted at the exact same location in the tree */}
+        <div className="flex-1 relative z-20">
           <ArScene 
-            sessionActive 
+            sessionActive={sessionActive}
             onSessionStart={() => setSessionActive(true)} 
             onSessionEnd={() => setSessionActive(false)} 
             measurementsState={measurements} 
           />
-        )}
+        </div>
+
       </div>
     </ErrorBoundary>
   );
