@@ -57,23 +57,22 @@ class GroqProvider(AnalysisProvider):
         except httpx.HTTPStatusError as e:
             status_code = e.response.status_code
             err_msg = e.response.text
-            try:
-                err_json = e.response.json()
-                if "error" in err_json and "message" in err_json["error"]:
-                    err_msg = err_json["error"]["message"]
-            except Exception:
-                pass
+            
+            logger.error(f"Groq HTTP error {status_code}: {err_msg}")
+            
+            if 'Retry-After' in e.response.headers:
+                logger.warning(f"Groq Retry-After header: {e.response.headers['Retry-After']}")
                 
-            friendly_msg = "Groq request failed. Please try again."
+            friendly_msg = f"Groq request failed. Raw Response: {err_msg}"
+            
             if status_code == 404:
-                friendly_msg = f"Model {self.model_name} is invalid or not accessible with your API key."
+                friendly_msg = f"Model {self.model_name} is invalid or not accessible. Raw Response: {err_msg}"
                 status_code = 400
             elif status_code == 429:
-                friendly_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
+                friendly_msg = f"AI provider rate limit reached. Raw Response: {err_msg}"
             elif status_code in (401, 403):
-                friendly_msg = "Invalid API key or quota exceeded. Please check your Groq console."
+                friendly_msg = f"Invalid API key or quota exceeded. Raw Response: {err_msg}"
                 
-            logger.exception("Groq HTTP error %s: %s", status_code, err_msg)
             raise AnalysisServiceError(friendly_msg, status_code)
             
         except Exception as e:

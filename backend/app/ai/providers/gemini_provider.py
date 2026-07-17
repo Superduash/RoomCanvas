@@ -82,16 +82,20 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                     err_msg = str(e)
                     status_code = 500
                     if isinstance(e, genai_errors.APIError):
+                        err_msg = f"Raw Response: {e.message}"
+                        logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
                         if e.code == 404:
-                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible with your API key."
+                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible. {err_msg}"
                             status_code = 400
                         elif e.code == 429:
-                            err_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
+                            err_msg = f"AI provider rate limit reached. {err_msg}"
                             status_code = 429
                         elif e.code in (401, 403):
-                            err_msg = "Invalid API key or quota exceeded. Please check your Google AI Studio dashboard."
+                            err_msg = f"Invalid API key or quota exceeded. {err_msg}"
                             status_code = 401
-                    logger.error(f"Gemini generation hard failed on {self.model_name}: {e}")
+                    else:
+                        logger.error(f"Gemini generation hard failed on {self.model_name}: {e}")
+                        
                     raise AnalysisServiceError(err_msg, status_code)
                     
         raise AnalysisServiceError(f"Gemini request failed: {str(last_exc)}", 500)
@@ -103,9 +107,10 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
         exc_str = str(exc).lower()
         if "timed out" in exc_str or "timeout" in exc_str or "503" in exc_str or "unavailable" in exc_str:
             return True
-        if isinstance(exc, genai_errors.APIError): # using APIError as genai_errors base
-            if hasattr(exc, 'code') and exc.code >= 500:
-                return True
+        if isinstance(exc, genai_errors.APIError):
+            if hasattr(exc, 'code'):
+                if exc.code >= 500 or exc.code == 429:
+                    return True
         return False
 
     async def analyze_room(self, image_bytes: bytes, mime_type: str, style_hint: str) -> dict:
@@ -146,16 +151,20 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                     err_msg = str(e)
                     status_code = 500
                     if isinstance(e, genai_errors.APIError):
+                        err_msg = f"Raw Response: {e.message}"
+                        logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
                         if e.code == 404:
-                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible with your API key."
+                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible. {err_msg}"
                             status_code = 400
                         elif e.code == 429:
-                            err_msg = "AI provider rate limit reached. Please wait 30–60 seconds or switch providers in Settings."
+                            err_msg = f"AI provider rate limit reached. {err_msg}"
                             status_code = 429
                         elif e.code in (401, 403):
-                            err_msg = "Invalid API key or quota exceeded. Please check your Google AI Studio dashboard."
+                            err_msg = f"Invalid API key or quota exceeded. {err_msg}"
                             status_code = 401
-                    logger.error(f"Gemini analysis hard failed on {self.model_name}: {e}")
+                    else:
+                        logger.error(f"Gemini analysis hard failed on {self.model_name}: {e}")
+                        
                     raise AnalysisServiceError(err_msg, status_code)
                     
         raise AnalysisServiceError(f"Gemini request failed: {str(last_exc)}", 500)

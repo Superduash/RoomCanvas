@@ -81,25 +81,30 @@ export function AnalysisPage() {
 
   const runWorkflow = async () => {
     try {
-      logger.info('Analyze started');
       setGenerateError(null);
-      setWorkflowState('ANALYZING');
       setIsGenerating(true);
       
-      const analysisResult = await analyzeMutation.mutateAsync({ 
-         image: pendingFile!, 
-         style: selectedStyleId! 
-      });
+      let currentAnalysisId = analysis?.analysis_id;
       
-      logger.info('Analyze completed');
-      setAnalysis(analysisResult);
+      if (!currentAnalysisId) {
+        logger.info('Analyze started');
+        setWorkflowState('ANALYZING');
+        const analysisResult = await analyzeMutation.mutateAsync({ 
+           image: pendingFile!, 
+           style: selectedStyleId! 
+        });
+        logger.info('Analyze completed');
+        setAnalysis(analysisResult);
+        currentAnalysisId = analysisResult.analysis_id;
+      }
 
       logger.info('Generate started');
       setWorkflowState('GENERATING');
       
       const genResult = await generateDesign.mutateAsync({ 
-         analysisId: analysisResult.analysis_id, 
-         customization 
+         analysisId: currentAnalysisId, 
+         customization,
+         force_new: true // Ensure we get a fresh attempt
       });
       setGenerationId(genResult.id);
     } catch (err) {
