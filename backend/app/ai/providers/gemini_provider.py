@@ -76,11 +76,12 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                         await asyncio.sleep(wait_time)
                         continue
                     else:
-                        logger.error(f"Gemini {self.model_name} failed after 3 attempts.")
-                        raise AnalysisServiceError("Network timeout connecting to Gemini. Please try again.", 504)
-                else:
-                    err_msg = str(e)
-                    status_code = 500
+                        logger.error(f"Gemini {self.model_name} failed after 3 attempts with transient error: {e}")
+                        # Fall through to the error handler below so we don't swallow the real error
+                
+                # If we get here, it's either a non-transient error, or we exhausted our 3 retries
+                err_msg = str(e)
+                status_code = 500
                     if isinstance(e, genai_errors.APIError):
                         err_msg = f"Raw Response: {e.message}"
                         logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
@@ -144,12 +145,12 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                         await asyncio.sleep(wait_time)
                         continue
                     else:
-                        logger.error(f"Gemini {self.model_name} failed after 3 attempts.")
-                        raise AnalysisServiceError("Network timeout connecting to Gemini. Please try again.", 504)
-                else:
-                    # Parse user-friendly error
-                    err_msg = str(e)
-                    status_code = 500
+                        logger.error(f"Gemini {self.model_name} failed after 3 attempts with transient error: {e}")
+                        # Fall through to the error handler below so we don't swallow the real error
+                
+                # Parse user-friendly error
+                err_msg = str(e)
+                status_code = 500
                     if isinstance(e, genai_errors.APIError):
                         err_msg = f"Raw Response: {e.message}"
                         logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
