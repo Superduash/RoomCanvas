@@ -73,9 +73,9 @@ class GroqProvider(AnalysisProvider):
             elif status_code in (401, 403):
                 friendly_msg = "Invalid API key or quota exceeded. Please check your Groq console."
                 
-            logger.error(f"Groq HTTP error {status_code}: {err_msg}")
+            logger.exception("Groq HTTP error %s: %s", status_code, err_msg)
             raise AnalysisServiceError(friendly_msg, status_code)
             
         except Exception as e:
-            logger.error(f"Groq analysis failed: {e}")
+            logger.exception("Groq analysis failed with unexpected error")
             raise AnalysisServiceError(f"Groq analysis failed: {str(e)}", 500)

@@ -112,6 +112,15 @@ class GenerationService:
                     
                     async def fetch_analysis():
                         text_provider = await get_text_provider(session, generation.user_id)
+                        
+                        provider_name = getattr(text_provider, '__class__', type(text_provider)).__name__
+                        model_name = getattr(text_provider, 'model_name', getattr(text_provider, 'model', 'unknown'))
+                        logger.info(
+                            "Using provider=%s model=%s for deferred analysis",
+                            provider_name,
+                            model_name,
+                        )
+                        
                         res = await text_provider.analyze_room(image_bytes, "image/jpeg", effective_style)
                         all_objects = res.get("movable_objects", []) + res.get("built_in_objects", [])
                         res["budget_summary"] = compute_budget_summary(all_objects)
