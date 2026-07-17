@@ -82,22 +82,22 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                 # If we get here, it's either a non-transient error, or we exhausted our 3 retries
                 err_msg = str(e)
                 status_code = 500
-                    if isinstance(e, genai_errors.APIError):
-                        err_msg = f"Raw Response: {e.message}"
-                        logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
-                        if e.code == 404:
-                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible. {err_msg}"
-                            status_code = 400
-                        elif e.code == 429:
-                            err_msg = f"AI provider rate limit reached. {err_msg}"
-                            status_code = 429
-                        elif e.code in (401, 403):
-                            err_msg = f"Invalid API key or quota exceeded. {err_msg}"
-                            status_code = 401
-                    else:
-                        logger.error(f"Gemini generation hard failed on {self.model_name}: {e}")
-                        
-                    raise AnalysisServiceError(err_msg, status_code)
+                if isinstance(e, genai_errors.APIError):
+                    err_msg = f"Raw Response: {e.message}"
+                    logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
+                    if e.code == 404:
+                        err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible. {err_msg}"
+                        status_code = 400
+                    elif e.code == 429:
+                        err_msg = f"AI provider rate limit reached. {err_msg}"
+                        status_code = 429
+                    elif e.code in (401, 403):
+                        err_msg = f"Invalid API key or quota exceeded. {err_msg}"
+                        status_code = 401
+                else:
+                    logger.error(f"Gemini generation hard failed on {self.model_name}: {e}")
+                    
+                raise AnalysisServiceError(err_msg, status_code)
                     
         raise AnalysisServiceError(f"Gemini request failed: {str(last_exc)}", 500)
 
@@ -151,21 +151,21 @@ class GeminiProvider(AnalysisProvider, GenerationProvider):
                 # Parse user-friendly error
                 err_msg = str(e)
                 status_code = 500
-                    if isinstance(e, genai_errors.APIError):
-                        err_msg = f"Raw Response: {e.message}"
-                        logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
-                        if e.code == 404:
-                            err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible. {err_msg}"
-                            status_code = 400
-                        elif e.code == 429:
-                            err_msg = f"AI provider rate limit reached. {err_msg}"
-                            status_code = 429
-                        elif e.code in (401, 403):
-                            err_msg = f"Invalid API key or quota exceeded. {err_msg}"
-                            status_code = 401
-                    else:
-                        logger.error(f"Gemini analysis hard failed on {self.model_name}: {e}")
-                        
-                    raise AnalysisServiceError(err_msg, status_code)
+                if isinstance(e, genai_errors.APIError):
+                    err_msg = f"Raw Response: {e.message}"
+                    logger.error(f"Gemini HTTP Error: {e.code} - {e.message}")
+                    if e.code == 404:
+                        err_msg = f"Model {self.model_name} is invalid, deprecated, or not accessible. {err_msg}"
+                        status_code = 400
+                    elif e.code == 429:
+                        err_msg = f"AI provider rate limit reached. {err_msg}"
+                        status_code = 429
+                    elif e.code in (401, 403):
+                        err_msg = f"Invalid API key or quota exceeded. {err_msg}"
+                        status_code = 401
+                else:
+                    logger.error(f"Gemini analysis hard failed on {self.model_name}: {e}")
+                    
+                raise AnalysisServiceError(err_msg, status_code)
                     
         raise AnalysisServiceError(f"Gemini request failed: {str(last_exc)}", 500)
