@@ -169,10 +169,12 @@ class GenerationService:
                         prompt=final_prompt,
                     )
                 except Exception as e:
+                    elapsed = time.perf_counter() - t1
+                    logger.error(f"Generation id={generation.id} failed after {elapsed:.1f} seconds: {e}")
                     status_code = getattr(e, 'status_code', getattr(e, 'status', 500))
                     error_type = type(e).__name__
                     model_used = getattr(image_provider, 'model', getattr(image_provider, 'model_name', "unknown"))
-                    error_msg = f"Provider: {current_img_prov} | Model: {model_used} | Status: {status_code} | Error: {error_type} - {str(e)}"
+                    error_msg = f"Provider: {current_img_prov} | Model: {model_used} | Status: {status_code} | Elapsed: {elapsed:.1f}s | Error: {error_type} - {str(e)}"
                     raise Exception(error_msg)
                 t2 = time.perf_counter()
                 logger.info(f"Generation id={generation.id}: replicate call took {t2-t1:.1f}s")
