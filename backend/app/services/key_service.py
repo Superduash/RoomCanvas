@@ -32,6 +32,26 @@ class KeyService:
         except InvalidToken:
             raise ValueError("Failed to decrypt the key (invalid token)")
 
+    def _resolve_supported_models(self, provider: str, pref_text: str | None, pref_image: str | None) -> tuple[str | None, str | None, bool]:
+        """Returns (valid_text_model, valid_image_model, needs_commit)."""
+        needs_commit = False
+        
+        if pref_text and not is_model_supported(provider, pref_text, "text"):
+            if provider == "gemini":
+                pref_text = settings.GEMINI_TEXT_MODEL_DEFAULT
+            elif provider == "groq":
+                pref_text = settings.GROQ_TEXT_MODEL_DEFAULT
+            needs_commit = True
+            
+        if pref_img and not is_model_supported(provider, pref_img, "image"):
+            if provider == "gemini":
+                pref_img = settings.GEMINI_IMAGE_MODEL_DEFAULT
+            elif provider == "replicate":
+                pref_img = settings.REPLICATE_IMAGE_MODEL_DEFAULT
+            needs_commit = True
+            
+        return pref_text, pref_img, needs_commit
+
     async def get_user_key(self, provider: str) -> tuple[str | None, str | None, str | None]:
         """Returns (api_key, preferred_text_model, preferred_image_model) for the given provider for the current user."""
         if not self.user_id:
@@ -48,28 +68,13 @@ class KeyService:
             try:
                 decrypted_key = self._decrypt(record.encrypted_key)
                 # Graceful fallback for legacy models with DB auto-correction
-                needs_commit = False
+                pref_text, pref_img, needs_commit = self._resolve_supported_models(
+                    provider, record.preferred_text_model, record.preferred_image_model
+                )
                 
-                pref_text = record.preferred_text_model
-                if pref_text and not is_model_supported(provider, pref_text, "text"):
-                    # Map to correct default
-                    if provider == "gemini":
-                        pref_text = settings.GEMINI_TEXT_MODEL_DEFAULT
-                    elif provider == "groq":
-                        pref_text = settings.GROQ_TEXT_MODEL_DEFAULT
-                    record.preferred_text_model = pref_text
-                    needs_commit = True
-                    
-                pref_img = record.preferred_image_model
-                if pref_img and not is_model_supported(provider, pref_img, "image"):
-                    if provider == "gemini":
-                        pref_img = settings.GEMINI_IMAGE_MODEL_DEFAULT
-                    elif provider == "replicate":
-                        pref_img = settings.REPLICATE_IMAGE_MODEL_DEFAULT
-                    record.preferred_image_model = pref_img
-                    needs_commit = True
-                    
                 if needs_commit:
+                    record.preferred_text_model = pref_text
+                    record.preferred_image_model = pref_img
                     await self.db.commit()
                     
                 return decrypted_key, pref_text, pref_img
@@ -88,33 +93,19 @@ class KeyService:
         records = result.scalars().all()
         
         async def _apply_fallback(r):
-            needs_commit = False
+            pref_text, pref_img, needs_commit = self._resolve_supported_models(
+                r.provider, r.preferred_text_model, r.preferred_image_model
+            )
             
-            text_model = r.preferred_text_model
-            if text_model and not is_model_supported(r.provider, text_model, "text"):
-                if r.provider == "gemini":
-                    text_model = settings.GEMINI_TEXT_MODEL_DEFAULT
-                elif r.provider == "groq":
-                    text_model = settings.GROQ_TEXT_MODEL_DEFAULT
-                r.preferred_text_model = text_model
-                needs_commit = True
-            
-            image_model = r.preferred_image_model
-            if image_model and not is_model_supported(r.provider, image_model, "image"):
-                if r.provider == "gemini":
-                    image_model = settings.GEMINI_IMAGE_MODEL_DEFAULT
-                elif r.provider == "replicate":
-                    image_model = settings.REPLICATE_IMAGE_MODEL_DEFAULT
-                r.preferred_image_model = image_model
-                needs_commit = True
-                
             if needs_commit:
+                r.preferred_text_model = pref_text
+                r.preferred_image_model = pref_img
                 await self.db.commit()
                 
             return {
                 "provider": r.provider, 
-                "preferred_text_model": text_model, 
-                "preferred_image_model": image_model
+                "preferred_text_model": pref_text, 
+                "preferred_image_model": pref_img
             }
 
         return [await _apply_fallback(r) for r in records]

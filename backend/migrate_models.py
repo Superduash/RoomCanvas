@@ -1,26 +1,31 @@
-import asyncio
-import logging
-from sqlalchemy import text
-from app.database.session import engine
+import sqlite3
+from app.config import settings
+import os
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+def run():
+    db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+    if not os.path.exists(db_path):
+        print(f"DB not found at {db_path}")
+        return
+        
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        UPDATE user_api_keys SET preferred_image_model = 'gemini-3.1-flash-image'
+        WHERE provider = 'gemini' AND preferred_image_model = 'nano-banana-2';
+    """)
+    cursor.execute("""
+        UPDATE user_api_keys SET preferred_image_model = 'gemini-2.5-flash-image'
+        WHERE provider = 'gemini' AND preferred_image_model = 'nano-banana';
+    """)
+    cursor.execute("""
+        UPDATE user_api_keys SET preferred_image_model = 'gemini-3-pro-image-preview'
+        WHERE provider = 'gemini' AND (preferred_image_model = 'nano-banana-pro' OR preferred_image_model = 'nano-banana-2-lite');
+    """)
+    
+    conn.commit()
+    conn.close()
+    print('DB Migration Complete')
 
-async def migrate():
-    async with engine.begin() as conn:
-        try:
-            logger.info("Attempting to rename preferred_model to preferred_text_model...")
-            await conn.execute(text("ALTER TABLE user_api_keys RENAME COLUMN preferred_model TO preferred_text_model;"))
-        except Exception as e:
-            logger.info(f"Could not rename (maybe already renamed or column missing): {e}")
-
-        try:
-            logger.info("Attempting to add preferred_image_model...")
-            await conn.execute(text("ALTER TABLE user_api_keys ADD COLUMN preferred_image_model VARCHAR;"))
-        except Exception as e:
-            logger.info(f"Could not add column (maybe already exists): {e}")
-            
-    logger.info("Migration complete.")
-
-if __name__ == "__main__":
-    asyncio.run(migrate())
+run()

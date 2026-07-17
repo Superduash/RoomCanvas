@@ -7,10 +7,9 @@ SUPPORTED_MODELS = {
             {"id": "gemini-3.1-pro", "label": "Gemini 3.1 Pro", "badge": "Paid"}
         ],
         "image": [
-            {"id": "nano-banana-2", "label": "Nano Banana 2", "badge": "Default"},
-            {"id": "nano-banana", "label": "Nano Banana", "badge": "Free"},
-            {"id": "nano-banana-2-lite", "label": "Nano Banana 2 Lite", "badge": "Free"},
-            {"id": "nano-banana-pro", "label": "Nano Banana Pro", "badge": "Paid"}
+            {"id": "gemini-3.1-flash-image", "label": "Nano Banana 2", "badge": "Default"},
+            {"id": "gemini-2.5-flash-image", "label": "Nano Banana", "badge": "Free"},
+            {"id": "gemini-3-pro-image-preview", "label": "Nano Banana Pro", "badge": "Paid"}
         ]
     },
     "groq": {
