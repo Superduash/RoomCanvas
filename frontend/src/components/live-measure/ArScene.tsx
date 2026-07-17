@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { createXRStore, XR } from '@react-three/xr';
 import * as THREE from 'three';
@@ -23,7 +23,6 @@ function MeasureLogic({ measurementsState, pointA }: any) {
 
   useFrame(() => {
     // Reticle updates hitMatrixRef and passes it to ArScene via state/ref.
-    // We already have hitMatrixRef passed in props, wait, let's just pass it.
   });
 
   return (
@@ -43,21 +42,24 @@ function MeasureLogic({ measurementsState, pointA }: any) {
 }
 
 export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessionActive }: ArSceneProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const [store, setStore] = useState<any>(null);
+  const [overlayElement, setOverlayElement] = useState<HTMLDivElement | null>(null);
+  
+  // 4. Stabilize XR Store
+  const store = useMemo(() => {
+    if (!overlayElement) return null;
+    return createXRStore({ domOverlay: { root: overlayElement } as any });
+  }, [overlayElement]);
 
-  useEffect(() => {
-    if (overlayRef.current && !store) {
-      setStore(createXRStore({ domOverlay: { root: overlayRef.current } as any }));
-    }
-  }, [store]);
-
+  // 10. Cleanup XR session on unmount or visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' && sessionActive) {
         try {
           const session = (store as any)?.getState?.()?.session;
-          if (session) session.end().catch(() => {});
+          if (session) {
+            console.log('[WebXR] Cleaning up session due to visibility change');
+            session.end().catch(() => {});
+          }
         } catch (e) {
           // ignore
         } finally {
@@ -66,15 +68,31 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      try {
+        const session = (store as any)?.getState?.()?.session;
+        if (session) {
+          console.log('[WebXR] Cleaning up session on unmount');
+          session.end().catch(() => {});
+        }
+      } catch (e) {}
+    };
   }, [sessionActive, store, onSessionEnd]);
 
   const [pointA, setPointA] = useState<THREE.Vector3 | null>(null);
   const hitMatrixRef = useRef<THREE.Matrix4 | null>(null);
   const [isSurfaceFound, setIsSurfaceFound] = useState(false);
+  
   const [cameraError, setCameraError] = useState<string | null>(null);
+  
+  // 2. Canvas Initialization Race
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
+  
+  // 5. Prevent Double Session Starts
+  const [isStarting, setIsStarting] = useState(false);
 
-  const handleCapture = () => {
+  const handleCapture = useCallback(() => {
     if (!isSurfaceFound || !hitMatrixRef.current) return;
 
     const currentPos = new THREE.Vector3().setFromMatrixPosition(hitMatrixRef.current);
@@ -91,40 +109,91 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
       });
       setPointA(null);
     }
-  };
+  }, [isSurfaceFound, pointA, measurementsState]);
 
+  // 6. Await XR Initialization
   const startAR = async () => {
+    if (isStarting) {
+      console.log('[WebXR] Session start already in progress. Ignoring duplicate click.');
+      return;
+    }
+    
+    if (!store || !isCanvasReady) {
+      console.warn('[WebXR] Attempted to start AR before store or canvas was ready.');
+      return;
+    }
+
+    setIsStarting(true);
     setCameraError(null);
+    const startTime = performance.now();
+    
     try {
-      // 1. Explicitly request camera permissions to force native prompt on mobile/PWA
+      console.log('[WebXR] Starting AR...');
+
+      // 9. Camera Permission Flow
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        // Immediately stop tracks so WebXR can take exclusive control of the camera
-        stream.getTracks().forEach(track => track.stop());
+        console.log('[WebXR] Requesting camera permissions...');
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          console.log('[WebXR] Camera ready. Releasing tracks for XR.');
+          // Immediately stop tracks so WebXR can take exclusive control of the camera
+          stream.getTracks().forEach(track => track.stop());
+        } catch (mediaErr: any) {
+          console.error('[WebXR] Media access error:', mediaErr);
+          if (mediaErr.name === 'NotAllowedError' || mediaErr.message?.includes('Permission')) {
+            throw new Error("Camera permission was denied. Please enable camera access in your browser settings.");
+          } else if (mediaErr.name === 'NotFoundError') {
+            throw new Error("No camera found on this device.");
+          } else if (mediaErr.name === 'NotReadableError') {
+            throw new Error("Camera is already in use by another application.");
+          }
+          throw mediaErr;
+        }
       }
 
-      // 2. Start WebXR AR Session
-      if (store) {
-        await store.enterAR();
-        onSessionStart();
-      }
+      console.log(`[WebXR] Entering AR Session. Elapsed time: ${Math.round(performance.now() - startTime)}ms`);
+      await store.enterAR();
+      
+      console.log('[WebXR] AR session started successfully.');
+      onSessionStart();
     } catch (err: any) {
-      console.error('Failed to start AR', err);
+      const elapsed = Math.round(performance.now() - startTime);
+      console.error(`[WebXR] Failed to start AR. Stage: Startup, Elapsed time: ${elapsed}ms, Browser: ${navigator.userAgent}`, err);
+      
       // Format a user-friendly error message
-      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
-        setCameraError("Camera permission was denied. Please enable camera access in your browser settings.");
-      } else if (err.name === 'NotFoundError') {
-        setCameraError("No camera found on this device.");
-      } else {
-        setCameraError(`Unable to start AR session: ${err.message || 'Unknown error'}`);
-      }
+      setCameraError(err.message || 'Unknown error occurred while starting AR.');
+    } finally {
+      setIsStarting(false);
     }
   };
+
+  const handleExit = useCallback(() => {
+    console.log('[WebXR] AR session ended by user.');
+    try {
+      const session = (store as any)?.getState?.()?.session;
+      if (session) {
+        session.end().catch(() => {});
+      }
+    } catch (e) {
+      // Ignore errors if session is already ended
+    } finally {
+      onSessionEnd();
+    }
+  }, [store, onSessionEnd]);
+
+  // 11. Logging lifecycle
+  useEffect(() => {
+    if (isCanvasReady) console.log('[WebXR] Canvas mounted\n[WebXR] Three renderer created');
+  }, [isCanvasReady]);
+
+  useEffect(() => {
+    if (store) console.log('[WebXR] XR store connected');
+  }, [store]);
 
   return (
     <>
       <div 
-        ref={overlayRef} 
+        ref={setOverlayElement} 
         id="xr-overlay"
         className="fixed inset-0 pointer-events-none z-40 hidden" 
         style={{ display: sessionActive ? 'block' : 'none' }}
@@ -136,18 +205,7 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
                 variant="secondary" 
                 size="sm" 
                 icon={<X size={16} />}
-                onClick={() => {
-                  try {
-                    const session = (store as any)?.getState?.()?.session;
-                    if (session) {
-                      session.end().catch(() => {});
-                    }
-                  } catch (e) {
-                    // Ignore errors if session is already ended
-                  } finally {
-                    onSessionEnd();
-                  }
-                }}
+                onClick={handleExit}
               >
                 Exit
               </Button>
@@ -169,15 +227,22 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
               {cameraError}
             </div>
           )}
-          <Button variant="primary" size="lg" onClick={startAR} disabled={!store}>
-            Start Measuring
+          <Button 
+            variant="primary" 
+            size="lg" 
+            onClick={startAR} 
+            disabled={!store || !isCanvasReady || isStarting} 
+            className="pointer-events-auto"
+          >
+            {(!store || !isCanvasReady) ? 'Initializing AR...' : isStarting ? 'Starting Camera...' : 'Start Measuring'}
           </Button>
         </div>
       )}
 
-      {store && (
-        <div className="absolute inset-0 -z-10" style={{ display: sessionActive ? 'block' : 'none' }}>
-          <Canvas>
+      {/* 3. Verify Component Hierarchy: Canvas -> XR -> Scene */}
+      <div className="absolute inset-0 -z-10" style={{ display: sessionActive ? 'block' : 'none' }}>
+        <Canvas onCreated={() => setIsCanvasReady(true)}>
+          {store && (
             <XR store={store}>
               <Reticle 
                 onHitTestResult={(matrix) => {
@@ -191,9 +256,9 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
                 pointA={pointA}
               />
             </XR>
-          </Canvas>
-        </div>
-      )}
+          )}
+        </Canvas>
+      </div>
     </>
   );
 }

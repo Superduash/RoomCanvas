@@ -42,10 +42,8 @@ export function LiveMeasurePage() {
   return (
     <ErrorBoundary>
       <div className="fixed inset-0 z-50 bg-bg text-text-primary flex flex-col pt-[env(safe-area-inset-top)]">
-        
-        {/* Splash screen overlay */}
         {!sessionActive && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center pointer-events-none bg-bg">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center pointer-events-none">
             <ScanLine className="w-16 h-16 text-accent mb-4" />
             <h1 className="text-2xl font-bold mb-2">Live AR Measure</h1>
             <p className="text-text-secondary mb-8 max-w-sm">
@@ -53,17 +51,17 @@ export function LiveMeasurePage() {
             </p>
           </div>
         )}
-
-        {/* ArScene must remain mounted at the exact same location in the tree */}
-        <div className="flex-1 relative z-20">
-          <ArScene 
-            sessionActive={sessionActive}
-            onSessionStart={() => setSessionActive(true)} 
-            onSessionEnd={() => setSessionActive(false)} 
-            measurementsState={measurements} 
-          />
+        {/* The ArScene is permanent and never unmounted by structural changes */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="w-full h-full pointer-events-auto">
+            <ArScene 
+              sessionActive={sessionActive} 
+              onSessionStart={() => setSessionActive(true)} 
+              onSessionEnd={() => setSessionActive(false)} 
+              measurementsState={measurements} 
+            />
+          </div>
         </div>
-
       </div>
     </ErrorBoundary>
   );
