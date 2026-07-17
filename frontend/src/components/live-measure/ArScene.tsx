@@ -240,7 +240,7 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
       )}
 
       {/* 3. Verify Component Hierarchy: Canvas -> XR -> Scene */}
-      <div className="absolute inset-0 -z-10" style={{ display: sessionActive ? 'block' : 'none' }}>
+      <div className="absolute inset-0 -z-10" style={{ visibility: sessionActive ? 'visible' : 'hidden' }}>
         <Canvas onCreated={() => setIsCanvasReady(true)}>
           {store && (
             <XR store={store}>
