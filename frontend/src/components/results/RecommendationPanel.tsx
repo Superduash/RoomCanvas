@@ -234,14 +234,16 @@ export function BudgetCard({ summary, items, fallbackEstimate }: BudgetCardProps
         </h4>
       </div>
       <p className="text-2xl font-semibold tracking-tight text-accent-hover mb-2">
-        ${summary.grand_total.min}–${summary.grand_total.max}
+        ${summary?.grand_total?.min ?? 0}–${summary?.grand_total?.max ?? 0}
       </p>
       
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-accent/80 mb-4">
-        <span>Required: ${summary.required_purchase_total.min}–${summary.required_purchase_total.max}</span>
+      {summary?.grand_total && (
+        <div className="flex gap-4 text-xs font-medium text-text-tertiary">
+        <span>Required: ${summary.required_purchase_total?.min ?? 0}–${summary.required_purchase_total?.max ?? 0}</span>
         <span>•</span>
-        <span>Optional: ${summary.optional_upgrade_total.min}–${summary.optional_upgrade_total.max}</span>
-      </div>
+        <span>Optional: ${summary.optional_upgrade_total?.min ?? 0}–${summary.optional_upgrade_total?.max ?? 0}</span>
+        </div>
+      )}
       
       {/* 40/20/25/15 distribution */}
       <div className="flex flex-col gap-2">
@@ -291,7 +293,9 @@ export function BudgetCard({ summary, items, fallbackEstimate }: BudgetCardProps
           
           <div className="pt-4 border-t border-border flex justify-between items-center mt-2 sticky bottom-0 bg-surface">
             <span className="font-semibold text-text-primary text-[15px]">Grand Total</span>
-            <span className="text-xl font-bold tracking-tight text-accent-hover">${summary.grand_total.min}–${summary.grand_total.max}</span>
+            {summary?.grand_total && (
+            <span className="text-xl font-bold tracking-tight text-accent-hover">${summary.grand_total.min ?? 0}–${summary.grand_total.max ?? 0}</span>
+          )}
           </div>
         </>
       ) : (
@@ -317,7 +321,7 @@ function BudgetSection({ title, items, total, badgeType, badgeLabel }: any) {
       >
         <h4 className="text-[13px] font-semibold text-text-primary">{title}</h4>
         <div className="flex items-center gap-3">
-          {total.max > 0 && <span className="text-sm font-medium text-text-secondary">${total.min}–${total.max}</span>}
+          {total?.max > 0 && <span className="text-sm font-medium text-text-secondary">${total?.min ?? 0}–${total?.max ?? 0}</span>}
           <div className={`text-text-tertiary transition-transform duration-200 ${isOpen ? '' : 'rotate-180'}`}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

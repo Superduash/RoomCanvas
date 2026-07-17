@@ -310,10 +310,10 @@ export function AnalysisPage() {
                   );
                 })()}
                 
-                {currentStep >= 4 && analysis?.budget_summary && (
+                {currentStep >= 4 && analysis?.budget_summary?.grand_total && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">
                     <p className="text-xs text-text-tertiary mb-1">Estimated Renovation Budget</p>
-                    <p className="text-sm font-medium text-text-primary">${analysis.budget_summary.grand_total.min}–${analysis.budget_summary.grand_total.max}</p>
+                    <p className="text-sm font-medium text-text-primary">${analysis.budget_summary.grand_total.min ?? 0}–${analysis.budget_summary.grand_total.max ?? 0}</p>
                   </motion.div>
                 )}
               </div>
