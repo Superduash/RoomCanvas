@@ -84,13 +84,19 @@ class GenerationService:
                 return
 
             try:
+                # 0. Early Provider Check (Fail fast before consuming text tokens)
+                image_provider = await get_image_provider(session, generation.user_id)
+                current_img_prov = getattr(image_provider, '__class__', type(image_provider)).__name__.replace('Provider', '').lower()
+
                 # 1. Prepare image
                 image = await StorageService.download_image_as_pil(generation.original_image_path)
                 image_bytes = resize_for_upload(image)
                 t1 = time.perf_counter()
                 logger.info(f"Generation id={generation.id}: image prep took {t1-t0:.1f}s")
 
-                # 2. Build prompt
+                effective_style = customization.style_override if (customization and getattr(customization, 'style_override', None)) else generation.style
+
+                # 2. Deferred Text Analysis
                 analysis_data = {}
                 if generation.analysis_json:
                     try:
@@ -98,7 +104,38 @@ class GenerationService:
                     except Exception:
                         pass
                 
-                effective_style = customization.style_override if (customization and getattr(customization, 'style_override', None)) else generation.style
+                if not analysis_data:
+                    logger.info(f"Generation id={generation.id}: executing deferred text analysis...")
+                    from app.ai.providers.provider_registry import get_text_provider
+                    from app.services.analysis_service import compute_budget_summary
+                    from app.cache.redis_cache import cached_json_async
+                    
+                    async def fetch_analysis():
+                        text_provider = await get_text_provider(session, generation.user_id)
+                        res = await text_provider.analyze_room(image_bytes, "image/jpeg", effective_style)
+                        all_objects = res.get("movable_objects", []) + res.get("built_in_objects", [])
+                        res["budget_summary"] = compute_budget_summary(all_objects)
+                        res.pop("estimated_budget_range", None)
+                        return res
+                    
+                    # We can use the image hash if it exists, otherwise generate one
+                    image_hash = generation.image_hash
+                    if not image_hash:
+                        import hashlib
+                        h = hashlib.sha256()
+                        h.update(image_bytes)
+                        image_hash = h.hexdigest()
+                        
+                    cache_key = f"analysis:{image_hash}:{effective_style}"
+                    analysis_data = await cached_json_async(cache_key, 7200, fetch_analysis)
+                    
+                    # Update DB with generated analysis
+                    generation.analysis_json = json.dumps(analysis_data)
+                    generation.redesign_prompt = analysis_data.get("redesign_prompt", "")
+                    generation.image_hash = image_hash
+                    await session.commit()
+
+                # 3. Build prompt
                 final_prompt = build_generation_prompt(
                     generation.redesign_prompt, 
                     analysis_data, 
@@ -108,19 +145,16 @@ class GenerationService:
                     instruction
                 )
 
-                # 3. Call Replicate
+                # 4. Call Image Generation Provider
                 logger.info(
                     f"Generation id={generation.id} starting. "
                     f"Image: '{generation.original_image_path}' ({len(image_bytes)} bytes). "
                     f"Prompt: '{final_prompt}'"
                 )
-                logger.info(f"Background task: calling Replicate for Generation id={generation.id}…")
-                
-                provider = await get_image_provider(session, generation.user_id)
-                current_prov = getattr(provider, '__class__', type(provider)).__name__.replace('Provider', '').lower()
+                logger.info(f"Background task: calling {current_img_prov} for Generation id={generation.id}…")
                 
                 try:
-                    output_url, seed_used = await provider.generate(
+                    output_url, seed_used = await image_provider.generate(
                         image_bytes=image_bytes,
                         mime_type="image/jpeg",
                         prompt=final_prompt,
@@ -128,8 +162,8 @@ class GenerationService:
                 except Exception as e:
                     status_code = getattr(e, 'status_code', getattr(e, 'status', 500))
                     error_type = type(e).__name__
-                    model_used = getattr(provider, 'model', getattr(provider, 'model_name', "unknown"))
-                    error_msg = f"Provider: {current_prov} | Model: {model_used} | Status: {status_code} | Error: {error_type} - {str(e)}"
+                    model_used = getattr(image_provider, 'model', getattr(image_provider, 'model_name', "unknown"))
+                    error_msg = f"Provider: {current_img_prov} | Model: {model_used} | Status: {status_code} | Error: {error_type} - {str(e)}"
                     raise Exception(error_msg)
                 t2 = time.perf_counter()
                 logger.info(f"Generation id={generation.id}: replicate call took {t2-t1:.1f}s")
@@ -153,9 +187,9 @@ class GenerationService:
                 # 7. Commit processing time + mark complete
                 elapsed = round(time.perf_counter() - t0, 2)
                 generation.processing_time_sec = elapsed
-                generation.provider = provider.__class__.__name__.replace('Provider', '').lower()
-                generation.provider_version = getattr(provider, 'provider_version', "v1")
-                generation.model_used = getattr(provider, 'model', "unknown")
+                generation.provider = image_provider.__class__.__name__.replace('Provider', '').lower()
+                generation.provider_version = getattr(image_provider, 'provider_version', "v1")
+                generation.model_used = getattr(image_provider, 'model', "unknown")
                 generation.model_version = "latest"
                 
                 # Critical: commit the Variation row first

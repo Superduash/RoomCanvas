@@ -42,95 +42,47 @@ class AnalysisService:
         user_id: int | None = None
     ) -> AnalyzeResponse:
         t0 = time.perf_counter()
-        analysis_dict = None
-        error_msg = None
-        status = "analyzed"
+        
         h = hashlib.sha256()
         h.update(image_bytes)
         image_hash = h.hexdigest()
 
-        # 0. Check DB Cache First
-        cached_gen = await self.repository.get_cached_analysis_by_hash(image_hash, style_id)
-        if cached_gen and cached_gen.analysis_json:
-            try:
-                analysis_dict = json.loads(cached_gen.analysis_json)
-                logger.info(f"DB cache hit for analysis (hash={image_hash[:8]}...)")
-            except Exception:
-                pass
-
-        # 1. Try to get analysis from AI Provider if not in DB cache
-        if not analysis_dict:
-            async def fetch_analysis():
-                provider = await get_text_provider(self.db, user_id)
-                current_prov = getattr(provider, '__class__', type(provider)).__name__.replace('Provider', '').lower()
-                model_used = getattr(provider, 'model_name', getattr(provider, 'model', "unknown"))
-                
-                # Vision check removed per user request
-                
-                try:
-                    res = await provider.analyze_room(image_bytes, mime_type, style_id)
-                except Exception as e:
-                    status_code = getattr(e, 'status_code', getattr(e, 'status', 500))
-                    error_type = type(e).__name__
-                    model_used = getattr(provider, 'model_name', getattr(provider, 'model', "unknown"))
-                    error_msg = f"Provider: {current_prov} | Model: {model_used} | Status: {status_code} | Error: {error_type} - {str(e)}"
-                    logger.error(f"Analysis failed: {error_msg}")
-                    from fastapi import HTTPException
-                    raise HTTPException(status_code=500, detail=error_msg)
-                
-                all_objects = res.get("movable_objects", []) + res.get("built_in_objects", [])
-                res["budget_summary"] = compute_budget_summary(all_objects)
-                res.pop("estimated_budget_range", None)
-                # Validate response shape
-                _ = AnalyzeResponse(analysis_id=0, **res)
-                return res
-
-            try:
-                from app.cache.redis_cache import cached_json_async
-                
-                # We can reuse the same hash for Redis
-                cache_key = f"analysis:{image_hash}:{style_id}"
-                
-                # Cache for 2 hours
-                analysis_dict = await cached_json_async(cache_key, 7200, fetch_analysis)
-            except Exception as e:
-                # Re-raise — let the router return the error to the frontend.
-                raise
-
-
-        # Provider info defaults (overwritten by fetch_analysis path if a live call was made)
-        provider_name = "gemini"
-        model_used = settings.GEMINI_TEXT_MODEL_DEFAULT
-        model_version = "latest"
-
+        # Defer text model API call: Just create the DB row to track the upload
         generation_data = {
             "original_image_path": original_image_path,
             "style": style_id,
-            "redesign_prompt": analysis_dict.get("redesign_prompt", ""),
+            "redesign_prompt": "",
             "prompt_version": "v1",
-            "analysis_json": json.dumps(analysis_dict),
-            "provider": provider_name,
+            "analysis_json": "",
+            "provider": "deferred",
             "provider_version": "v1",
-            "model_used": model_used,
-            "model_version": model_version,
-            "status": status,
+            "model_used": "deferred",
+            "model_version": "deferred",
+            "status": "analyzed",
             "processing_time_sec": round(time.perf_counter() - t0, 2),
             "user_id": user_id,
             "image_hash": image_hash,
         }
-        if error_msg:
-            generation_data["error"] = error_msg
 
-        analysis_id = 0
         try:
             generation = await self.repository.create_generation(generation_data)
             analysis_id = generation.id
             elapsed = round(time.perf_counter() - t0, 2)
-            logger.info(f"Analysis complete — id={analysis_id} style={style_id} ({elapsed}s) status={status}")
+            logger.info(f"Deferred analysis (upload registered) — id={analysis_id} style={style_id} ({elapsed}s)")
         except Exception as db_err:
             logger.error(f"Database save failed: {db_err}")
-            # Do NOT crash. Return the analysis anyway, so the user can see it.
-            # But the user won't be able to generate from it. Still better than 500.
-        
-        return AnalyzeResponse(analysis_id=analysis_id, **analysis_dict)
+            analysis_id = 0
+            
+        # Return fallback empty data so Pydantic validation passes and frontend routing continues
+        return AnalyzeResponse(
+            analysis_id=analysis_id,
+            room_type="Unknown",
+            furniture=[],
+            color_palette=[],
+            redesign_prompt="",
+            style_explanation="",
+            layout_notes="",
+            lighting_suggestions="",
+            budget_summary=None
+        )
 
