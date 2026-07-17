@@ -17,7 +17,7 @@ router = APIRouter(prefix="/analyze", tags=["Analysis"])
     "",
     response_model=AnalyzeResponse,
     status_code=201,
-    dependencies=[Depends(RateLimiter("analyze", 10, 3600))],
+    dependencies=[Depends(RateLimiter("analyze", 60, 3600))],
 
     responses={
         201: {

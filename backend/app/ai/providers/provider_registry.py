@@ -31,9 +31,11 @@ async def get_text_provider(db: AsyncSession, user_id: int | None = None) -> Ana
         
     if active_prov == "groq":
         from app.ai.providers.groq_provider import GroqProvider
-        return GroqProvider(api_key=api_key, model=preferred_text_model or settings.GROQ_VISION_MODEL_DEFAULT)
+        # Force the vision model for analysis; a text-only preferred model will crash Groq
+        return GroqProvider(api_key=api_key, model=settings.GROQ_VISION_MODEL_DEFAULT)
     elif active_prov == "gemini":
         from app.ai.providers.gemini_provider import GeminiProvider
+        # Gemini 1.5/flash models are natively multimodal
         return GeminiProvider(api_key=api_key, model=preferred_text_model or settings.GEMINI_TEXT_MODEL_DEFAULT)
     else:
         raise ProviderUnavailableError(f"Unsupported text provider: {active_prov}")

@@ -20,7 +20,7 @@ router = APIRouter(prefix="/generate", tags=["Generation"])
     "",
     response_model=GenerateResponse,
     status_code=201,
-    dependencies=[Depends(RateLimiter("generate", 15, 3600))],
+    dependencies=[Depends(RateLimiter("generate", 60, 3600))],
 
     responses={
         201: {
