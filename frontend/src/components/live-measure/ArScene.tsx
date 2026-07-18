@@ -160,34 +160,22 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
       try {
         await store.enterAR();
       } catch (err: any) {
-        if (err.name === 'NotSupportedError') {
-          console.warn('[WebXR] Primary AR session rejected. Retrying with minimal feature set...');
-          // Fallback to absolute bare-minimum to avoid hard-failing on obscure optional features
-          const minimalStore = createXRStore({
-            domOverlay: { root: overlayElement } as any,
-            requiredFeatures: ['hit-test']
-          } as any);
-          await minimalStore.enterAR();
+        console.error('[Measure] Fatal error:', err);
+        const elapsed = Math.round(performance.now() - startTime);
+        console.error(`[WebXR] Failed to start AR. Stage: Startup, Elapsed time: ${elapsed}ms, Browser: ${navigator.userAgent}`, err);
+        
+        // Go straight to fallback on ANY session start error instead of retrying
+        if (onUnsupported) {
+          setCameraError(null);
+          onUnsupported();
         } else {
-          throw err;
+          setCameraError(err.message || 'Unknown error occurred while starting AR.');
         }
+        return;
       }
       
       console.log('[WebXR] AR session started successfully.');
       onSessionStart();
-    } catch (err: any) {
-      console.error('[Measure] Fatal error:', err);
-      const elapsed = Math.round(performance.now() - startTime);
-      console.error(`[WebXR] Failed to start AR. Stage: Startup, Elapsed time: ${elapsed}ms, Browser: ${navigator.userAgent}`, err);
-      
-      const isConfigError = err?.message?.includes('session configuration') || err?.name === 'NotSupportedError';
-      if (isConfigError && onUnsupported) {
-        setCameraError(null);
-        onUnsupported();
-      } else {
-        // Format a user-friendly error message
-        setCameraError(err.message || 'Unknown error occurred while starting AR.');
-      }
     } finally {
       setIsStarting(false);
     }

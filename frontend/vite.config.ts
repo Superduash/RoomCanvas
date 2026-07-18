@@ -133,6 +133,8 @@ export default defineConfig({
           if (id.includes('@radix-ui/')) return 'vendor-radix';
           if (id.includes('lucide-react')) return 'vendor-icons';
           if (id.includes('react-dropzone') || id.includes('react-image-crop')) return 'vendor-forms';
+          if (id.includes('node_modules/three/')) return 'vendor-three';
+          if (id.includes('node_modules/@react-three/')) return 'vendor-r3f';
           if (
             id.includes('react-dom') ||
             id.includes('react-router-dom') ||
