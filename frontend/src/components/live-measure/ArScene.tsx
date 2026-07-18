@@ -50,8 +50,8 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
     if (!overlayElement) return null;
     return createXRStore({ 
       domOverlay: { root: overlayElement } as any,
-      requiredFeatures: ['dom-overlay'],
-      optionalFeatures: ['hit-test']
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['anchors', 'dom-overlay', 'local-floor']
     } as any);
   }, [overlayElement]);
 
@@ -157,11 +157,26 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
       }
 
       console.log(`[WebXR] Entering AR Session. Elapsed time: ${Math.round(performance.now() - startTime)}ms`);
-      await store.enterAR();
+      try {
+        await store.enterAR();
+      } catch (err: any) {
+        if (err.name === 'NotSupportedError') {
+          console.warn('[WebXR] Primary AR session rejected. Retrying with minimal feature set...');
+          // Fallback to absolute bare-minimum to avoid hard-failing on obscure optional features
+          const minimalStore = createXRStore({
+            domOverlay: { root: overlayElement } as any,
+            requiredFeatures: ['hit-test']
+          } as any);
+          await minimalStore.enterAR();
+        } else {
+          throw err;
+        }
+      }
       
       console.log('[WebXR] AR session started successfully.');
       onSessionStart();
     } catch (err: any) {
+      console.error('[Measure] Fatal error:', err);
       const elapsed = Math.round(performance.now() - startTime);
       console.error(`[WebXR] Failed to start AR. Stage: Startup, Elapsed time: ${elapsed}ms, Browser: ${navigator.userAgent}`, err);
       

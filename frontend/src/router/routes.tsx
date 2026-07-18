@@ -75,6 +75,7 @@ function RouterErrorBoundary() {
             const keys = await caches.keys();
             await Promise.all(keys.map(k => caches.delete(k)));
           }
+          console.error('[Router] Redirecting to / due to chunk error:', error);
           window.location.href = '/';
         }}>
           Refresh Page
@@ -98,10 +99,16 @@ function RouterErrorBoundary() {
           {error.message}
         </div>
       )}
-      <Button onClick={() => window.location.reload()} className="mt-4">
+      <Button onClick={() => {
+        console.error('[Router] Reloading page due to error:', error);
+        window.location.reload();
+      }} className="mt-4">
         Try Again
       </Button>
-      <Button variant="ghost" onClick={() => window.location.href = '/'}>
+      <Button variant="ghost" onClick={() => {
+        console.error('[Router] Redirecting to / from error fallback:', error);
+        window.location.href = '/';
+      }}>
         Return Home
       </Button>
     </div>
