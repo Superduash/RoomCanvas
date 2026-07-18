@@ -16,6 +16,7 @@ interface ArSceneProps {
   onSessionEnd: () => void;
   measurementsState: UseArMeasurementsReturn;
   sessionActive?: boolean;
+  onUnsupported?: () => void;
 }
 
 function MeasureLogic({ measurementsState, pointA }: any) {
@@ -41,13 +42,17 @@ function MeasureLogic({ measurementsState, pointA }: any) {
   );
 }
 
-export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessionActive }: ArSceneProps) {
+export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessionActive, onUnsupported }: ArSceneProps) {
   const [overlayElement, setOverlayElement] = useState<HTMLDivElement | null>(null);
   
   // 4. Stabilize XR Store
   const store = useMemo(() => {
     if (!overlayElement) return null;
-    return createXRStore({ domOverlay: { root: overlayElement } as any });
+    return createXRStore({ 
+      domOverlay: { root: overlayElement } as any,
+      requiredFeatures: ['dom-overlay'],
+      optionalFeatures: ['hit-test']
+    } as any);
   }, [overlayElement]);
 
   // 10. Cleanup XR session on unmount or visibility change
@@ -160,8 +165,14 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
       const elapsed = Math.round(performance.now() - startTime);
       console.error(`[WebXR] Failed to start AR. Stage: Startup, Elapsed time: ${elapsed}ms, Browser: ${navigator.userAgent}`, err);
       
-      // Format a user-friendly error message
-      setCameraError(err.message || 'Unknown error occurred while starting AR.');
+      const isConfigError = err?.message?.includes('session configuration') || err?.name === 'NotSupportedError';
+      if (isConfigError && onUnsupported) {
+        setCameraError(null);
+        onUnsupported();
+      } else {
+        // Format a user-friendly error message
+        setCameraError(err.message || 'Unknown error occurred while starting AR.');
+      }
     } finally {
       setIsStarting(false);
     }

@@ -14,23 +14,32 @@ from app.auth.firebase_admin_init import is_firebase_available
 
 router = APIRouter()
 
-async def _probe_gemini() -> bool:
-    if not settings.GEMINI_API_KEY:
-        return False
-    try:
-        await asyncio.wait_for(asyncio.to_thread(socket.getaddrinfo, "generativelanguage.googleapis.com", 443), timeout=3)
-        return True
-    except Exception:
-        return False
+import httpx
+from google import genai
 
-async def _probe_replicate() -> bool:
-    if not settings.REPLICATE_API_TOKEN:
-        return False
-    try:
-        await asyncio.wait_for(asyncio.to_thread(socket.getaddrinfo, "api.replicate.com", 443), timeout=3)
-        return True
-    except Exception:
-        return False
+async def verify_provider_keys():
+    results = {}
+    if settings.GEMINI_API_KEY:
+        try:
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            await asyncio.to_thread(client.models.list)  # cheap, no-cost validation call
+            results["gemini"] = "valid"
+        except Exception as e:
+            results["gemini"] = f"invalid: {e}"
+    else:
+        results["gemini"] = "not configured"
+
+    if settings.REPLICATE_API_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get("https://api.replicate.com/v1/account", headers={"Authorization": f"Bearer {settings.REPLICATE_API_TOKEN}"}, timeout=10)
+                results["replicate"] = "valid" if resp.status_code == 200 else f"invalid: HTTP {resp.status_code}"
+        except Exception as e:
+            results["replicate"] = f"invalid: {e}"
+    else:
+        results["replicate"] = "not configured"
+
+    return results
 
 @router.get(
     "/health",
@@ -49,7 +58,9 @@ async def check_health(request: Request) -> JSONResponse:
         db_status = "unreachable"
 
     # 2. AI Providers
-    gemini_ok, replicate_ok = await asyncio.gather(_probe_gemini(), _probe_replicate())
+    provider_status = await verify_provider_keys()
+    gemini_ok = provider_status.get("gemini") == "valid"
+    replicate_ok = provider_status.get("replicate") == "valid"
 
     # 3. Firebase
     firebase_status = "ready" if is_firebase_available() else "unconfigured"

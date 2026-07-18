@@ -6,7 +6,7 @@ import { useArMeasurements } from '../hooks/useArMeasurements';
 import { ScanLine } from 'lucide-react';
 
 export function LiveMeasurePage() {
-  const [supported, setSupported] = useState<boolean | null>(null);
+  const [capability, setCapability] = useState<'supported' | 'unsupported' | 'unknown' | 'checking'>('checking');
   const [sessionActive, setSessionActive] = useState(false);
   const measurements = useArMeasurements();
 
@@ -16,26 +16,24 @@ export function LiveMeasurePage() {
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
     if (isIOS) {
-      setSupported(false);
+      setCapability('unsupported');
       return;
     }
 
     if (navigator.xr && navigator.xr.isSessionSupported) {
-      navigator.xr.isSessionSupported('immersive-ar').then((isSupported) => {
-        setSupported(isSupported);
-      }).catch(() => {
-        setSupported(false);
-      });
+      navigator.xr.isSessionSupported('immersive-ar')
+        .then((isSupported) => setCapability(isSupported ? 'supported' : 'unsupported'))
+        .catch(() => setCapability('unknown'));
     } else {
-      setSupported(false);
+      setCapability('unsupported');
     }
   }, []);
 
-  if (supported === null) {
-    return <div className="min-h-screen bg-bg" />; // Checking capability
+  if (capability === 'checking') {
+    return <div className="min-h-screen bg-bg" />;
   }
 
-  if (!supported) {
+  if (capability === 'unsupported' || capability === 'unknown') {
     return <ArUnsupportedFallback />;
   }
 
@@ -59,6 +57,7 @@ export function LiveMeasurePage() {
               onSessionStart={() => setSessionActive(true)} 
               onSessionEnd={() => setSessionActive(false)} 
               measurementsState={measurements} 
+              onUnsupported={() => setCapability('unsupported')}
             />
           </div>
         </div>

@@ -95,11 +95,12 @@ async def lifespan(app: FastAPI):
     # Display clean startup banner
     from app.auth.firebase_admin_init import is_firebase_available
     firebase_status = "✓ Firebase Admin Ready" if is_firebase_available() else "⚠ Firebase Admin Not Configured (Auth Disabled)"
-    gemini_key = settings.GEMINI_API_KEY
-    replicate_key = settings.REPLICATE_API_TOKEN
     
-    gemini_status = "✓ Gemini Provider (Platform)" if gemini_key else "⚠ Gemini Provider (BYOK Only)"
-    replicate_status = "✓ Replicate Provider (Platform)" if replicate_key else "⚠ Replicate Provider (BYOK Only)"
+    from app.routers.health import verify_provider_keys
+    provider_status = await verify_provider_keys()
+    
+    gemini_status = f"✓ Gemini Provider ({provider_status.get('gemini')})" if provider_status.get("gemini") == "valid" else f"⚠ Gemini Provider ({provider_status.get('gemini')})"
+    replicate_status = f"✓ Replicate Provider ({provider_status.get('replicate')})" if provider_status.get("replicate") == "valid" else f"⚠ Replicate Provider ({provider_status.get('replicate')})"
 
     banner = f"""
 ══════════════════════════════════════════════
