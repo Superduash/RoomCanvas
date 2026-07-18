@@ -29,7 +29,7 @@ export function TopNav() {
   }, [mobileOpen]);
 
   const { user, profile, signOut, isLoading, syncError } = useAuth();
-  const { data: keys, isLoading: keysLoading } = useUserKeys();
+  const { data: keys, isLoading: keysLoading } = useUserKeys(!!user);
   const { activeTheme: theme, toggleTheme } = useTheme();
 
   const getMissingConfig = () => {

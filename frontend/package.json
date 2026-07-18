@@ -50,7 +50,7 @@
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.18.1",
     "tailwind-merge": "^3.6.0",
-    "three": "^0.185.1",
+    "three": "^0.182.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   }

@@ -5,15 +5,14 @@ import * as THREE from 'three';
 import { Reticle } from './Reticle';
 import { MeasurementLine } from './MeasurementLine';
 import { CaptureButton } from './CaptureButton';
-// DEMO CUT: import { UseArMeasurementsReturn } from '../../hooks/useArMeasurements';
 import { formatDistanceAuto, getDistanceInMeters } from '../../lib/arMath';
 import { Button } from '../primitives/Button';
 import { X } from 'lucide-react';
+import { logger } from '../../lib/logger';
 
 interface ArSceneProps {
   onSessionStart: () => void;
   onSessionEnd: () => void;
-  // DEMO CUT: measurementsState: UseArMeasurementsReturn;
   sessionActive?: boolean;
   onUnsupported?: () => void;
 }
@@ -31,12 +30,6 @@ function MeasureLogic({ pointA, pointB }: any) {
       <ambientLight intensity={1} />
       <directionalLight position={[10, 10, 10]} />
       
-      {/* DEMO CUT: 
-      {measurementsState.measurements.map((m: any) => (
-        <MeasurementLine key={m.id} pointA={m.pointA} pointB={m.pointB} />
-      ))}
-      */}
-
       {/* Show the final locked line if both points exist */}
       {pointA && pointB && (
         <MeasurementLine pointA={pointA} pointB={pointB} />
@@ -78,7 +71,7 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
         try {
           const session = (store as any)?.getState?.()?.session;
           if (session) {
-            console.log('[WebXR] Cleaning up session due to visibility change');
+            logger.debug('[WebXR] Cleaning up session due to visibility change');
             session.end().catch(() => {});
           }
         } catch (e) {
@@ -94,7 +87,7 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
       try {
         const session = (store as any)?.getState?.()?.session;
         if (session) {
-          console.log('[WebXR] Cleaning up session on unmount');
+          logger.debug('[WebXR] Cleaning up session on unmount');
           session.end().catch(() => {});
         }
       } catch (e) {}
@@ -127,38 +120,27 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
       setPointA(currentPos);
     } else {
       const dist = getDistanceInMeters(pointA, currentPos);
-      console.log(`[Measure] Captured final distance. Raw: ${dist} meters. Display: ${formatDistanceAuto(dist)}`);
+      logger.debug(`[Measure] Captured final distance. Raw: ${dist} meters. Display: ${formatDistanceAuto(dist)}`);
       setPointB(currentPos);
-      // setDistance(dist); // Unused
       setDistanceDisplay(formatDistanceAuto(dist));
-      
-      /* DEMO CUT: 
-      measurementsState.addMeasurement({
-        id: Math.random().toString(36).substring(7),
-        pointA: pointA,
-        pointB: currentPos,
-        distanceCm: formatDistanceAuto(dist)
-      });
-      */
     }
   }, [isSurfaceFound, pointA]);
 
   const handleMeasureAgain = useCallback(() => {
     setPointA(null);
     setPointB(null);
-    // setDistance(null); // Unused
     setDistanceDisplay(null);
   }, []);
 
   // 6. Await XR Initialization
   const startAR = async () => {
     if (isStarting) {
-      console.log('[WebXR] Session start already in progress. Ignoring duplicate click.');
+      logger.debug('[WebXR] Session start already in progress. Ignoring duplicate click.');
       return;
     }
     
     if (!store || !isCanvasReady) {
-      console.warn('[WebXR] Attempted to start AR before store or canvas was ready.');
+      logger.debug('[WebXR] Attempted to start AR before store or canvas was ready.');
       return;
     }
 
@@ -167,18 +149,18 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
     const startTime = performance.now();
     
     try {
-      console.log('[WebXR] Starting AR...');
+      logger.debug('[WebXR] Starting AR...');
 
       // 9. Camera Permission Flow
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        console.log('[WebXR] Requesting camera permissions...');
+        logger.debug('[WebXR] Requesting camera permissions...');
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          console.log('[WebXR] Camera ready. Releasing tracks for XR.');
+          logger.debug('[WebXR] Camera ready. Releasing tracks for XR.');
           // Immediately stop tracks so WebXR can take exclusive control of the camera
           stream.getTracks().forEach(track => track.stop());
         } catch (mediaErr: any) {
-          console.error('[WebXR] Media access error:', mediaErr);
+          logger.warn('[WebXR] Media access error:', mediaErr);
           if (mediaErr.name === 'NotAllowedError' || mediaErr.message?.includes('Permission')) {
             throw new Error("Camera permission was denied. Please enable camera access in your browser settings.");
           } else if (mediaErr.name === 'NotFoundError') {
@@ -190,25 +172,25 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
         }
       }
 
-      console.log(`[WebXR] Entering AR Session. Elapsed time: ${Math.round(performance.now() - startTime)}ms`);
+      logger.debug(`[WebXR] Entering AR Session. Elapsed time: ${Math.round(performance.now() - startTime)}ms`);
       try {
         await store.enterAR();
       } catch (err: any) {
-        console.error('[Measure] Fatal error:', err);
         const elapsed = Math.round(performance.now() - startTime);
-        console.error(`[WebXR] Failed to start AR. Stage: Startup, Elapsed time: ${elapsed}ms, Browser: ${navigator.userAgent}`, err);
+        logger.debug(`[WebXR] AR session request rejected (device/GPU does not support the requested features). Elapsed: ${elapsed}ms, Browser: ${navigator.userAgent}`, err);
         
         // Go straight to fallback on ANY session start error instead of retrying
         if (onUnsupported) {
           setCameraError(null);
           onUnsupported();
         } else {
+          logger.warn('[WebXR] AR unsupported and no fallback handler was provided.', err);
           setCameraError(err.message || 'Unknown error occurred while starting AR.');
         }
         return;
       }
       
-      console.log('[WebXR] AR session started successfully.');
+      logger.debug('[WebXR] AR session started successfully.');
       onSessionStart();
     } finally {
       setIsStarting(false);
@@ -216,7 +198,7 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
   };
 
   const handleExit = useCallback(() => {
-    console.log('[WebXR] AR session ended by user.');
+    logger.debug('[WebXR] AR session ended by user.');
     try {
       const session = (store as any)?.getState?.()?.session;
       if (session) {
@@ -231,11 +213,11 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
 
   // 11. Logging lifecycle
   useEffect(() => {
-    if (isCanvasReady) console.log('[WebXR] Canvas mounted\n[WebXR] Three renderer created');
+    if (isCanvasReady) logger.debug('[WebXR] Canvas mounted, renderer created');
   }, [isCanvasReady]);
 
   useEffect(() => {
-    if (store) console.log('[WebXR] XR store connected');
+    if (store) logger.debug('[WebXR] XR store connected');
   }, [store]);
 
   return (
@@ -258,8 +240,6 @@ export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsuppo
                 Exit
               </Button>
             </div>
-            
-            {/* DEMO CUT: <MeasurementListPanel measurementsState={measurementsState} /> */}
             
             {/* 2. Unified disable state - depends directly on isSurfaceFound */}
             {(!pointA || !pointB) ? (

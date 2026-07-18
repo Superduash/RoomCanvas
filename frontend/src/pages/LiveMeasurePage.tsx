@@ -2,13 +2,11 @@ import { useState, useEffect } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ArScene } from '../components/live-measure/ArScene';
 import { ArUnsupportedFallback } from '../components/live-measure/ArUnsupportedFallback';
-// DEMO CUT: import { useArMeasurements } from '../hooks/useArMeasurements';
 import { ScanLine } from 'lucide-react';
 
 export function LiveMeasurePage() {
   const [capability, setCapability] = useState<'supported' | 'unsupported' | 'unknown' | 'checking'>('checking');
   const [sessionActive, setSessionActive] = useState(false);
-  // DEMO CUT: const measurements = useArMeasurements();
 
   useEffect(() => {
     // Aggressively block iOS since Safari does not support WebXR natively
@@ -56,7 +54,6 @@ export function LiveMeasurePage() {
               sessionActive={sessionActive} 
               onSessionStart={() => setSessionActive(true)} 
               onSessionEnd={() => setSessionActive(false)} 
-              // DEMO CUT: measurementsState={measurements} 
               onUnsupported={() => setCapability('unsupported')}
             />
           </div>

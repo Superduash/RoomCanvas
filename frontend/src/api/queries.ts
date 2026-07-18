@@ -256,10 +256,11 @@ export function useActiveTextProvider() {
   });
 }
 
-export function useUserKeys() {
+export function useUserKeys(enabled = true) {
   return useQuery({
     queryKey: ['user_keys'],
     queryFn: () => api.get<UserKeyStatus[]>('/settings/keys'),
+    enabled,
   });
 }
 
