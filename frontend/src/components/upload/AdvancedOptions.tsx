@@ -7,7 +7,7 @@ import type { CustomizationOptions } from '../../api/types';
 
 const FURNITURE_OPTIONS = ["Sofa", "Bookshelf", "Dining table", "TV unit", "Plants", "Rug", "Accent chair"];
 const AVOID_OPTIONS = ["Dark colors", "Glass surfaces", "Open shelving"];
-const BUDGET_TIERS = ['Budget-Friendly', 'Mid-Range', 'Premium'] as const;
+const BUDGET_TIERS = ['Budget', 'Mid', 'Premium'] as const;
 const LIGHTING_PREFERENCES = ['Warm', 'Cool', 'Natural daylight'] as const;
 
 export function AdvancedOptions({ value, onChange }: { value: CustomizationOptions, onChange: (val: CustomizationOptions) => void }) {

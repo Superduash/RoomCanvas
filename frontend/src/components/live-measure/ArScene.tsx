@@ -51,7 +51,14 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
     return createXRStore({ 
       domOverlay: { root: overlayElement } as any,
       requiredFeatures: ['hit-test'],
-      optionalFeatures: ['anchors', 'dom-overlay', 'local-floor']
+      optionalFeatures: ['anchors', 'dom-overlay', 'local-floor'],
+      meshDetection: false,
+      planeDetection: false,
+      depthSensing: false,
+      layers: false,
+      hand: false,
+      controller: false,
+      offerSession: false,
     } as any);
   }, [overlayElement]);
 

@@ -130,7 +130,7 @@ export interface StyleOption {
 export interface CustomizationOptions {
   must_have_furniture?: string[];
   color_preference?: string;
-  budget_tier?: 'Budget-Friendly' | 'Mid-Range' | 'Premium';
+  budget_tier?: 'Budget' | 'Mid' | 'Premium';
   lighting_preference?: 'Warm' | 'Cool' | 'Natural daylight';
   room_width_ft?: number;
   room_length_ft?: number;

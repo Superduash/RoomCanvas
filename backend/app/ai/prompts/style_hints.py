@@ -61,21 +61,21 @@ ADDITIONAL_STYLES = [
         "id": "indian_contemporary",
         "furniture": ["low-profile teak wood sofa", "brass-inlay coffee table", "hand-block-print cushions", "jali-pattern room divider"],
         "palette": ["#8B4513", "#D4AF37", "#F5F0E6", "#2E5339"],
-        "budget_tag": "Mid-Range",
+        "budget_tag": "Mid",
         "reason_template": "A {room_type} that blends contemporary form with traditional Indian craft details — brass accents, block-print textiles, and warm wood tones.",
     },
     {
         "id": "japandi",
         "furniture": ["low platform bed or seating", "natural oak furniture", "paper/rice-weave lighting", "minimal ceramic decor"],
         "palette": ["#E8E2D5", "#4A4238", "#B8A88A", "#1C1C1C"],
-        "budget_tag": "Mid-Range",
+        "budget_tag": "Mid",
         "reason_template": "A {room_type} combining Japanese minimalism with Scandinavian warmth — natural materials, low furniture, and quiet, uncluttered lines.",
     },
     {
         "id": "mediterranean",
         "furniture": ["wrought-iron accents", "terracotta planters", "linen upholstered seating", "carved wood console"],
         "palette": ["#F2E9D8", "#3B6E8F", "#C97C4A", "#7A8B69"],
-        "budget_tag": "Mid-Range",
+        "budget_tag": "Mid",
         "reason_template": "A sun-washed {room_type} inspired by coastal Mediterranean homes — terracotta, whitewashed textures, and warm blue accents.",
     },
     {
@@ -89,7 +89,7 @@ ADDITIONAL_STYLES = [
         "id": "coastal",
         "furniture": ["woven rattan chairs", "light driftwood tones", "linen slipcovers", "nautical-inspired accents"],
         "palette": ["#F7F5F0", "#A8C5D6", "#E8DCC8", "#2C3E50"],
-        "budget_tag": "Budget-Friendly",
+        "budget_tag": "Budget",
         "reason_template": "A breezy, light-filled {room_type} with coastal textures — rattan, driftwood tones, and soft ocean-inspired color.",
     },
 ]
