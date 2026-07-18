@@ -1,13 +1,15 @@
-import { Trash2 } from 'lucide-react';
-import { UseArMeasurementsReturn } from '../../hooks/useArMeasurements';
+// DEMO CUT: import { Trash2 } from 'lucide-react';
+// DEMO CUT: import { UseArMeasurementsReturn } from '../../hooks/useArMeasurements';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/* DEMO CUT: 
 interface MeasurementListPanelProps {
   measurementsState: UseArMeasurementsReturn;
 }
+*/
 
-export function MeasurementListPanel({ measurementsState }: MeasurementListPanelProps) {
-  const { measurements, removeMeasurement, clearMeasurements } = measurementsState;
+export function MeasurementListPanel({ measurementsState }: { measurementsState: any }) {
+  const { measurements /*, removeMeasurement, clearMeasurements */ } = measurementsState;
 
   return (
     <div className="absolute top-[env(safe-area-inset-top,80px)] mt-16 left-4 right-4 z-20 pointer-events-none flex flex-col items-end">
@@ -22,18 +24,18 @@ export function MeasurementListPanel({ measurementsState }: MeasurementListPanel
           >
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50 bg-surface/30">
               <span className="text-[11px] font-bold text-text-secondary uppercase tracking-widest">Measurements</span>
-              {measurements.length > 1 && (
+              {/* {measurements.length > 1 && (
                 <button 
                   onClick={clearMeasurements}
                   className="text-[11px] font-semibold text-danger hover:text-danger-subtle transition-colors px-2 py-1 rounded active:scale-95"
                 >
                   Clear All
                 </button>
-              )}
+              )} */}
             </div>
             <div className="max-h-[300px] overflow-y-auto overscroll-contain">
               <AnimatePresence initial={false}>
-                {measurements.map((m) => (
+                {measurements.map((m: any) => (
                   <motion.div 
                     key={m.id}
                     initial={{ opacity: 0, height: 0 }}
@@ -45,7 +47,7 @@ export function MeasurementListPanel({ measurementsState }: MeasurementListPanel
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-text-primary tabular-nums tracking-tight">{m.distanceCm}</span>
                       </div>
-                      <button
+                      {/* <button
                         onClick={() => {
                           if (typeof window !== 'undefined' && navigator.vibrate) {
                             navigator.vibrate(30);
@@ -56,7 +58,7 @@ export function MeasurementListPanel({ measurementsState }: MeasurementListPanel
                         aria-label="Delete measurement"
                       >
                         <Trash2 size={16} strokeWidth={2.5} />
-                      </button>
+                      </button> */}
                     </div>
                   </motion.div>
                 ))}

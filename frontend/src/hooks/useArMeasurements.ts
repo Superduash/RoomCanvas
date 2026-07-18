@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+// DEMO CUT: import { useState, useCallback } from 'react';
 import * as THREE from 'three';
 
 export type ARMeasurement = {
@@ -9,8 +9,9 @@ export type ARMeasurement = {
 };
 
 export function useArMeasurements() {
-  const [measurements, setMeasurements] = useState<ARMeasurement[]>([]);
+  const measurements: ARMeasurement[] = []; // DEMO CUT: const [measurements, setMeasurements] = useState<ARMeasurement[]>([]);
 
+  /* DEMO CUT:
   const addMeasurement = useCallback((measurement: ARMeasurement) => {
     setMeasurements((prev) => [...prev, measurement]);
   }, []);
@@ -22,12 +23,11 @@ export function useArMeasurements() {
   const clearMeasurements = useCallback(() => {
     setMeasurements([]);
   }, []);
+  */
 
   return {
     measurements,
-    addMeasurement,
-    removeMeasurement,
-    clearMeasurements,
+    // DEMO CUT: addMeasurement, removeMeasurement, clearMeasurements
   };
 }
 

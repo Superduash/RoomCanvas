@@ -5,8 +5,7 @@ import * as THREE from 'three';
 import { Reticle } from './Reticle';
 import { MeasurementLine } from './MeasurementLine';
 import { CaptureButton } from './CaptureButton';
-import { MeasurementListPanel } from './MeasurementListPanel';
-import { UseArMeasurementsReturn } from '../../hooks/useArMeasurements';
+// DEMO CUT: import { UseArMeasurementsReturn } from '../../hooks/useArMeasurements';
 import { formatDistanceAuto, getDistanceInMeters } from '../../lib/arMath';
 import { Button } from '../primitives/Button';
 import { X } from 'lucide-react';
@@ -14,12 +13,13 @@ import { X } from 'lucide-react';
 interface ArSceneProps {
   onSessionStart: () => void;
   onSessionEnd: () => void;
-  measurementsState: UseArMeasurementsReturn;
+  // DEMO CUT: measurementsState: UseArMeasurementsReturn;
   sessionActive?: boolean;
   onUnsupported?: () => void;
 }
 
-function MeasureLogic({ measurementsState, pointA }: any) {
+function MeasureLogic({ pointA, pointB }: any) {
+  // We use this ref to show the line updating live before point B is captured
   const livePointRef = useRef<THREE.Vector3 | null>(null);
 
   useFrame(() => {
@@ -31,18 +31,26 @@ function MeasureLogic({ measurementsState, pointA }: any) {
       <ambientLight intensity={1} />
       <directionalLight position={[10, 10, 10]} />
       
+      {/* DEMO CUT: 
       {measurementsState.measurements.map((m: any) => (
         <MeasurementLine key={m.id} pointA={m.pointA} pointB={m.pointB} />
       ))}
+      */}
 
-      {pointA && (
+      {/* Show the final locked line if both points exist */}
+      {pointA && pointB && (
+        <MeasurementLine pointA={pointA} pointB={pointB} />
+      )}
+
+      {/* Show the live preview line if point A exists but B is not yet captured */}
+      {pointA && !pointB && (
         <MeasurementLine pointA={pointA} isLive livePointRef={livePointRef} />
       )}
     </>
   );
 }
 
-export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessionActive, onUnsupported }: ArSceneProps) {
+export function ArScene({ onSessionStart, onSessionEnd, sessionActive, onUnsupported }: ArSceneProps) {
   const [overlayElement, setOverlayElement] = useState<HTMLDivElement | null>(null);
   
   // 4. Stabilize XR Store
@@ -51,10 +59,11 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
     return createXRStore({ 
       domOverlay: { root: overlayElement } as any,
       requiredFeatures: ['hit-test'],
-      optionalFeatures: ['anchors', 'dom-overlay', 'local-floor'],
+      optionalFeatures: ['local-floor'],
       meshDetection: false,
       planeDetection: false,
       depthSensing: false,
+      anchors: false,
       layers: false,
       hand: false,
       controller: false,
@@ -93,6 +102,10 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
   }, [sessionActive, store, onSessionEnd]);
 
   const [pointA, setPointA] = useState<THREE.Vector3 | null>(null);
+  const [pointB, setPointB] = useState<THREE.Vector3 | null>(null);
+  // const [distance, setDistance] = useState<number | null>(null); // Unused, display is tracked
+  const [distanceDisplay, setDistanceDisplay] = useState<string | null>(null);
+  
   const hitMatrixRef = useRef<THREE.Matrix4 | null>(null);
   const [isSurfaceFound, setIsSurfaceFound] = useState(false);
   
@@ -107,21 +120,35 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
   const handleCapture = useCallback(() => {
     if (!isSurfaceFound || !hitMatrixRef.current) return;
 
+    // 1. Capture the exact current frame position from the ref
     const currentPos = new THREE.Vector3().setFromMatrixPosition(hitMatrixRef.current);
 
     if (!pointA) {
       setPointA(currentPos);
     } else {
-      const distance = getDistanceInMeters(pointA, currentPos);
+      const dist = getDistanceInMeters(pointA, currentPos);
+      console.log(`[Measure] Captured final distance. Raw: ${dist} meters. Display: ${formatDistanceAuto(dist)}`);
+      setPointB(currentPos);
+      // setDistance(dist); // Unused
+      setDistanceDisplay(formatDistanceAuto(dist));
+      
+      /* DEMO CUT: 
       measurementsState.addMeasurement({
         id: Math.random().toString(36).substring(7),
         pointA: pointA,
         pointB: currentPos,
-        distanceCm: formatDistanceAuto(distance)
+        distanceCm: formatDistanceAuto(dist)
       });
-      setPointA(null);
+      */
     }
-  }, [isSurfaceFound, pointA, measurementsState]);
+  }, [isSurfaceFound, pointA]);
+
+  const handleMeasureAgain = useCallback(() => {
+    setPointA(null);
+    setPointB(null);
+    // setDistance(null); // Unused
+    setDistanceDisplay(null);
+  }, []);
 
   // 6. Await XR Initialization
   const startAR = async () => {
@@ -232,11 +259,30 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
               </Button>
             </div>
             
-            <MeasurementListPanel measurementsState={measurementsState} />
+            {/* DEMO CUT: <MeasurementListPanel measurementsState={measurementsState} /> */}
             
-            <div className="pointer-events-auto">
-              <CaptureButton onClick={handleCapture} disabled={!isSurfaceFound} />
-            </div>
+            {/* 2. Unified disable state - depends directly on isSurfaceFound */}
+            {(!pointA || !pointB) ? (
+              <div className="pointer-events-auto">
+                <CaptureButton onClick={handleCapture} disabled={!isSurfaceFound} />
+              </div>
+            ) : (
+              <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center justify-center pointer-events-auto gap-4 px-4">
+                <div className="bg-bg/90 backdrop-blur-md px-8 py-4 rounded-2xl shadow-xl border border-white/20">
+                  <div className="text-4xl font-bold text-white text-center">
+                    {distanceDisplay}
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <Button variant="secondary" size="lg" onClick={handleMeasureAgain}>
+                    Measure Again
+                  </Button>
+                  <Button variant="primary" size="lg" onClick={handleExit}>
+                    Done
+                  </Button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -273,8 +319,8 @@ export function ArScene({ onSessionStart, onSessionEnd, measurementsState, sessi
                 }} 
               />
               <MeasureLogic 
-                measurementsState={measurementsState}
                 pointA={pointA}
+                pointB={pointB}
               />
             </XR>
           )}
