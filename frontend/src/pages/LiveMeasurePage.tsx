@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { ArUnsupportedFallback } from '../components/live-measure/ArUnsupportedFallback';
 import { ArScene } from '../components/live-measure/ArScene';
 import { useArMeasurements } from '../hooks/useArMeasurements';
 import { ScanLine } from 'lucide-react';
@@ -34,7 +34,7 @@ export function LiveMeasurePage() {
   }
 
   if (capability === 'unsupported' || capability === 'unknown') {
-    return <ArUnsupportedFallback />;
+    return <Navigate to="/" replace />;
   }
 
   return (
